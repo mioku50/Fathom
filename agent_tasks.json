@@ -84,7 +84,7 @@
     },
     {
       "id": "choose-mvp-stack",
-      "status": "todo",
+      "status": "done",
       "area": "architecture",
       "risk": "low",
       "title": "Choose MVP tech stack",
@@ -106,19 +106,22 @@
       "area": "app",
       "risk": "medium",
       "title": "Scaffold TypeScript API project",
-      "description": "Create a minimal TypeScript API scaffold with health endpoint and test setup, without production deployment or secrets.",
+      "description": "Create a minimal TypeScript API scaffold for Cloudflare Workers (using Wrangler/Hono) with health endpoint and test setup, without production deployment or secrets.",
       "allowed_paths": [
         "src/**",
         "tests/**",
         "package.json",
         "tsconfig.json",
         "vitest.config.*",
+        "wrangler.json",
+        "wrangler.toml",
         "agent_tasks.json"
       ],
       "acceptance": [
         "Project installs locally",
         "Health endpoint or handler exists",
         "Basic test passes",
+        "Cloudflare Workers/Wrangler setup is configured",
         "No secrets or production deployment are added"
       ]
     },

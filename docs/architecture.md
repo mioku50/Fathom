@@ -126,3 +126,17 @@ Fathom provides a RESTful API for fetching token prices and liquidity data. It f
 - **Cross-chain support**: MVP is strictly focused on Base network.
 - **Sub-second Latency**: Fathom is optimized for reliability and confidence, not high-frequency trading.
 - **Order Execution**: Fathom is a read-only price oracle, it does not execute swaps.
+
+## MVP Tech Stack Choice
+
+The chosen runtime for the Fathom MVP is **Cloudflare Workers**.
+
+### Tradeoffs: Cloudflare Workers vs. Vercel
+
+When evaluating the MVP stack, we compared Cloudflare Workers against Vercel. Cloudflare Workers was selected due to its robust edge ecosystem and generous free tier, which aligns perfectly with Fathom's $0 overhead requirement.
+
+Here are the specific tradeoffs considered:
+
+- **viem**: Cloudflare Workers' edge runtime (V8 isolates) historically required special polyfills for Node.js standard libraries compared to Vercel's standard Node.js environments. However, `viem` has made significant improvements to its edge compatibility, making Cloudflare a viable and fast option for on-chain reads. Vercel provides an easier out-of-the-box experience for standard Node packages, but Cloudflare's performance benefits outweigh the minor configuration overhead.
+- **cache**: Fathom relies heavily on caching to minimize RPC calls and guarantee low latency. Cloudflare KV provides a natively integrated, globally distributed, and generous free-tier cache. Vercel KV (powered by Upstash Redis) is an excellent alternative but has more restrictive free-tier limits (e.g., lower daily command limits), which could become a bottleneck as Fathom scales its API requests.
+- **x402 integration**: Fathom's monetization relies on the x402 payment protocol, which involves intercepting requests to return a `402 Payment Required` response quickly. Cloudflare Workers offers exceptionally low-latency edge execution, ensuring that payment checks and proxying logic happen instantly. Vercel Edge functions provide similar capabilities, but Cloudflare’s infrastructure is explicitly optimized for this type of fast, edge-first middleware layer.
