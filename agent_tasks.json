@@ -102,7 +102,7 @@
     },
     {
       "id": "scaffold-typescript-api",
-      "status": "todo",
+      "status": "done",
       "area": "app",
       "risk": "medium",
       "title": "Scaffold TypeScript API project",
@@ -161,6 +161,23 @@
         "Confidence score returns 0..100",
         "Risk flags cap confidence correctly",
         "Unit tests cover reliable, thin, stale and manipulation-like cases"
+      ]
+    },
+    {
+      "id": "add-dex-adapter-interface",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "medium",
+      "title": "Add DEX Adapter interface",
+      "description": "Create a standard DEXAdapter interface to discover pools and fetch raw data for price and liquidity calculation.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "DEXAdapter interface is defined",
+        "It includes getPools and getRawData methods"
       ]
     }
   ]
