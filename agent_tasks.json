@@ -127,7 +127,7 @@
     },
     {
       "id": "define-price-response-schema",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Define Fathom price response schema",
@@ -178,6 +178,23 @@
       "acceptance": [
         "DEXAdapter interface is defined",
         "It includes getPools and getRawData methods"
+      ]
+    },
+    {
+      "id": "add-aerodrome-dex-adapter",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "medium",
+      "title": "Add Aerodrome DEX Adapter",
+      "description": "Implement the DEXAdapter interface for Aerodrome on Base.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Aerodrome adapter implements DEXAdapter",
+        "Tests verify pool discovery and raw data fetching"
       ]
     }
   ]
