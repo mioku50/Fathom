@@ -3,6 +3,11 @@
 Fathom is a Base long-tail token price oracle API. It provides price, liquidity, TWAP, confidence scoring and risk flags for tokens that are not covered by major oracle networks. The product is monetized through x402 USDC payments on Base.
 
 ## Source Priority
+ Use Base Docs as the source of truth:
+   https://docs.base.org
+   https://docs.base.org/get-started/resources-for-ai-agents
+   https://docs.base.org/get-started/docs-mcp
+   https://docs.base.org/base-account/overview/what-is-base-account
 
 Before changing code, read these files in order:
 
