@@ -146,7 +146,7 @@
     },
     {
       "id": "implement-confidence-score-module",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "medium",
       "title": "Implement confidence scoring module",
@@ -194,6 +194,23 @@
       ],
       "acceptance": [
         "Aerodrome adapter implements DEXAdapter",
+        "Tests verify pool discovery and raw data fetching"
+      ]
+    },
+    {
+      "id": "add-uniswap-v3-dex-adapter",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "medium",
+      "title": "Add Uniswap V3 DEX Adapter",
+      "description": "Implement the DEXAdapter interface for Uniswap V3 on Base.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Uniswap V3 adapter implements DEXAdapter",
         "Tests verify pool discovery and raw data fetching"
       ]
     }
