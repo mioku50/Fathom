@@ -165,7 +165,7 @@
     },
     {
       "id": "add-dex-adapter-interface",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "medium",
       "title": "Add DEX Adapter interface",
@@ -211,6 +211,23 @@
       ],
       "acceptance": [
         "Uniswap V3 adapter implements DEXAdapter",
+        "Tests verify pool discovery and raw data fetching"
+      ]
+    },
+    {
+      "id": "add-uniswap-v2-dex-adapter",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "medium",
+      "title": "Add Uniswap V2 DEX Adapter",
+      "description": "Implement the DEXAdapter interface for Uniswap V2 on Base.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Uniswap V2 adapter implements DEXAdapter",
         "Tests verify pool discovery and raw data fetching"
       ]
     }
