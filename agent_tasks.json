@@ -182,7 +182,7 @@
     },
     {
       "id": "add-aerodrome-dex-adapter",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "medium",
       "title": "Add Aerodrome DEX Adapter",
@@ -229,6 +229,23 @@
       "acceptance": [
         "Uniswap V2 adapter implements DEXAdapter",
         "Tests verify pool discovery and raw data fetching"
+      ]
+    },
+    {
+      "id": "add-cache-layer",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Add caching layer for price responses",
+      "description": "Implement KV caching layer to reduce RPC calls and latency for repeated queries.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Cache layer implemented",
+        "Tests verify caching behavior"
       ]
     }
   ]
