@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "project": "fathom",
+  "task_source_priority": [
+    "agent_tasks.json",
+    "README.md",
+    "AGENTS.md",
+    "docs/architecture.md",
+    "docs/jules_autonomous_loop.md"
+  ],
+  "risk_levels": [
+    "low",
+    "medium",
+    "high",
+    "critical"
+  ],
+  "merge_policy": {
+    "low": "tests_required",
+    "medium": "tests_and_human_review",
+    "high": "human_review_required",
+    "critical": "manual_only"
+  },
+  "replenishment_policy": {
+    "minimum_todo_tasks": 3,
+    "batch_size": 3,
+    "always_add_tasks": false,
+    "tasks_per_run": 1,
+    "allowed_risks_for_generated_tasks": [
+      "low",
+      "medium"
+    ],
+    "instruction": "Add new todo tasks only when the pool falls below minimum_todo_tasks. Prefer small production steps for Fathom: price reader, schema, API endpoint, tests, cache, x402, docs and deployment hardening. Never generate high/critical tasks for autonomous execution.",
+    "max_todo_tasks": 50
+  },
+  "autonomous_loop_policy": {
+    "operating_model": "docs/jules_autonomous_loop.md",
+    "selection_rule": "Choose the first todo task that is not claimed and not high/critical risk.",
+    "anti_stall_rule": "Do not ask the user for the next task while safe low/medium tasks can be generated from README.md, docs, failing CI or TODO comments.",
+    "stabilization_first": true,
+    "max_pr_scope": "one task id per PR",
+    "failure_rule": "If CI fails, prioritize a fix task before new features."
+  },
+  "tasks": [
+    {
+      "id": "bootstrap-governance-loop",
+      "status": "done",
+      "area": "governance",
+      "risk": "low",
+      "title": "Bootstrap Jules/Codex governance loop",
+      "description": "Add AGENTS.md, task manifest, validator, tests and bridge CLI for Fathom.",
+      "allowed_paths": [
+        "AGENTS.md",
+        "agent_tasks.json",
+        "docs/**",
+        "scripts/**",
+        "tests/**",
+        "fathom_agent/**"
+      ],
+      "acceptance": [
+        "AGENTS.md exists",
+        "agent_tasks.json validates",
+        "python scripts/validate_agent_tasks.py agent_tasks.json passes",
+        "pytest tests/test_agent_tasks.py passes",
+        "python -m fathom_agent.codex_bridge status works"
+      ]
+    },
+    {
+      "id": "document-fathom-architecture",
+      "status": "todo",
+      "area": "architecture",
+      "risk": "low",
+      "title": "Document Fathom production architecture",
+      "description": "Create docs/architecture.md describing API, DEX adapters, pricing engine, confidence scoring, cache, x402 payment flow and deployment assumptions.",
+      "allowed_paths": [
+        "docs/architecture.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/architecture.md describes API boundary",
+        "docs/architecture.md describes DEX adapter interfaces",
+        "docs/architecture.md describes confidence scoring and cache",
+        "docs/architecture.md lists production risks and non-goals"
+      ]
+    },
+    {
+      "id": "choose-mvp-stack",
+      "status": "todo",
+      "area": "architecture",
+      "risk": "low",
+      "title": "Choose MVP tech stack",
+      "description": "Decide between Cloudflare Workers and Vercel for the first MVP and document the tradeoffs for viem, cache and x402 integration.",
+      "allowed_paths": [
+        "docs/architecture.md",
+        "README.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "MVP runtime choice is documented",
+        "Tradeoffs are listed",
+        "Next implementation task is updated if needed"
+      ]
+    },
+    {
+      "id": "scaffold-typescript-api",
+      "status": "todo",
+      "area": "app",
+      "risk": "medium",
+      "title": "Scaffold TypeScript API project",
+      "description": "Create a minimal TypeScript API scaffold with health endpoint and test setup, without production deployment or secrets.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "package.json",
+        "tsconfig.json",
+        "vitest.config.*",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Project installs locally",
+        "Health endpoint or handler exists",
+        "Basic test passes",
+        "No secrets or production deployment are added"
+      ]
+    },
+    {
+      "id": "define-price-response-schema",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Define Fathom price response schema",
+      "description": "Create stable TypeScript types for /v1/price response including price_usd, price_low, price_high, twap, liquidity_usd, confidence, label, pools, flags and updated_at.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "docs/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Response schema matches README concept",
+        "Tests cover required fields",
+        "Docs show one example response"
+      ]
+    },
+    {
+      "id": "implement-confidence-score-module",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "medium",
+      "title": "Implement confidence scoring module",
+      "description": "Implement deterministic confidence scoring from liquidity, source deviation, TWAP deviation, sigma/mu and market maturity using configurable thresholds.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "docs/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Confidence score returns 0..100",
+        "Risk flags cap confidence correctly",
+        "Unit tests cover reliable, thin, stale and manipulation-like cases"
+      ]
+    }
+  ]
+}
