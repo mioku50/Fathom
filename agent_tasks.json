@@ -199,7 +199,7 @@
     },
     {
       "id": "add-uniswap-v3-dex-adapter",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "medium",
       "title": "Add Uniswap V3 DEX Adapter",
@@ -246,6 +246,23 @@
       "acceptance": [
         "Cache layer implemented",
         "Tests verify caching behavior"
+      ]
+    },
+    {
+      "id": "improve-uniswap-v3-dex-adapter-error-handling",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "low",
+      "title": "Improve Uniswap V3 Adapter Error Handling",
+      "description": "Improve the error handling in the Uniswap V3 Adapter to handle rate limits and specific revert strings.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Adapter handles RPC rate limits explicitly",
+        "Adapter handles missing pool errors specifically"
       ]
     }
   ]
