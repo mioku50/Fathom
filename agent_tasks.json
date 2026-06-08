@@ -216,7 +216,7 @@
     },
     {
       "id": "add-uniswap-v2-dex-adapter",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "medium",
       "title": "Add Uniswap V2 DEX Adapter",
@@ -263,6 +263,24 @@
       "acceptance": [
         "Adapter handles RPC rate limits explicitly",
         "Adapter handles missing pool errors specifically"
+      ]
+    },
+    {
+      "id": "integrate-dex-adapters",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "medium",
+      "title": "Integrate DEX Adapters",
+      "description": "Create an orchestration component that aggregates DEX adapters to discover all pools for a token and fetch the required raw data.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Orchestration component exists",
+        "It queries multiple adapters",
+        "Tests verify aggregation"
       ]
     }
   ]
