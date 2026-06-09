@@ -58,4 +58,52 @@ describe('DEXOrchestrator Error Handling', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('should gracefully handle non-rate limit (generic) errors during getAllRawData', async () => {
+    const failingAdapter = new MockDEXAdapter('failing');
+    vi.spyOn(failingAdapter, 'getRawData').mockRejectedValue(new Error('Unknown contract revert'));
+
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setRawData('0xValidPool', { reserve0: 100n, reserve1: 200n, updatedAt: 123456 });
+
+    const orchestrator = new DEXOrchestrator([failingAdapter, uniV2]);
+
+    const testPools: PoolInfo[] = [
+      { address: '0xValidPool', dex: 'uniswap_v2', fee: 0.003 },
+      { address: '0xFailingPool', dex: 'failing', fee: 0.003 }
+    ];
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const rawDataResults = await orchestrator.getAllRawData(testPools);
+
+    expect(rawDataResults).toHaveLength(1);
+    expect(rawDataResults[0].pool.dex).toBe('uniswap_v2');
+    expect(rawDataResults[0].rawData.reserve0).toBe(100n);
+
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
+
+  it('should continue processing remaining adapters when one adapter fails with non-rate limit error in getAllPools', async () => {
+    const failingAdapter = new MockDEXAdapter('failing');
+    vi.spyOn(failingAdapter, 'getPools').mockRejectedValue(new Error('Unknown contract revert'));
+
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setPools('0xWETH', [{ address: '0xuniswap_v2Pool', dex: 'uniswap_v2', fee: 0.003 }]);
+
+    const orchestrator = new DEXOrchestrator([failingAdapter, uniV2]);
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const pools = await orchestrator.getAllPools('0xWETH');
+
+    expect(pools).toHaveLength(1);
+    expect(pools[0].dex).toBe('uniswap_v2');
+
+    expect(consoleSpy).toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
+  });
 });
