@@ -418,6 +418,40 @@ describe('Fathom API', () => {
     expect(mockPut.mock.calls[0][0]).toBe('metadata-base-0x1234567890123456789012345678901234567890')
   })
 
+
+  it('Should use cached metadata for subsequent requests to /v1/metadata', async () => {
+    const cachedMetadata = {
+      address: '0x1234567890123456789012345678901234567890',
+      symbol: 'CACHED',
+      name: 'Cached Token',
+      decimals: 6
+    }
+
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(JSON.stringify(cachedMetadata))
+    const env = {
+      FATHOM_KV: {
+        get: mockGet,
+        put: mockPut
+      }
+    } as unknown as FathomEnv
+
+    const req = new Request('http://localhost/v1/metadata?token=0x1234567890123456789012345678901234567890&chain=base', {
+      method: 'GET',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body).toEqual(cachedMetadata)
+
+    // verify it was read from cache and NOT written to
+    expect(mockGet).toHaveBeenCalledWith('metadata-base-0x1234567890123456789012345678901234567890')
+    expect(mockPut).not.toHaveBeenCalled()
+  })
+
   it('Should return 500 if KV delete fails for /v1/cache/invalidate', async () => {
     const mockDelete = vi.fn().mockRejectedValue(new Error('KV error'))
     const mockKV = { get: vi.fn(), put: vi.fn(), delete: mockDelete, list: vi.fn() } as unknown as KVNamespace
