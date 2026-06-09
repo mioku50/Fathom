@@ -1116,7 +1116,7 @@
       "title": "Add Missing Middleware Test Coverage",
       "description": "Add integration tests to explicitly verify edge cases for x402 payment validation middleware. Make sure 402 HTTP status is returned and expected JSON responses are matched.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/middleware/**",
@@ -1156,8 +1156,23 @@
         "Orchestrator gracefully handles RPC errors from adapters without crashing",
         "Error cases are covered in orchestrator tests"
       ]
+    },
+    {
+      "id": "add-rate-limit-middleware-success-tests-0a1b2c3d",
+      "title": "Add Missing Rate Limit Middleware Success Test Coverage",
+      "description": "Add integration tests to explicitly verify 200 OK successful responses and payload metrics logic for rate limit middleware.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/middleware/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Rate limit middleware tests explicitly verify successful responses and payload metrics."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 65
+  "total_tasks": 66
 }
