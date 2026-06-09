@@ -824,7 +824,7 @@
       "title": "Add latency jitter to MockDEXAdapter",
       "description": "Add optional jitter configuration to MockDEXAdapter latency simulation to more accurately mock real-world network fluctuations.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/mock_dex_adapter.ts",
@@ -865,6 +865,24 @@
       ],
       "acceptance": [
         "Vitest retries failing tests at least once"
+      ]
+    },
+    {
+      "id": "support-token-metadata",
+      "title": "Add token metadata endpoint",
+      "description": "Create a /v1/metadata endpoint to fetch token metadata (symbol, name, decimals) directly from contract calls.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/api/**",
+        "tests/api/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "New /v1/metadata endpoint handles requests for a given token address",
+        "Returns JSON containing token symbol, name, and decimals",
+        "Tests verify successful fetch and error handling for missing/invalid tokens"
       ]
     }
   ]
