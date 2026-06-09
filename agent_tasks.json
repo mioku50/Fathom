@@ -233,7 +233,7 @@
     },
     {
       "id": "add-cache-layer",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Add caching layer for price responses",
@@ -241,7 +241,8 @@
       "allowed_paths": [
         "src/**",
         "tests/**",
-        "agent_tasks.json"
+        "agent_tasks.json",
+        "wrangler.toml"
       ],
       "acceptance": [
         "Cache layer implemented",
@@ -281,6 +282,42 @@
         "Orchestration component exists",
         "It queries multiple adapters",
         "Tests verify aggregation"
+      ]
+    },
+    {
+      "id": "setup-x402-payment-layer",
+      "status": "todo",
+      "area": "api",
+      "risk": "medium",
+      "title": "Setup x402 payment wrapper",
+      "description": "Add x402 middleware to /v1/price endpoint to enforce payment via Fathom's monetization strategy before returning cached or calculated price.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Middleware intercepts unpaid requests",
+        "Returns HTTP 402 with correct payment instructions",
+        "Tests verify payment bypass vs block behavior"
+      ]
+    },
+    {
+      "id": "implement-batch-prices-endpoint",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Implement /v1/prices batch endpoint",
+      "description": "Add an endpoint that accepts a comma-separated list of tokens and returns an array of PriceResponses, utilizing the cache.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "/v1/prices endpoint exists",
+        "Validates multiple tokens up to a sane limit (e.g. 10)",
+        "Tests verify batch response schema"
       ]
     }
   ]
