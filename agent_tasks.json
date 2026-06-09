@@ -286,7 +286,7 @@
     },
     {
       "id": "implement-price-calculation",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "medium",
       "title": "Implement price calculation logic",
@@ -336,6 +336,23 @@
         "/v1/prices endpoint exists",
         "Validates multiple tokens up to a sane limit (e.g. 10)",
         "Tests verify batch response schema"
+      ]
+    },
+    {
+      "id": "write-pricing-engine-readme",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "low",
+      "title": "Write README for pricing engine",
+      "description": "Add a small README inside src/pricing explaining the adapter architecture and confidence scoring calculations.",
+      "allowed_paths": [
+        "src/pricing/README.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "README exists",
+        "README explains adapter integration",
+        "README explains pricing and confidence scoring"
       ]
     }
   ]
