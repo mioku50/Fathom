@@ -16,6 +16,76 @@ describe('Fathom API', () => {
     expect(typeof body.timestamp).toBe('string')
   })
 
+  it('Should rate limit /v1/health if FATHOM_KV is bound', async () => {
+    // The middleware defaults are limit=60, windowMs=60000.
+    // For test purposes, let's say the KV returns string values.
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+
+    // We simulate KV returning the count
+    let callCount = 0
+    const mockGet = vi.fn().mockImplementation(() => {
+      if (callCount === 0) return Promise.resolve(null)
+      return Promise.resolve(callCount.toString())
+    })
+
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    // Send 60 requests that should pass (0 to 59 in our mock counter)
+    // Actually our mockGet needs to track the real request flow or we can just send enough requests
+    for (let i = 0; i < 60; i++) {
+      const req = new Request('http://localhost/v1/health', {
+        headers: { 'cf-connecting-ip': '192.168.1.1' }
+      })
+      const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+      expect(res.status).toBe(200)
+      callCount++
+    }
+
+    // The 61st request should be rate limited
+    const reqLimit = new Request('http://localhost/v1/health', {
+      headers: { 'cf-connecting-ip': '192.168.1.1' }
+    })
+    const resLimit = await app.fetch(reqLimit, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(resLimit.status).toBe(429)
+    const bodyLimit = await resLimit.json() as any
+    expect(bodyLimit.error).toBe('rate_limited')
+  })
+
+  it('Should bypass rate limit for /v1/health if FATHOM_KV is NOT bound', async () => {
+    const env: FathomEnv = { FATHOM_KV: undefined }
+
+    for (let i = 0; i < 65; i++) {
+      const req = new Request('http://localhost/v1/health')
+      const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+      expect(res.status).toBe(200)
+    }
+  })
+
+  it('Should return 500 for /v1/health if KV operation fails', async () => {
+    const mockGet = vi.fn().mockRejectedValue(new Error('KV failure'))
+    const mockKV = { get: mockGet, put: vi.fn(), delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/health', {
+      headers: { 'cf-connecting-ip': '192.168.1.2' }
+    })
+
+    // Mock console.error to avoid polluting test output
+    const originalConsoleError = console.error
+    console.error = vi.fn()
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('Rate limit storage unavailable')
+
+    // Restore console.error
+    console.error = originalConsoleError
+  })
+
   it('Should return ok for /v1/cache/stats and not require payment', async () => {
     const req = new Request('http://localhost/v1/cache/stats')
     const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
