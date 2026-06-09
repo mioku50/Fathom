@@ -357,7 +357,7 @@
     },
     {
       "id": "improve-logging-in-cache",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Improve logging in cache layer",
@@ -403,6 +403,23 @@
       ],
       "acceptance": [
         "Tests cover DEX adapter interfaces"
+      ]
+    },
+    {
+      "id": "cache-ttl-configuration-support",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Add caching TTL fallback configuration support",
+      "description": "Allow optional overriding of the cache default TTL via an environment variable `CACHE_DEFAULT_TTL_SECONDS`. If present and parsing correctly, it should be passed instead of 60 default seconds.",
+      "allowed_paths": [
+        "src/cache.ts",
+        "src/index.ts",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests use mocked CACHE_DEFAULT_TTL_SECONDS"
       ]
     }
   ]
