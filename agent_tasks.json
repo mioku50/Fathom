@@ -926,7 +926,7 @@
       "title": "Add batch token metadata endpoint",
       "description": "Create a /v1/metadatas endpoint to fetch token metadata for multiple tokens in a single request.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/api/**",
@@ -973,6 +973,21 @@
         "Tests verify requests are counted correctly",
         "Tests verify latency is tracked correctly",
         "Edge cases like error statuses are tested"
+      ]
+    },
+    {
+      "id": "write-batch-metadata-integration-tests",
+      "title": "Write Batch Metadata Integration Tests",
+      "description": "Add integration tests to verify the /v1/metadatas endpoint end-to-end.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify the endpoint functions correctly with actual middleware and routes"
       ]
     }
   ]
