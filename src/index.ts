@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { PriceResponse } from './schema'
 import { KVCacheLayer, type FathomEnv } from './cache'
 import { x402Middleware } from './middleware/x402'
+import { validateAddressesMiddleware } from './middleware/validation'
 import { generateDummyResponse } from './utils'
 
 const app = new Hono<{ Bindings: FathomEnv }>()
@@ -10,7 +11,7 @@ app.get('/v1/health', (c) => {
   return c.json({ status: 'ok', service: 'fathom-api' })
 })
 
-app.get('/v1/price', x402Middleware, async (c) => {
+app.get('/v1/price', validateAddressesMiddleware, x402Middleware, async (c) => {
   const token = c.req.query('token') || '0x0000000000000000000000000000000000000000'
   const chain = c.req.query('chain') || 'base'
 
@@ -33,7 +34,7 @@ app.get('/v1/price', x402Middleware, async (c) => {
   return c.json(dummyResponse)
 })
 
-app.get('/v1/prices', x402Middleware, async (c) => {
+app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => {
   const tokensParam = c.req.query('tokens') || ''
   const chain = c.req.query('chain') || 'base'
 

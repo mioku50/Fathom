@@ -458,7 +458,7 @@
     },
     {
       "id": "add-request-validation-middleware",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Add request validation middleware for token addresses",
