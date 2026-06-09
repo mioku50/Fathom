@@ -527,7 +527,7 @@
     },
     {
       "id": "orchestrator-pricing-calculation-test",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "low",
       "title": "Test DEXOrchestrator Pricing Calculations",
@@ -578,6 +578,21 @@
         "When enabled, getPools and getRawData calls log their parameters and returned values (or errors)",
         "Tests are updated to verify logging behavior",
         "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "write-integration-test-fathom-api",
+      "title": "Write Integration Test for Fathom API",
+      "description": "Create an integration test to run end-to-end against the /v1/price endpoint to ensure x402 payment, cache layer, and pricing calculations are all working properly.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Integration test passes and verifies the endpoint flow"
       ]
     }
   ]
