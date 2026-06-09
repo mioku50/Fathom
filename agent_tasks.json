@@ -842,7 +842,7 @@
       "title": "Fix PriceCalculator Unit Tests",
       "description": "Add edge case tests for the PriceCalculator.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/price_calculator.test.ts",
@@ -883,6 +883,21 @@
         "New /v1/metadata endpoint handles requests for a given token address",
         "Returns JSON containing token symbol, name, and decimals",
         "Tests verify successful fetch and error handling for missing/invalid tokens"
+      ]
+    },
+    {
+      "id": "write-orchestrator-caching-unit-tests",
+      "title": "Write Orchestrator Caching Unit Tests",
+      "description": "Add tests to verify that DEXOrchestrator properly interacts with the cache layer (e.g. setting/retrieving data from cache when appropriate).",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/orchestrator_cache.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "DEXOrchestrator caching unit tests are added and passing"
       ]
     }
   ]
