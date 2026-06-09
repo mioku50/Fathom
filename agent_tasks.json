@@ -1146,7 +1146,7 @@
       "title": "Write Viem Client Error Tests for Orchestrator",
       "description": "Add tests to orchestrator.test.ts to verify orchestrator gracefully handles RPC limits when viem client throws errors.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/orchestrator.test.ts",
@@ -1190,8 +1190,38 @@
         "Requires admin x402 payment or auth header.",
         "Tests verify cache invalidation behavior."
       ]
+    },
+    {
+      "id": "write-viem-client-error-tests-aerodrome-1a2b3c",
+      "title": "Write Viem Client Error Tests for Aerodrome Adapter",
+      "description": "Add tests to verify Aerodrome adapter gracefully handles RPC rate limits.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/adapters/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Aerodrome adapter tests cover RPC rate limit errors explicitly"
+      ]
+    },
+    {
+      "id": "write-viem-client-error-tests-uniswapv2-4d5e6f",
+      "title": "Write Viem Client Error Tests for Uniswap V2 Adapter",
+      "description": "Add tests to verify Uniswap V2 adapter gracefully handles RPC rate limits.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/adapters/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Uniswap V2 adapter tests cover RPC rate limit errors explicitly"
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 67
+  "todo_tasks": 4,
+  "total_tasks": 69
 }
