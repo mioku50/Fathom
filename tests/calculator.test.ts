@@ -66,6 +66,46 @@ describe('PriceCalculator', () => {
     });
   });
 
+  describe('Edge Cases', () => {
+    it('should handle large bigints resulting in Infinity', () => {
+      // Very large reserve
+      const hugeReserve = 1000000000000000000000000000000000000000000000000000000000000n;
+      const result1 = PriceCalculator.calculateV2(hugeReserve, hugeReserve, 18, 6);
+      expect(result1.priceInQuote).not.toBeNaN();
+      // JavaScript Numbers go to Infinity around 1e308, so hugeReserve here goes to ~1e60, which is fine
+      // But let's verify math is consistent
+      expect(result1.liquidityInQuote).toBeGreaterThan(0);
+    });
+
+    it('should handle NaN decimals resulting in NaN values gracefully in V2', () => {
+      const result = PriceCalculator.calculateV2(1000n, 1000n, NaN, 6);
+      expect(result.priceInQuote).toBeNaN();
+    });
+
+    it('should handle NaN decimals resulting in NaN values gracefully in V3', () => {
+      const result = PriceCalculator.calculateV3(79228162514264337593543950336n, 1000000n, true, NaN, 18);
+      expect(result.priceInQuote).toBeNaN();
+    });
+
+    it('should handle tiny sqrtPriceX96 values correctly', () => {
+      const tinySqrtPriceX96 = 1n; // Minimum non-zero value
+      const liquidity = 1000000n;
+
+      const result = PriceCalculator.calculateV3(tinySqrtPriceX96, liquidity, true, 18, 18);
+      expect(result.priceInQuote).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should handle large sqrtPriceX96 values correctly', () => {
+      // Max uint160 is roughly ~1.46e48
+      const maxSqrtPriceX96 = 1461501637330902918203684832716283019655932542975n;
+      const liquidity = 1000000n;
+
+      const result = PriceCalculator.calculateV3(maxSqrtPriceX96, liquidity, true, 18, 18);
+      // P will be huge
+      expect(result.priceInQuote).toBeGreaterThan(0);
+    });
+  });
+
   describe('calculatePoolPriceAndLiquidity', () => {
     it('should route to V3 calculation if V3 fields exist', () => {
       const rawData: RawPoolData = {
