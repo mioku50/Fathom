@@ -618,7 +618,7 @@
       "title": "Test PriceCalculator with MockDEXAdapter Logging",
       "description": "Create tests in PriceCalculator to verify that when MockDEXAdapter with logging is injected, it operates correctly without interfering with pricing calculation flows.",
       "area": "pricing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/**",
@@ -662,6 +662,23 @@
         "Endpoint exists at /v1/health",
         "Returns a success payload",
         "Tests verify the endpoint behaves correctly"
+      ]
+    },
+    {
+      "id": "add-orchestrator-error-handling-tests",
+      "title": "Add Error Handling Tests for DEXOrchestrator",
+      "description": "Expand tests for DEXOrchestrator to ensure it gracefully handles missing adapters and continues to process remaining adapters when one adapter fails.",
+      "area": "pricing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify DEXOrchestrator handles missing adapters gracefully",
+        "Tests verify DEXOrchestrator continues processing if one adapter fails",
+        "Tests pass successfully"
       ]
     }
   ]
