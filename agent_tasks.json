@@ -1131,7 +1131,7 @@
       "title": "Write Additional DEXOrchestrator Tests",
       "description": "Add missing error integration tests for DEXOrchestrator to ensure unexpected non-rate limit RPC errors are skipped completely and do not throw uncaught exceptions.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/**",
@@ -1171,8 +1171,27 @@
       "acceptance": [
         "Rate limit middleware tests explicitly verify successful responses and payload metrics."
       ]
+    },
+    {
+      "id": "add-cache-invalidation-endpoint-5f4b9d1e",
+      "title": "Add Cache Invalidation Endpoint",
+      "description": "Add a new endpoint /v1/cache/invalidate to explicitly clear cache entries for a given token or pool address.",
+      "area": "api",
+      "status": "todo",
+      "risk": "medium",
+      "allowed_paths": [
+        "src/api/**",
+        "src/index.ts",
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Endpoint successfully clears cache in FATHOM_KV.",
+        "Requires admin x402 payment or auth header.",
+        "Tests verify cache invalidation behavior."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 66
+  "total_tasks": 67
 }
