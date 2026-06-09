@@ -3,6 +3,15 @@ import app from '../src/index'
 import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 
+vi.mock('../src/api/metadata', () => ({
+  getTokenMetadata: vi.fn().mockResolvedValue({
+    address: '0x1234567890123456789012345678901234567890',
+    symbol: 'TST',
+    name: 'Test Token',
+    decimals: 18
+  })
+}))
+
 describe('Fathom API', () => {
   it('Should return ok for /v1/health', async () => {
     const req = new Request('http://localhost/v1/health')
@@ -376,6 +385,37 @@ describe('Fathom API', () => {
     expect(body.message).toBe('Cache invalidated successfully')
 
     expect(mockDelete).toHaveBeenCalledWith('price:base:0x0000000000000000000000000000000000000000')
+  })
+
+  it('Should successfully return metadata for /v1/metadata', async () => {
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const env = {
+      FATHOM_KV: {
+        get: mockGet,
+        put: mockPut
+      }
+    } as unknown as FathomEnv
+
+    const req = new Request('http://localhost/v1/metadata?token=0x1234567890123456789012345678901234567890&chain=base', {
+      method: 'GET',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body).toEqual({
+      address: '0x1234567890123456789012345678901234567890',
+      symbol: 'TST',
+      name: 'Test Token',
+      decimals: 18
+    })
+
+    // verify it was cached
+    expect(mockPut).toHaveBeenCalled()
+    expect(mockPut.mock.calls[0][0]).toBe('metadata-base-0x1234567890123456789012345678901234567890')
   })
 
   it('Should return 500 if KV delete fails for /v1/cache/invalidate', async () => {

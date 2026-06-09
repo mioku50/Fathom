@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import type { PriceResponse } from './schema'
 import { KVCacheLayer, type FathomEnv, getCacheStats } from './cache'
+import { Address } from 'viem'
 import { x402Middleware } from './middleware/x402'
 import { validateAddressesMiddleware } from './middleware/validation'
 import { rateLimitMiddleware } from './middleware/rate_limit'
 import { generateDummyResponse } from './utils'
+import { getTokenMetadata } from './api/metadata'
 
 const app = new Hono<{ Bindings: FathomEnv }>()
 
@@ -102,6 +104,43 @@ app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
   }
 
   return c.json({ status: 'ok', message: 'Cache invalidated successfully' })
+})
+
+app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) => {
+  const token = c.req.query('token') as Address
+  const chain = c.req.query('chain') || 'base'
+
+  if (chain !== 'base') {
+    return c.json({ error: 'Only base chain is currently supported for metadata' }, 400)
+  }
+
+  // 24 hours TTL for metadata
+  const defaultTTL = 86400
+  const cacheKey = `metadata-${chain}-${token}`
+
+  if (c.env?.FATHOM_KV) {
+    const cachedResponseStr = await c.env.FATHOM_KV.get(cacheKey)
+    if (cachedResponseStr) {
+      try {
+        const cachedResponse = JSON.parse(cachedResponseStr)
+        return c.json(cachedResponse)
+      } catch (e) {
+        // ignore parse error and fetch fresh
+      }
+    }
+  }
+
+  try {
+    const metadata = await getTokenMetadata(token)
+
+    if (c.env?.FATHOM_KV) {
+      c.executionCtx.waitUntil(c.env.FATHOM_KV.put(cacheKey, JSON.stringify(metadata), { expirationTtl: defaultTTL }))
+    }
+
+    return c.json(metadata)
+  } catch (error) {
+    return c.json({ error: 'Failed to fetch token metadata' }, 500)
+  }
 })
 
 export default app
