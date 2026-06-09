@@ -85,18 +85,29 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
 
 app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
   const token = c.req.query('token')
+  const pool = c.req.query('pool')
   const chain = c.req.query('chain') || 'base'
 
-  if (!token) {
-    return c.json({ error: 'token parameter is required' }, 400)
+  if (!token && !pool) {
+    return c.json({ error: 'Either token or pool parameter is required' }, 400)
   }
 
   if (c.env?.FATHOM_KV) {
-    const cacheLayer = new KVCacheLayer(c.env.FATHOM_KV)
-    const cacheKey = cacheLayer.getCacheKey(token, chain)
-
     try {
-      await c.env.FATHOM_KV.delete(cacheKey)
+      if (token) {
+        const cacheLayer = new KVCacheLayer(c.env.FATHOM_KV)
+        const cacheKey = cacheLayer.getCacheKey(token, chain)
+        await c.env.FATHOM_KV.delete(cacheKey)
+      }
+
+      if (pool) {
+        // According to src/orchestrator.ts these are the cache keys used for pools
+        const poolsCacheKey = `orchestrator:pools:${pool.toLowerCase()}`
+        const rawCacheKey = `orchestrator:raw:${pool.toLowerCase()}`
+
+        await c.env.FATHOM_KV.delete(poolsCacheKey)
+        await c.env.FATHOM_KV.delete(rawCacheKey)
+      }
     } catch (e) {
       console.error('KV Cache delete error:', e)
       return c.json({ error: 'Failed to invalidate cache' }, 500)

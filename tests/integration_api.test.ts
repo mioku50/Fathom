@@ -337,4 +337,73 @@ describe('Fathom API Integration Test', () => {
     expect(stats.hits).toBeGreaterThan(0)
     expect(stats.misses).toBeGreaterThan(0)
   })
+
+  it('Should successfully invalidate cache through /v1/cache/invalidate', async () => {
+    const mockDelete = vi.fn().mockResolvedValue(undefined)
+    const mockKV = { get: vi.fn(), put: vi.fn(), delete: mockDelete, list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const token = '0x1234567890123456789012345678901234567890'
+    const req = new Request(`http://localhost/v1/cache/invalidate?token=${token}&chain=base`, {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.message).toBe('Cache invalidated successfully')
+
+    expect(mockDelete).toHaveBeenCalledWith(`price:base:${token.toLowerCase()}`)
+  })
+
+  it('Should successfully invalidate cache for pool address through /v1/cache/invalidate', async () => {
+    const mockDelete = vi.fn().mockResolvedValue(undefined)
+    const mockKV = { get: vi.fn(), put: vi.fn(), delete: mockDelete, list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const pool = '0x0987654321098765432109876543210987654321'
+    const req = new Request(`http://localhost/v1/cache/invalidate?pool=${pool}&chain=base`, {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.message).toBe('Cache invalidated successfully')
+
+    expect(mockDelete).toHaveBeenCalledWith(`orchestrator:pools:${pool.toLowerCase()}`)
+    expect(mockDelete).toHaveBeenCalledWith(`orchestrator:raw:${pool.toLowerCase()}`)
+  })
+
+  it('Should fail /v1/cache/invalidate if missing x402 payment', async () => {
+    const env: FathomEnv = {}
+    const req = new Request('http://localhost/v1/cache/invalidate?token=0x1234', {
+      method: 'POST'
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(402)
+  })
+
+  it('Should fail /v1/cache/invalidate if missing token or pool', async () => {
+    const env: FathomEnv = {}
+    const req = new Request('http://localhost/v1/cache/invalidate?chain=base', {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('Either token or pool parameter is required')
+  })
 });
