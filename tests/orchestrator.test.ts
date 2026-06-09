@@ -1,3 +1,4 @@
+import { UniswapV3Adapter } from '../src/adapters/uniswap_v3';
 import { describe, it, expect, vi } from 'vitest';
 import { DEXOrchestrator } from '../src/orchestrator';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../src/dex_adapter';
@@ -148,5 +149,39 @@ describe('DEXOrchestrator', () => {
 
     consoleWarnSpy.mockRestore();
     consoleErrorSpy.mockRestore();
+  });
+
+  it('should handle RPC rate limit errors from viem client gracefully', async () => {
+    const uniswapAdapter = new UniswapV3Adapter();
+    (uniswapAdapter as any).client = {
+      readContract: vi.fn().mockRejectedValue(new Error('HTTP request failed with status 429: Rate limit exceeded'))
+    };
+
+    const orchestrator = new DEXOrchestrator([
+      new MockAerodromeAdapter(),
+      uniswapAdapter
+    ]);
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // getPools should not crash and should return pools from MockAerodromeAdapter
+    const pools = await orchestrator.getAllPools('0xTOKEN');
+    expect(pools.length).toBe(2);
+    expect(pools).toEqual(expect.arrayContaining([
+      expect.objectContaining({ address: '0xA1', dex: 'aerodrome' }),
+      expect.objectContaining({ address: '0xA2', dex: 'aerodrome' })
+    ]));
+
+    // getAllRawData should not crash
+    const poolToFetch = [
+      { address: '0xA1', dex: 'aerodrome', fee: 0.003 },
+      { address: '0xU1', dex: 'uniswap_v3', fee: 0.003 }
+    ];
+
+    const allData = await orchestrator.getAllRawData(poolToFetch);
+    expect(allData.length).toBe(1);
+    expect(allData[0].pool.address).toBe('0xA1');
+
+    consoleSpy.mockRestore();
   });
 });
