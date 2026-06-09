@@ -600,7 +600,7 @@
       "title": "Improve Error Handling in Rate Limit Middleware",
       "description": "Currently rate limiting handles generic errors but we should ensure it specifically logs kv related errors and returns a 500 when the backend storage fails, preventing infinite passes if KV breaks.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/middleware/rate_limit.ts",
@@ -644,6 +644,24 @@
         "MockDEXAdapter has an error count property that increments when it simulates throwing an error",
         "Tests exist to verify error tracking",
         "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "add-health-check-endpoint",
+      "title": "Add Health Check Endpoint",
+      "description": "Add a /v1/health endpoint that returns basic service status.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/index.ts",
+        "tests/index.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Endpoint exists at /v1/health",
+        "Returns a success payload",
+        "Tests verify the endpoint behaves correctly"
       ]
     }
   ]
