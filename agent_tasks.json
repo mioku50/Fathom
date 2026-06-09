@@ -442,7 +442,7 @@
     },
     {
       "id": "add-mock-dex-adapter-to-factory",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "low",
       "title": "Add Mock DEX Adapter for testing",
@@ -491,6 +491,54 @@
         "Rate limit middleware is implemented",
         "Middleware correctly limits excessive requests",
         "Tests verify the rate limiting functionality"
+      ]
+    },
+    {
+      "id": "refactor-adapters-integration-test-to-use-mock",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "low",
+      "title": "Refactor Adapters Integration Test to use MockDEXAdapter",
+      "description": "Replace FakeAdapter in tests/pricing/adapters_integration.test.ts with the newly created MockDEXAdapter.",
+      "allowed_paths": [
+        "tests/pricing/adapters_integration.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "adapters_integration.test.ts uses MockDEXAdapter",
+        "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "add-mock-adapter-error-tests",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "low",
+      "title": "Add Error Handling Tests to MockDEXAdapter",
+      "description": "Expand tests for MockDEXAdapter to ensure it can gracefully handle and simulate various network and RPC errors.",
+      "allowed_paths": [
+        "tests/pricing/mock_dex_adapter.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Additional error simulation test cases added",
+        "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "orchestrator-pricing-calculation-test",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "low",
+      "title": "Test DEXOrchestrator Pricing Calculations",
+      "description": "Add tests to ensure DEXOrchestrator correctly calculates prices using data provided by MockDEXAdapters.",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify price calculation logic",
+        "Tests pass successfully"
       ]
     }
   ]
