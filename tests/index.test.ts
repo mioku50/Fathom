@@ -3,12 +3,39 @@ import app from '../src/index'
 import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 
+// Mock the generateDummyResponse function
+vi.mock('../src/utils', () => ({
+  generateDummyResponse: vi.fn().mockImplementation((token: string, chain: string) => ({
+    token,
+    chain,
+    symbol: 'DUMMY',
+    price_usd: 1.5,
+    price_low: 1.4,
+    price_high: 1.6,
+    twap_5m: 1.5,
+    confidence: 85,
+    label: 'healthy',
+    liquidity_usd: 100000,
+    main_pool: { dex: 'aerodrome', address: '0x123', fee: 0.003 },
+    flags: [],
+    updated_at: new Date().toISOString()
+  }))
+}))
+
 vi.mock('../src/api/metadata', () => ({
   getTokenMetadata: vi.fn().mockResolvedValue({
     address: '0x1234567890123456789012345678901234567890',
     symbol: 'TST',
     name: 'Test Token',
     decimals: 18
+  }),
+  getBatchTokenMetadata: vi.fn().mockImplementation(async (tokens) => {
+    return tokens.map((t: string) => ({
+      address: t,
+      symbol: 'TST',
+      name: 'Test Token',
+      decimals: 18
+    }))
   })
 }))
 
@@ -468,5 +495,105 @@ describe('Fathom API', () => {
 
     const body = await res.json() as any
     expect(body.error).toBe('Failed to invalidate cache')
+  })
+
+
+  it('Should return metadata for multiple tokens successfully for /v1/metadatas', async () => {
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const env = {
+      FATHOM_KV: {
+        get: mockGet,
+        put: mockPut
+      }
+    } as unknown as FathomEnv
+
+    const req = new Request('http://localhost/v1/metadatas?tokens=0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321&chain=base', {
+      method: 'GET',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.length).toBe(2)
+    expect(body[0].address).toBe('0x1234567890123456789012345678901234567890')
+    expect(body[1].address).toBe('0x0987654321098765432109876543210987654321')
+
+    // verify both were cached
+    expect(mockPut).toHaveBeenCalledTimes(2)
+    expect(mockPut.mock.calls[0][0]).toBe('metadata-base-0x1234567890123456789012345678901234567890')
+    expect(mockPut.mock.calls[1][0]).toBe('metadata-base-0x0987654321098765432109876543210987654321')
+  })
+
+  it('Should use cached metadata and fetch missing metadata for /v1/metadatas', async () => {
+    const cachedMetadata = {
+      address: '0x1234567890123456789012345678901234567890',
+      symbol: 'CACHED',
+      name: 'Cached Token',
+      decimals: 6
+    }
+
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockImplementation(async (key) => {
+      if (key === 'metadata-base-0x1234567890123456789012345678901234567890') {
+        return JSON.stringify(cachedMetadata)
+      }
+      return null
+    })
+
+    const env = {
+      FATHOM_KV: {
+        get: mockGet,
+        put: mockPut
+      }
+    } as unknown as FathomEnv
+
+    const req = new Request('http://localhost/v1/metadatas?tokens=0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321&chain=base', {
+      method: 'GET',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.length).toBe(2)
+
+    // First should be cached
+    expect(body[0]).toEqual(cachedMetadata)
+
+    // Second should be fetched
+    expect(body[1].address).toBe('0x0987654321098765432109876543210987654321')
+
+    // verify it was read from cache
+    expect(mockGet).toHaveBeenCalledTimes(2)
+    // verify ONLY the second was written to cache
+    expect(mockPut).toHaveBeenCalledTimes(1)
+    expect(mockPut.mock.calls[0][0]).toBe('metadata-base-0x0987654321098765432109876543210987654321')
+  })
+
+  it('Should return 400 for /v1/metadatas if tokens are missing', async () => {
+    const req = new Request('http://localhost/v1/metadatas', {
+      method: 'GET',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('tokens parameter is required')
+  })
+
+  it('Should return 400 for /v1/metadatas if tokens exceed 10', async () => {
+    const tokens = Array(11).fill('0x1234567890123456789012345678901234567890').join(',')
+    const req = new Request(`http://localhost/v1/metadatas?tokens=${tokens}`, {
+      method: 'GET',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('Maximum 10 tokens allowed per request')
   })
 })
