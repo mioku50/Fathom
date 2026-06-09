@@ -391,7 +391,7 @@
     },
     {
       "id": "add-more-tests-for-pricing-engine",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "low",
       "title": "Add tests for pricing engine adapters",
@@ -438,6 +438,22 @@
         "Cache invalidation endpoint exists",
         "Endpoint requires authentication or x402 payment",
         "Tests verify cache is invalidated after calling the endpoint"
+      ]
+    },
+    {
+      "id": "add-mock-dex-adapter-to-factory",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "low",
+      "title": "Add Mock DEX Adapter for testing",
+      "description": "Create a Mock DEX Adapter inside the tests directory for use across various pricing engine tests to simulate valid adapter behavior.",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Mock DEX Adapter implements DEXAdapter interface",
+        "Mock can return configurable pool data"
       ]
     }
   ]
