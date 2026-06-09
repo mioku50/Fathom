@@ -407,7 +407,7 @@
     },
     {
       "id": "cache-ttl-configuration-support",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Add caching TTL fallback configuration support",
@@ -454,6 +454,24 @@
       "acceptance": [
         "Mock DEX Adapter implements DEXAdapter interface",
         "Mock can return configurable pool data"
+      ]
+    },
+    {
+      "id": "add-request-validation-middleware",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Add request validation middleware for token addresses",
+      "description": "Add a middleware to validate that the token parameter in /v1/price and tokens parameter in /v1/prices are valid hexadecimal Ethereum addresses. Return 400 Bad Request if invalid.",
+      "allowed_paths": [
+        "src/index.ts",
+        "src/middleware/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Requests with invalid token addresses return 400",
+        "Tests verify validation logic"
       ]
     }
   ]
