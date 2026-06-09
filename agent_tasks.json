@@ -740,7 +740,7 @@
       "title": "Test Health Endpoint Rate Limiting",
       "description": "Expand tests in tests/index.test.ts to verify that the /v1/health endpoint is correctly rate limited by the middleware.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/index.test.ts",
