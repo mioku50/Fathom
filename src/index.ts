@@ -73,4 +73,27 @@ app.get('/v1/prices', x402Middleware, async (c) => {
   return c.json(results)
 })
 
+app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
+  const token = c.req.query('token')
+  const chain = c.req.query('chain') || 'base'
+
+  if (!token) {
+    return c.json({ error: 'token parameter is required' }, 400)
+  }
+
+  if (c.env?.FATHOM_KV) {
+    const cacheLayer = new KVCacheLayer(c.env.FATHOM_KV)
+    const cacheKey = cacheLayer.getCacheKey(token, chain)
+
+    try {
+      await c.env.FATHOM_KV.delete(cacheKey)
+    } catch (e) {
+      console.error('KV Cache delete error:', e)
+      return c.json({ error: 'Failed to invalidate cache' }, 500)
+    }
+  }
+
+  return c.json({ status: 'ok', message: 'Cache invalidated successfully' })
+})
+
 export default app
