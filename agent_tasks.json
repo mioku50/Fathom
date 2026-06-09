@@ -585,7 +585,7 @@
       "title": "Write Integration Test for Fathom API",
       "description": "Create an integration test to run end-to-end against the /v1/price endpoint to ensure x402 payment, cache layer, and pricing calculations are all working properly.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/**",
