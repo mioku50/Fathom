@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import app from '../src/index'
 import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
+import { resetCacheStats } from '../src/cache'
 
 vi.mock('../src/api/metadata', () => ({
   getTokenMetadata: vi.fn().mockResolvedValue({
@@ -269,4 +270,71 @@ describe('Fathom API Integration Test', () => {
     expect(mockPut).toHaveBeenCalledWith('ratelimit:1.2.3.4:/v1/health', '1', expect.objectContaining({ expirationTtl: 60 }))
   })
 
-})
+
+
+  it('Should correctly return and update cache stats on /v1/cache/stats', async () => {
+    // Reset stats to ensure a clean state
+    resetCacheStats()
+
+    // Mock KV for cache layer
+    let kvStore = new Map()
+    const mockPut = vi.fn().mockImplementation((key, val) => {
+      kvStore.set(key, val)
+      return Promise.resolve(undefined)
+    })
+    // For price cache hit, KVCacheLayer expects JSON string, so let's store it as such
+    const mockGet = vi.fn().mockImplementation((key, type) => {
+      let val = kvStore.get(key)
+      if (!val) return Promise.resolve(null)
+      if (type === 'json' && typeof val === 'string') {
+          return Promise.resolve(JSON.parse(val))
+      }
+      return Promise.resolve(val)
+    })
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    // 1. Check initial stats (should be hits: 0, misses: 0)
+    const reqInitial = new Request('http://localhost/v1/cache/stats')
+    const resInitial = await app.fetch(reqInitial, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(resInitial.status).toBe(200)
+    let stats = await resInitial.json() as any
+    expect(stats.hits).toBe(0)
+    expect(stats.misses).toBe(0)
+
+    const token = '0x1111111111111111111111111111111111111111'
+
+    // 2. Trigger a cache miss by requesting price for a new token
+    const reqMiss = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+    await app.fetch(reqMiss, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+
+    // 3. Trigger a cache hit
+    // KVCacheLayer uses kv.get(key, 'json') which we mock to parse strings.
+    // So we need to store a string in our kvStore map.
+    const priceResponse = {
+      token: token,
+      chain: 'base',
+      price_usd: '1.0',
+      confidence: 1.0,
+      flags: []
+    }
+    kvStore.set(`price:base:${token}`, JSON.stringify(priceResponse))
+
+    const reqHit = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+    await app.fetch(reqHit, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+
+    // 4. Check stats again
+    const reqFinal = new Request('http://localhost/v1/cache/stats')
+    const resFinal = await app.fetch(reqFinal, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(resFinal.status).toBe(200)
+    stats = await resFinal.json() as any
+
+    expect(stats.hits).toBeGreaterThan(0)
+    expect(stats.misses).toBeGreaterThan(0)
+  })
+});

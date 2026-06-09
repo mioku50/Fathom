@@ -1101,7 +1101,7 @@
       "title": "Write Cache Stats Integration Tests",
       "description": "Add integration tests to verify the cache stats on /v1/cache/stats.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1140,8 +1140,24 @@
       "acceptance": [
         "Tests are written for unknown non-rate limit exception scenarios."
       ]
+    },
+    {
+      "id": "write-viem-client-error-tests-668abc",
+      "title": "Write Viem Client Error Tests for Orchestrator",
+      "description": "Add tests to orchestrator.test.ts to verify orchestrator gracefully handles RPC limits when viem client throws errors.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/orchestrator.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Orchestrator gracefully handles RPC errors from adapters without crashing",
+        "Error cases are covered in orchestrator tests"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 64
+  "total_tasks": 65
 }
