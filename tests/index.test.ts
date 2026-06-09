@@ -13,6 +13,18 @@ describe('Fathom API', () => {
     expect(body).toEqual({ status: 'ok', service: 'fathom-api' })
   })
 
+  it('Should return ok for /v1/cache/stats and not require payment', async () => {
+    const req = new Request('http://localhost/v1/cache/stats')
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.hits).toBeDefined()
+    expect(body.misses).toBeDefined()
+    expect(typeof body.hits).toBe('number')
+    expect(typeof body.misses).toBe('number')
+  })
+
   it('Should return 400 for /v1/price if token address is invalid', async () => {
     const req = new Request('http://localhost/v1/price?token=invalid_token&chain=base', {
       headers: { 'X-PAYMENT': 'mock_payment' }

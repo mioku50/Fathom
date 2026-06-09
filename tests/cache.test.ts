@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { KVCacheLayer } from '../src/cache'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { KVCacheLayer, getCacheStats, resetCacheStats } from '../src/cache'
 import type { PriceResponse } from '../src/schema'
 
 const mockPriceResponse: PriceResponse = {
@@ -23,6 +23,10 @@ const mockPriceResponse: PriceResponse = {
 }
 
 describe('KVCacheLayer', () => {
+  beforeEach(() => {
+    resetCacheStats()
+  })
+
   it('Should return null if KV is not provided', async () => {
     const cache = new KVCacheLayer()
     const result = await cache.get('0xabc', 'base')
@@ -38,6 +42,7 @@ describe('KVCacheLayer', () => {
 
     expect(mockGet).toHaveBeenCalledWith('price:base:0xabc', 'json')
     expect(result).toEqual(mockPriceResponse)
+    expect(getCacheStats()).toEqual({ hits: 1, misses: 0 })
   })
 
   it('Should return null if response is not cached', async () => {
@@ -49,6 +54,7 @@ describe('KVCacheLayer', () => {
 
     expect(mockGet).toHaveBeenCalledWith('price:base:0xabc', 'json')
     expect(result).toBeNull()
+    expect(getCacheStats()).toEqual({ hits: 0, misses: 1 })
   })
 
   it('Should gracefully return null if KV throws an error on get', async () => {
