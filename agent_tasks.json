@@ -476,7 +476,7 @@
     },
     {
       "id": "rate-limit-middleware",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "medium",
       "title": "Add rate limit middleware",
@@ -539,6 +539,26 @@
       "acceptance": [
         "Tests verify price calculation logic",
         "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "cache-stats-endpoint",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Add cache statistics endpoint",
+      "description": "Implement a free /v1/cache/stats endpoint that returns simple hit/miss metrics to monitor cache performance without x402 payment.",
+      "allowed_paths": [
+        "src/index.ts",
+        "src/cache.ts",
+        "tests/cache.test.ts",
+        "tests/index.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Cache stats endpoint is implemented at /v1/cache/stats",
+        "Returns basic operational metrics",
+        "Tests verify the endpoint works and requires no payment"
       ]
     }
   ]
