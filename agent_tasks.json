@@ -1071,7 +1071,7 @@
       "title": "Write Adapters Rate Limit Error tests",
       "description": "Add missing error integration tests for DEXOrchestrator to handle rate limits explicitly in edge cases.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/**",
@@ -1110,8 +1110,38 @@
       "acceptance": [
         "Tests verify cache stats are returned correctly on /v1/cache/stats"
       ]
+    },
+    {
+      "id": "add-middleware-coverage-tests-09a1f4b2",
+      "title": "Add Missing Middleware Test Coverage",
+      "description": "Add integration tests to explicitly verify edge cases for x402 payment validation middleware. Make sure 402 HTTP status is returned and expected JSON responses are matched.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/middleware/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Payment validation middleware tests successfully mock requests and assert headers / status codes."
+      ]
+    },
+    {
+      "id": "write-uncovered-adapters-rate-limit-tests-7f8d4bd2",
+      "title": "Write Additional DEXOrchestrator Tests",
+      "description": "Add missing error integration tests for DEXOrchestrator to ensure unexpected non-rate limit RPC errors are skipped completely and do not throw uncaught exceptions.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests are written for unknown non-rate limit exception scenarios."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 62
+  "todo_tasks": 4,
+  "total_tasks": 64
 }
