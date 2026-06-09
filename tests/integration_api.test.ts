@@ -146,4 +146,17 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(402)
   })
 
+  it('Should return health status and basic metrics from /v1/health', async () => {
+    const env: FathomEnv = {}
+    const req = new Request('http://localhost/v1/health')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.service).toBe('fathom-api')
+    expect(body.timestamp).toBeDefined()
+  })
+
 })
