@@ -857,7 +857,7 @@
       "title": "Add Vitest Test Retry Config",
       "description": "Configure Vitest to retry failing tests to reduce flakiness in CI environments.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "vitest.config.ts",
@@ -898,6 +898,24 @@
       ],
       "acceptance": [
         "DEXOrchestrator caching unit tests are added and passing"
+      ]
+    },
+    {
+      "id": "add-metadata-caching",
+      "title": "Add Token Metadata Caching",
+      "description": "Implement caching for the token metadata endpoint to reduce redundant contract calls.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/index.ts",
+        "tests/index.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Token metadata is cached upon first retrieval",
+        "Subsequent requests use cached metadata",
+        "Tests verify caching behavior"
       ]
     }
   ]
