@@ -980,7 +980,7 @@
       "title": "Write Batch Metadata Integration Tests",
       "description": "Add integration tests to verify the /v1/metadatas endpoint end-to-end.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1018,6 +1018,21 @@
       ],
       "acceptance": [
         "Tests verify the health endpoint functions correctly under integration conditions"
+      ]
+    },
+    {
+      "id": "write-uncovered-adapters-error-tests",
+      "title": "Write Adapters Error Integration Tests",
+      "description": "Expand test coverage in tests/pricing/adapters_integration.test.ts to cover unexpected error states for the adapter classes.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Test coverage for adapters integration includes error edge cases."
       ]
     }
   ]
