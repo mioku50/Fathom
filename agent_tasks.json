@@ -251,7 +251,7 @@
     },
     {
       "id": "improve-uniswap-v3-dex-adapter-error-handling",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "low",
       "title": "Improve Uniswap V3 Adapter Error Handling",

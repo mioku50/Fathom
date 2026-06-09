@@ -60,7 +60,10 @@ export class UniswapV3Adapter implements DEXAdapter {
               fee: fee / 1000000 // Format to decimal like 0.0005 for 500
             });
           }
-        } catch (error) {
+        } catch (error: any) {
+          if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) {
+            throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}`);
+          }
           // Ignore errors for non-existent pools
           console.error(`Error checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}:`, error);
         }
@@ -117,7 +120,10 @@ export class UniswapV3Adapter implements DEXAdapter {
         liquidity: liquidity,
         updatedAt: Math.floor(Date.now() / 1000) // slot0 doesn't have a timestamp, use current time
       };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) {
+        throw new Error(`RPC rate limit exceeded while fetching raw data for pool ${poolAddress}`);
+      }
       throw new Error(`Failed to fetch raw data for pool ${poolAddress}: ${error}`);
     }
   }
