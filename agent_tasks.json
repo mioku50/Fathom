@@ -340,7 +340,7 @@
     },
     {
       "id": "write-pricing-engine-readme",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "low",
       "title": "Write README for pricing engine",
@@ -387,6 +387,22 @@
         "Utility function generates dummy response",
         "Endpoints use the utility function",
         "Tests continue to pass"
+      ]
+    },
+    {
+      "id": "add-more-tests-for-pricing-engine",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "low",
+      "title": "Add tests for pricing engine adapters",
+      "description": "Add more test coverage for DEX adapters in pricing engine.",
+      "allowed_paths": [
+        "src/pricing/**/*.ts",
+        "tests/pricing/**/*.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests cover DEX adapter interfaces"
       ]
     }
   ]
