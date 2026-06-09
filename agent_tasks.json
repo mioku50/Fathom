@@ -908,7 +908,7 @@
       "title": "Add Token Metadata Caching",
       "description": "Implement caching for the token metadata endpoint to reduce redundant contract calls.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/index.ts",
@@ -955,6 +955,24 @@
       "acceptance": [
         "Tests verify DEXOrchestrator caches raw data under concurrency",
         "Tests verify DEXOrchestrator cache correctly hits cache limit rules"
+      ]
+    },
+    {
+      "id": "write-metrics-middleware-tests",
+      "title": "Write Metrics Middleware Tests",
+      "description": "Write missing unit tests for the planned metrics/observability middleware to ensure accurate request counting and latency tracking.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/middleware/metrics.ts",
+        "tests/middleware/metrics.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify requests are counted correctly",
+        "Tests verify latency is tracked correctly",
+        "Edge cases like error statuses are tested"
       ]
     }
   ]
