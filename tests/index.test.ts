@@ -390,7 +390,7 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
     const body = await res.json() as any
-    expect(body.error).toBe('token parameter is required')
+    expect(body.error).toBe('Either token or pool parameter is required')
   })
 
   it('Should call KV delete and return ok for /v1/cache/invalidate', async () => {
