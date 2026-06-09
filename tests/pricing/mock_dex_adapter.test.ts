@@ -99,6 +99,33 @@ describe('MockDEXAdapter', () => {
     adapter.resetErrorCount();
     expect(adapter.errorCount).toBe(0);
   });
+
+  it('should track the number of getPools calls', async () => {
+    expect(adapter.getPoolsCallCount).toBe(0);
+
+    await adapter.getPools('0xToken1');
+    expect(adapter.getPoolsCallCount).toBe(1);
+
+    await adapter.getPools('0xToken2');
+    expect(adapter.getPoolsCallCount).toBe(2);
+  });
+
+  it('should track the number of getRawData calls', async () => {
+    expect(adapter.getRawDataCallCount).toBe(0);
+
+    const mockData: RawPoolData = { reserve0: 10n, reserve1: 20n, updatedAt: 123 };
+    adapter.setRawData('0xpool1', mockData);
+
+    await adapter.getRawData('0xpool1');
+    expect(adapter.getRawDataCallCount).toBe(1);
+
+    try {
+      await adapter.getRawData('0xunknown');
+    } catch (e) {
+      // Ignored for testing call count
+    }
+    expect(adapter.getRawDataCallCount).toBe(2);
+  });
 });
 
 describe('MockDEXAdapter Logging', () => {

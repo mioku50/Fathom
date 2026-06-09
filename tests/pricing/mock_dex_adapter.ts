@@ -11,6 +11,8 @@ export class MockDEXAdapter implements DEXAdapter {
   private rawDataMap: Map<string, RawPoolData | Error> = new Map();
   private logger?: Logger | boolean;
   public errorCount: number = 0;
+  public getPoolsCallCount: number = 0;
+  public getRawDataCallCount: number = 0;
 
   constructor(id: string = 'mock_dex', logger?: Logger | boolean) {
     this.id = id;
@@ -46,6 +48,7 @@ export class MockDEXAdapter implements DEXAdapter {
   }
 
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
+    this.getPoolsCallCount++;
     this.doLog('info', `getPools called for token: ${tokenAddress}`);
     const pools = this.poolsMap.get(tokenAddress.toLowerCase()) || [];
     this.doLog('info', `getPools returned for token: ${tokenAddress}`, pools);
@@ -57,6 +60,7 @@ export class MockDEXAdapter implements DEXAdapter {
   }
 
   async getRawData(poolAddress: string): Promise<RawPoolData> {
+    this.getRawDataCallCount++;
     this.doLog('info', `getRawData called for pool: ${poolAddress}`);
     const data = this.rawDataMap.get(poolAddress.toLowerCase());
 
