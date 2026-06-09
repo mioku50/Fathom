@@ -4,40 +4,21 @@ import { UniswapV2Adapter } from '../../src/adapters/uniswap_v2';
 import { UniswapV3Adapter } from '../../src/adapters/uniswap_v3';
 import { AerodromeAdapter } from '../../src/adapters/aerodrome';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../../src/dex_adapter';
-
-// Create a stable mock adapter for testing orchestrator with real adapter instances
-class FakeAdapter implements DEXAdapter {
-  constructor(public id: string) {}
-
-  async getPools(tokenAddress: string): Promise<PoolInfo[]> {
-    if (tokenAddress === '0xWETH') {
-      return [{ address: `0x${this.id}Pool`, dex: this.id, fee: 0.003 }];
-    }
-    return [];
-  }
-
-  async getRawData(poolAddress: string): Promise<RawPoolData> {
-    if (poolAddress.includes('Error')) {
-      throw new Error(`Simulated error in ${this.id}`);
-    }
-    return {
-      reserve0: 100n,
-      reserve1: 200n,
-      updatedAt: 123456
-    };
-  }
-}
+import { MockDEXAdapter } from './mock_dex_adapter';
 
 describe('Pricing Engine Adapters Integration', () => {
   it('should instantiate all supported adapters and use them in Orchestrator', async () => {
     // Note: in a real environment these need an RPC url or mock public client,
     // but the Orchestrator doesn't care, it just calls their interfaces.
     // For this test we will just verify the Orchestrator handles multiple adapters correctly.
-    const adapters = [
-      new FakeAdapter('uniswap_v2'),
-      new FakeAdapter('uniswap_v3'),
-      new FakeAdapter('aerodrome')
-    ];
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setPools('0xWETH', [{ address: '0xuniswap_v2Pool', dex: 'uniswap_v2', fee: 0.003 }]);
+    const uniV3 = new MockDEXAdapter('uniswap_v3');
+    uniV3.setPools('0xWETH', [{ address: '0xuniswap_v3Pool', dex: 'uniswap_v3', fee: 0.003 }]);
+    const aero = new MockDEXAdapter('aerodrome');
+    aero.setPools('0xWETH', [{ address: '0xaerodromePool', dex: 'aerodrome', fee: 0.003 }]);
+
+    const adapters = [uniV2, uniV3, aero];
 
     const orchestrator = new DEXOrchestrator(adapters);
 
@@ -48,13 +29,18 @@ describe('Pricing Engine Adapters Integration', () => {
   });
 
   it('orchestrator should gracefully handle one adapter failing to discover pools', async () => {
-    const failingAdapter = new FakeAdapter('failing');
+    const failingAdapter = new MockDEXAdapter('failing');
     vi.spyOn(failingAdapter, 'getPools').mockRejectedValue(new Error('RPC limit exceeded'));
 
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setPools('0xWETH', [{ address: '0xuniswap_v2Pool', dex: 'uniswap_v2', fee: 0.003 }]);
+    const aero = new MockDEXAdapter('aerodrome');
+    aero.setPools('0xWETH', [{ address: '0xaerodromePool', dex: 'aerodrome', fee: 0.003 }]);
+
     const adapters = [
-      new FakeAdapter('uniswap_v2'),
+      uniV2,
       failingAdapter,
-      new FakeAdapter('aerodrome')
+      aero
     ];
 
     const orchestrator = new DEXOrchestrator(adapters);
@@ -72,9 +58,14 @@ describe('Pricing Engine Adapters Integration', () => {
   });
 
   it('orchestrator should gracefully handle one adapter failing to fetch raw data', async () => {
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setRawData('0xValidPool', { reserve0: 100n, reserve1: 200n, updatedAt: 123456 });
+    const aero = new MockDEXAdapter('aerodrome');
+    aero.setRawData('0xErrorPool', new Error('Simulated error in aerodrome'));
+
     const adapters = [
-      new FakeAdapter('uniswap_v2'),
-      new FakeAdapter('aerodrome')
+      uniV2,
+      aero
     ];
 
     const orchestrator = new DEXOrchestrator(adapters);
