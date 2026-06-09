@@ -771,7 +771,7 @@
       "title": "Add Delay Simulation to MockDEXAdapter",
       "description": "Add the ability to simulate network latency in the MockDEXAdapter by allowing configuration of artificial delays for getPools and getRawData calls.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/mock_dex_adapter.ts",
@@ -817,6 +817,24 @@
       "acceptance": [
         "Intentional test error logs are suppressed",
         "Tests continue to pass"
+      ]
+    },
+    {
+      "id": "mock-adapter-latency-jitter",
+      "title": "Add latency jitter to MockDEXAdapter",
+      "description": "Add optional jitter configuration to MockDEXAdapter latency simulation to more accurately mock real-world network fluctuations.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/mock_dex_adapter.ts",
+        "tests/pricing/mock_dex_adapter.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "MockDEXAdapter accepts an optional jitter configuration",
+        "Delay simulation randomly varies within the configured jitter range",
+        "Tests verify the jitter behavior"
       ]
     }
   ]
