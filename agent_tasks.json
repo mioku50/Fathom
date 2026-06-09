@@ -962,7 +962,7 @@
       "title": "Write Metrics Middleware Tests",
       "description": "Write missing unit tests for the planned metrics/observability middleware to ensure accurate request counting and latency tracking.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/middleware/metrics.ts",
@@ -1003,6 +1003,21 @@
       ],
       "acceptance": [
         "Test coverage for adapters integration includes edge cases."
+      ]
+    },
+    {
+      "id": "write-health-metrics-integration-tests",
+      "title": "Write Health Metrics Integration Tests",
+      "description": "Add integration tests to verify the /v1/health endpoint includes basic application metrics if possible, or verify health endpoint routing.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify the health endpoint functions correctly under integration conditions"
       ]
     }
   ]
