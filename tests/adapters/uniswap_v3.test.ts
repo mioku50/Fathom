@@ -57,6 +57,12 @@ describe('UniswapV3Adapter', () => {
 
       expect(pools).toHaveLength(0);
     });
+
+    it('should throw an error on RPC rate limit (429)', async () => {
+      mockReadContract.mockRejectedValue(new Error('HTTP request failed: 429 Too Many Requests'));
+
+      await expect(adapter.getPools('0x123')).rejects.toThrow(/RPC rate limit exceeded/);
+    });
   });
 
   describe('getRawData', () => {
@@ -98,6 +104,12 @@ describe('UniswapV3Adapter', () => {
       mockReadContract.mockRejectedValue(new Error('Network error'));
 
       await expect(adapter.getRawData('0xabc123')).rejects.toThrow(/Failed to fetch raw data for pool/);
+    });
+
+    it('should throw an error on RPC rate limit (429)', async () => {
+      mockReadContract.mockRejectedValue(new Error('Rate limit exceeded for endpoint'));
+
+      await expect(adapter.getRawData('0xabc123')).rejects.toThrow(/RPC rate limit exceeded/);
     });
   });
 });
