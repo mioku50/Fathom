@@ -228,4 +228,62 @@ describe('Fathom API', () => {
     // Put shouldn't be called if cache hit
     expect(mockPut).not.toHaveBeenCalled()
   })
+
+  it('Should return 402 for /v1/cache/invalidate without payment', async () => {
+    const req = new Request('http://localhost/v1/cache/invalidate?token=0xABC', {
+      method: 'POST'
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(402)
+  })
+
+  it('Should return 400 for /v1/cache/invalidate if token is missing', async () => {
+    const req = new Request('http://localhost/v1/cache/invalidate', {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('token parameter is required')
+  })
+
+  it('Should call KV delete and return ok for /v1/cache/invalidate', async () => {
+    const mockDelete = vi.fn().mockResolvedValue(undefined)
+    const mockKV = { get: vi.fn(), put: vi.fn(), delete: mockDelete, list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/invalidate?token=0xABC&chain=base', {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.message).toBe('Cache invalidated successfully')
+
+    expect(mockDelete).toHaveBeenCalledWith('price:base:0xabc')
+  })
+
+  it('Should return 500 if KV delete fails for /v1/cache/invalidate', async () => {
+    const mockDelete = vi.fn().mockRejectedValue(new Error('KV error'))
+    const mockKV = { get: vi.fn(), put: vi.fn(), delete: mockDelete, list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/invalidate?token=0xABC&chain=base', {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('Failed to invalidate cache')
+  })
 })
