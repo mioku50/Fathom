@@ -1086,7 +1086,7 @@
       "title": "Add metadata caching integration tests",
       "description": "Write an integration test to ensure that /v1/metadata correctly interacts with FATHOM_KV caching mechanism",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1142,6 +1142,6 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 64
 }

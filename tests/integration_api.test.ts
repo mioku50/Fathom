@@ -87,6 +87,69 @@ describe('Fathom API Integration Test', () => {
     expect(body.error.code).toBe('payment_required')
   })
 
+
+  it('Should successfully process request, set cache and return valid structure through /v1/metadata', async () => {
+    // Mock KV for cache layer
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const token = '0x1234567890123456789012345678901234567890'
+    const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`, {
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.address).toBe('0x1234567890123456789012345678901234567890')
+    expect(body.symbol).toBeDefined()
+    expect(body.name).toBeDefined()
+    expect(body.decimals).toBeDefined()
+
+    // KV assertions for cache miss
+    expect(mockGet).toHaveBeenCalledWith(`metadata-base-${token}`)
+    expect(mockPut).toHaveBeenCalledWith(
+      `metadata-base-${token}`,
+      expect.any(String),
+      expect.objectContaining({ expirationTtl: 86400 })
+    )
+  })
+
+  it('Should return cached response on /v1/metadata if available', async () => {
+    const cachedMetadata = {
+      address: '0x1234567890123456789012345678901234567890',
+      symbol: 'CACHE',
+      name: 'Cached Token',
+      decimals: 18
+    }
+
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(JSON.stringify(cachedMetadata))
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const token = '0x1234567890123456789012345678901234567890'
+    const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`, {
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    // Should return cached data
+    expect(body.symbol).toBe('CACHE')
+
+    // KV assertions for cache hit
+    expect(mockGet).toHaveBeenCalledWith(`metadata-base-${token}`)
+    expect(mockPut).not.toHaveBeenCalled()
+  })
+
   it('Should successfully process batch request through /v1/metadatas', async () => {
     // Mock KV for cache layer
     const mockPut = vi.fn().mockResolvedValue(undefined)
