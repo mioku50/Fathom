@@ -117,6 +117,42 @@ app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
   return c.json({ status: 'ok', message: 'Cache invalidated successfully' })
 })
 
+app.post('/v1/cache/clear', x402Middleware, async (c) => {
+  if (!c.env?.FATHOM_KV) {
+    return c.json({ error: 'Internal Server Error: KV not configured' }, 500)
+  }
+
+  try {
+    let cursor: string | undefined = undefined
+    let deletePromises: Promise<void>[] = []
+
+    do {
+      const listResult: KVNamespaceListResult<string> = await c.env.FATHOM_KV.list({ cursor })
+
+      for (const key of listResult.keys) {
+        deletePromises.push(c.env.FATHOM_KV.delete(key.name))
+
+        // Batch deletes to avoid exceeding subrequest limits (1000 per invocation)
+        if (deletePromises.length >= 100) {
+            await Promise.all(deletePromises)
+            deletePromises = []
+        }
+      }
+
+      cursor = listResult.list_complete ? undefined : listResult.cursor
+    } while (cursor)
+
+    if (deletePromises.length > 0) {
+        await Promise.all(deletePromises)
+    }
+
+    return c.json({ status: 'ok', message: 'All cache cleared successfully' })
+  } catch (e) {
+    console.error('KV Cache clear all error:', e)
+    return c.json({ error: 'Failed to clear cache' }, 500)
+  }
+})
+
 app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) => {
   const token = c.req.query('token') as Address
   const chain = c.req.query('chain') || 'base'

@@ -406,4 +406,53 @@ describe('Fathom API Integration Test', () => {
     const body = await res.json() as any
     expect(body.error).toBe('Either token or pool parameter is required')
   })
+
+  it('Should successfully clear all cache through /v1/cache/clear', async () => {
+    const mockDelete = vi.fn().mockResolvedValue(undefined)
+    const mockList = vi.fn()
+      .mockResolvedValueOnce({
+        keys: [{ name: 'key1' }, { name: 'key2' }],
+        list_complete: false,
+        cursor: 'cursor1'
+      })
+      .mockResolvedValueOnce({
+        keys: [{ name: 'key3' }],
+        list_complete: true
+      })
+
+    const mockKV = { get: vi.fn(), put: vi.fn(), delete: mockDelete, list: mockList } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/clear', {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.message).toBe('All cache cleared successfully')
+
+    expect(mockList).toHaveBeenCalledTimes(2)
+    expect(mockList).toHaveBeenNthCalledWith(1, { cursor: undefined })
+    expect(mockList).toHaveBeenNthCalledWith(2, { cursor: 'cursor1' })
+
+    expect(mockDelete).toHaveBeenCalledTimes(3)
+    expect(mockDelete).toHaveBeenCalledWith('key1')
+    expect(mockDelete).toHaveBeenCalledWith('key2')
+    expect(mockDelete).toHaveBeenCalledWith('key3')
+  })
+
+  it('Should fail /v1/cache/clear if missing x402 payment', async () => {
+    const env: FathomEnv = {}
+    const req = new Request('http://localhost/v1/cache/clear', {
+      method: 'POST'
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(402)
+  })
 });
