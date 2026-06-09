@@ -56,4 +56,28 @@ describe('MockDEXAdapter', () => {
     adapter.setRawData('0xPoOl1', mockData);
     expect(await adapter.getRawData('0XpOOl1')).toEqual(mockData);
   });
+
+  it('should handle simulated HTTP 429 Rate Limit error', async () => {
+    const error = new Error('HTTP 429: Too Many Requests');
+    (error as any).status = 429;
+    adapter.setRawData('0xpool_429', error);
+
+    await expect(adapter.getRawData('0xpool_429')).rejects.toThrow('HTTP 429: Too Many Requests');
+  });
+
+  it('should handle simulated RPC Timeout error', async () => {
+    const error = new Error('RPC Timeout');
+    (error as any).code = 'ETIMEDOUT';
+    adapter.setRawData('0xpool_timeout', error);
+
+    await expect(adapter.getRawData('0xpool_timeout')).rejects.toThrow('RPC Timeout');
+  });
+
+  it('should handle simulated Contract Revert error', async () => {
+    const error = new Error('execution reverted: UniswapV2: INSUFFICIENT_LIQUIDITY');
+    (error as any).code = 3;
+    adapter.setRawData('0xpool_revert', error);
+
+    await expect(adapter.getRawData('0xpool_revert')).rejects.toThrow('execution reverted: UniswapV2: INSUFFICIENT_LIQUIDITY');
+  });
 });
