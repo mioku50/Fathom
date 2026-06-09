@@ -80,6 +80,25 @@ describe('MockDEXAdapter', () => {
 
     await expect(adapter.getRawData('0xpool_revert')).rejects.toThrow('execution reverted: UniswapV2: INSUFFICIENT_LIQUIDITY');
   });
+
+  it('should track the number of simulated errors correctly', async () => {
+    expect(adapter.errorCount).toBe(0);
+
+    const error = new Error('Simulated RPC Error');
+    adapter.setRawData('0xpool_error_1', error);
+
+    await expect(adapter.getRawData('0xpool_error_1')).rejects.toThrow('Simulated RPC Error');
+    expect(adapter.errorCount).toBe(1);
+
+    await expect(adapter.getRawData('0xpool_error_1')).rejects.toThrow('Simulated RPC Error');
+    expect(adapter.errorCount).toBe(2);
+
+    await expect(adapter.getRawData('0xunconfigured_pool')).rejects.toThrow('Raw data not found for pool 0xunconfigured_pool');
+    expect(adapter.errorCount).toBe(3);
+
+    adapter.resetErrorCount();
+    expect(adapter.errorCount).toBe(0);
+  });
 });
 
 describe('MockDEXAdapter Logging', () => {

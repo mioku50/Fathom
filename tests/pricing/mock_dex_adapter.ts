@@ -10,6 +10,7 @@ export class MockDEXAdapter implements DEXAdapter {
   private poolsMap: Map<string, PoolInfo[]> = new Map();
   private rawDataMap: Map<string, RawPoolData | Error> = new Map();
   private logger?: Logger | boolean;
+  public errorCount: number = 0;
 
   constructor(id: string = 'mock_dex', logger?: Logger | boolean) {
     this.id = id;
@@ -51,6 +52,10 @@ export class MockDEXAdapter implements DEXAdapter {
     return pools;
   }
 
+  resetErrorCount(): void {
+    this.errorCount = 0;
+  }
+
   async getRawData(poolAddress: string): Promise<RawPoolData> {
     this.doLog('info', `getRawData called for pool: ${poolAddress}`);
     const data = this.rawDataMap.get(poolAddress.toLowerCase());
@@ -58,11 +63,13 @@ export class MockDEXAdapter implements DEXAdapter {
     if (data === undefined) {
       const error = new Error(`Raw data not found for pool ${poolAddress}`);
       this.doLog('error', `getRawData threw error for pool: ${poolAddress}`, error);
+      this.errorCount++;
       throw error;
     }
 
     if (data instanceof Error) {
       this.doLog('error', `getRawData threw error for pool: ${poolAddress}`, data);
+      this.errorCount++;
       throw data;
     }
 
