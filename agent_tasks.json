@@ -634,7 +634,7 @@
       "title": "Add Error Metrics Tracking to MockDEXAdapter",
       "description": "Expand MockDEXAdapter to track the number of simulated errors it throws during a test run to allow test suites to verify fault tolerance logic.",
       "area": "pricing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/**",
@@ -679,6 +679,26 @@
         "Tests verify DEXOrchestrator handles missing adapters gracefully",
         "Tests verify DEXOrchestrator continues processing if one adapter fails",
         "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "refactor-calculator-twap-logic",
+      "title": "Refactor TWAP Logic in Price Calculator",
+      "description": "Extract TWAP calculation logic from the PriceCalculator into a separate helper module to improve testability and maintainability.",
+      "area": "pricing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/pricing/calculator.ts",
+        "src/pricing/twap_helper.ts",
+        "tests/pricing/calculator.test.ts",
+        "tests/pricing/twap_helper.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "TWAP logic is moved to twap_helper.ts",
+        "PriceCalculator utilizes the new helper",
+        "Tests verify the helper works correctly"
       ]
     }
   ]
