@@ -13,8 +13,20 @@ describe('Fathom API', () => {
     expect(body).toEqual({ status: 'ok', service: 'fathom-api' })
   })
 
-  it('Should return valid schema for /v1/price (no cache)', async () => {
+  it('Should return 402 payment required if no X-PAYMENT header is present', async () => {
     const req = new Request('http://localhost/v1/price?token=0xABC&chain=base')
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(402)
+
+    const body = await res.json() as any
+    expect(body.error).toBeDefined()
+    expect(body.error.code).toBe('payment_required')
+  })
+
+  it('Should return valid schema for /v1/price (no cache)', async () => {
+    const req = new Request('http://localhost/v1/price?token=0xABC&chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
     const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
@@ -34,6 +46,14 @@ describe('Fathom API', () => {
     expect(body.updated_at).toBeDefined()
   })
 
+  it('Should bypass payment block if Authorization header is present', async () => {
+    const req = new Request('http://localhost/v1/price?token=0xABC&chain=base', {
+      headers: { 'Authorization': 'Bearer mock_token' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+  })
+
   it('Should set cache on first request if FATHOM_KV is bound', async () => {
     const mockPut = vi.fn().mockResolvedValue(undefined)
     const mockGet = vi.fn().mockResolvedValue(null)
@@ -41,7 +61,9 @@ describe('Fathom API', () => {
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
-    const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base')
+    const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
     const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
@@ -76,7 +98,9 @@ describe('Fathom API', () => {
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
-    const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base')
+    const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
     const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
