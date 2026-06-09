@@ -669,7 +669,7 @@
       "title": "Add Error Handling Tests for DEXOrchestrator",
       "description": "Expand tests for DEXOrchestrator to ensure it gracefully handles missing adapters and continues to process remaining adapters when one adapter fails.",
       "area": "pricing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/**",
@@ -716,6 +716,23 @@
         "Tests verify TTL expiration behavior",
         "Tests handle simulated KV errors gracefully",
         "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "mock-adapter-metrics-extension",
+      "title": "Extend MockDEXAdapter with Request Metrics",
+      "description": "Extend the MockDEXAdapter to track the number of times getPools and getRawData are called during a test to aid in testing batching and caching logic.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/mock_dex_adapter.ts",
+        "tests/pricing/mock_dex_adapter.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "MockDEXAdapter has counters for getPools and getRawData calls",
+        "Tests verify the counters increment correctly"
       ]
     }
   ]
