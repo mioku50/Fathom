@@ -14,6 +14,8 @@ export interface RawPoolData {
 }
 
 export interface DEXAdapter {
+  readonly id: string;
+
   /**
    * Discover all relevant pools for a token.
    * @param tokenAddress The ERC-20 token contract address (0x...).

@@ -268,7 +268,7 @@
     },
     {
       "id": "integrate-dex-adapters",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "medium",
       "title": "Integrate DEX Adapters",
@@ -282,6 +282,24 @@
         "Orchestration component exists",
         "It queries multiple adapters",
         "Tests verify aggregation"
+      ]
+    },
+    {
+      "id": "implement-price-calculation",
+      "status": "todo",
+      "area": "pricing",
+      "risk": "medium",
+      "title": "Implement price calculation logic",
+      "description": "Create a service to calculate price and liquidity based on raw data fetched by DEX adapters.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Service exists to calculate price from reserves/ticks",
+        "Service calculates total liquidity correctly",
+        "Tests verify price calculation logic"
       ]
     },
     {
