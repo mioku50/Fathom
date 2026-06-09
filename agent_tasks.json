@@ -373,7 +373,7 @@
     },
     {
       "id": "refactor-price-dummy-generation",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Refactor dummy price generation",
@@ -420,6 +420,24 @@
       ],
       "acceptance": [
         "Tests use mocked CACHE_DEFAULT_TTL_SECONDS"
+      ]
+    },
+    {
+      "id": "add-cache-invalidation-endpoint",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Add cache invalidation endpoint",
+      "description": "Add an endpoint to manually invalidate the cache for a given token and chain.",
+      "allowed_paths": [
+        "src/index.ts",
+        "tests/index.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Cache invalidation endpoint exists",
+        "Endpoint requires authentication or x402 payment",
+        "Tests verify cache is invalidated after calling the endpoint"
       ]
     }
   ]
