@@ -1010,7 +1010,7 @@
       "title": "Write Health Metrics Integration Tests",
       "description": "Add integration tests to verify the /v1/health endpoint includes basic application metrics if possible, or verify health endpoint routing.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1049,6 +1049,24 @@
       "acceptance": [
         "Tests verify the health endpoint functions correctly under integration conditions"
       ]
+    },
+    {
+      "id": "write-rate-limit-integration-tests-mq717dez",
+      "title": "Write Rate Limit Integration Tests",
+      "description": "Add integration tests to verify the rate limiting middleware on the /v1/health endpoint.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify rate limiting on /v1/health",
+        "Subsequent requests are blocked after limit"
+      ]
     }
-  ]
+  ],
+  "todo_tasks": 3,
+  "total_tasks": 59
 }
