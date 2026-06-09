@@ -1227,7 +1227,7 @@
       "title": "Add Cache Clear All Endpoint",
       "description": "Add a new endpoint /v1/cache/clear to clear all cache. Required for testing and emergency manual clears.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "medium",
       "allowed_paths": [
         "src/api/**",
@@ -1274,8 +1274,26 @@
       "acceptance": [
         "Tests verify cache metrics endpoint correctly queries and returns KV info."
       ]
+    },
+    {
+      "id": "add-cache-clear-pool-endpoint-6da76037",
+      "title": "Add Cache Clear Pool Endpoint",
+      "description": "Add a new endpoint /v1/cache/clear/pool to clear cache for a specific pool.",
+      "area": "api",
+      "status": "todo",
+      "risk": "medium",
+      "allowed_paths": [
+        "src/index.ts",
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Endpoint successfully clears cache for a specific pool in FATHOM_KV.",
+        "Requires admin x402 payment or auth header.",
+        "Tests verify cache clear pool behavior."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 72
+  "total_tasks": 73
 }
