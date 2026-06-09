@@ -122,6 +122,76 @@ describe('Fathom API', () => {
     )
   })
 
+  it('Should use CACHE_DEFAULT_TTL_SECONDS from env if provided and valid', async () => {
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = {
+      FATHOM_KV: mockKV,
+      CACHE_DEFAULT_TTL_SECONDS: '120'
+    }
+
+    const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    expect(mockGet).toHaveBeenCalledWith('price:base:0xdef', 'json')
+    expect(mockPut).toHaveBeenCalledWith(
+      'price:base:0xdef',
+      expect.any(String),
+      { expirationTtl: 120 }
+    )
+  })
+
+  it('Should fall back to 60s if CACHE_DEFAULT_TTL_SECONDS is invalid', async () => {
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = {
+      FATHOM_KV: mockKV,
+      CACHE_DEFAULT_TTL_SECONDS: 'invalid'
+    }
+
+    const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    expect(mockPut).toHaveBeenCalledWith(
+      'price:base:0xdef',
+      expect.any(String),
+      { expirationTtl: 60 }
+    )
+  })
+
+  it('Should fall back to 60s if CACHE_DEFAULT_TTL_SECONDS is less than 60', async () => {
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = {
+      FATHOM_KV: mockKV,
+      CACHE_DEFAULT_TTL_SECONDS: '30'
+    }
+
+    const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    expect(mockPut).toHaveBeenCalledWith(
+      'price:base:0xdef',
+      expect.any(String),
+      { expirationTtl: 60 }
+    )
+  })
+
   it('Should return cached response if FATHOM_KV has it', async () => {
     const cachedResponse: PriceResponse = {
       token: '0xDEF',
