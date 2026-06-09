@@ -54,6 +54,53 @@ describe('Fathom API', () => {
     expect(res.status).toBe(200)
   })
 
+  it('Should return 400 for /v1/prices if tokens parameter is missing', async () => {
+    const req = new Request('http://localhost/v1/prices?chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('tokens parameter is required')
+  })
+
+  it('Should return 400 for /v1/prices if more than 10 tokens are requested', async () => {
+    const tokens = '1,2,3,4,5,6,7,8,9,10,11'
+    const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('Maximum 10 tokens allowed per request')
+  })
+
+  it('Should return valid schema for /v1/prices (batch)', async () => {
+    const req = new Request('http://localhost/v1/prices?tokens=0xABC,0xDEF&chain=base', {
+      headers: { 'X-PAYMENT': 'mock_payment' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as PriceResponse[]
+    expect(Array.isArray(body)).toBe(true)
+    expect(body.length).toBe(2)
+
+    expect(body[0].token).toBe('0xABC')
+    expect(body[1].token).toBe('0xDEF')
+
+    expect(body[0].symbol).toBe('DUMMY')
+    expect(body[1].symbol).toBe('DUMMY')
+  })
+
+  it('Should bypass payment block for /v1/prices if Authorization header is present', async () => {
+    const req = new Request('http://localhost/v1/prices?tokens=0xABC&chain=base', {
+      headers: { 'Authorization': 'Bearer mock_token' }
+    })
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+  })
+
   it('Should set cache on first request if FATHOM_KV is bound', async () => {
     const mockPut = vi.fn().mockResolvedValue(undefined)
     const mockGet = vi.fn().mockResolvedValue(null)
