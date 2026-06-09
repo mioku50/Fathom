@@ -50,3 +50,12 @@ export async function getTokenMetadata(tokenAddress: Address, rpcUrl?: string): 
     throw new Error(`Failed to fetch token metadata for ${tokenAddress}`);
   }
 }
+
+export async function getBatchTokenMetadata(tokens: Address[], rpcUrl?: string): Promise<TokenMetadata[]> {
+  try {
+    return await Promise.all(tokens.map(token => getTokenMetadata(token, rpcUrl)));
+  } catch (error) {
+    console.error('Error fetching batch metadata:', error);
+    throw new Error('Failed to fetch batch token metadata');
+  }
+}

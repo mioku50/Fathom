@@ -6,7 +6,7 @@ import { x402Middleware } from './middleware/x402'
 import { validateAddressesMiddleware } from './middleware/validation'
 import { rateLimitMiddleware } from './middleware/rate_limit'
 import { generateDummyResponse } from './utils'
-import { getTokenMetadata } from './api/metadata'
+import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
 
 const app = new Hono<{ Bindings: FathomEnv }>()
 
@@ -146,6 +146,83 @@ app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) =
   } catch (error) {
     return c.json({ error: 'Failed to fetch token metadata' }, 500)
   }
+})
+
+
+app.get('/v1/metadatas', validateAddressesMiddleware, x402Middleware, async (c) => {
+  const tokensParam = c.req.query('tokens') || ''
+  const chain = c.req.query('chain') || 'base'
+
+  if (chain !== 'base') {
+    return c.json({ error: 'Only base chain is currently supported for metadata' }, 400)
+  }
+
+  if (!tokensParam) {
+    return c.json({ error: 'tokens parameter is required' }, 400)
+  }
+
+  const tokens = tokensParam.split(',').map(t => t.trim()).filter(Boolean) as Address[]
+  if (tokens.length === 0) {
+    return c.json({ error: 'tokens parameter cannot be empty' }, 400)
+  }
+
+  if (tokens.length > 10) {
+    return c.json({ error: 'Maximum 10 tokens allowed per request' }, 400)
+  }
+
+  const defaultTTL = 86400
+  const results: TokenMetadata[] = []
+  const missingTokens: Address[] = []
+  const missingIndices: number[] = []
+
+  // Initialize results array to preserve order
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    const cacheKey = `metadata-${chain}-${token}`
+    let cached = false
+
+    if (c.env?.FATHOM_KV) {
+      try {
+        const cachedResponseStr = await c.env.FATHOM_KV.get(cacheKey)
+        if (cachedResponseStr) {
+          const cachedResponse = JSON.parse(cachedResponseStr)
+          results[i] = cachedResponse
+          cached = true
+        }
+      } catch (e) {
+        console.error('KV Cache read/parse error for batch metadata:', e)
+      }
+    }
+
+    if (!cached) {
+      missingTokens.push(token)
+      missingIndices.push(i)
+    }
+  }
+
+  if (missingTokens.length > 0) {
+    try {
+      const fetchedMetadata = await getBatchTokenMetadata(missingTokens)
+
+      for (let j = 0; j < fetchedMetadata.length; j++) {
+        const metadata = fetchedMetadata[j]
+        const originalIndex = missingIndices[j]
+        results[originalIndex] = metadata
+
+        if (c.env?.FATHOM_KV) {
+          const cacheKey = `metadata-${chain}-${metadata.address}`
+          c.executionCtx.waitUntil(
+            c.env.FATHOM_KV.put(cacheKey, JSON.stringify(metadata), { expirationTtl: defaultTTL })
+              .catch(e => console.error('KV Cache write error for batch metadata:', e))
+          )
+        }
+      }
+    } catch (error) {
+      return c.json({ error: 'Failed to fetch batch token metadata' }, 500)
+    }
+  }
+
+  return c.json(results)
 })
 
 export default app
