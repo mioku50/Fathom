@@ -11,6 +11,7 @@ export class MockDEXAdapter implements DEXAdapter {
   private rawDataMap: Map<string, RawPoolData | Error> = new Map();
   private logger?: Logger | boolean;
   private delayMs: number = 0;
+  private jitterMs: number = 0;
   public errorCount: number = 0;
   public getPoolsCallCount: number = 0;
   public getRawDataCallCount: number = 0;
@@ -48,17 +49,32 @@ export class MockDEXAdapter implements DEXAdapter {
     this.rawDataMap.set(poolAddress.toLowerCase(), data);
   }
 
-  setDelay(delayMs: number): void {
+  setDelay(delayMs: number, jitterMs: number = 0): void {
     this.delayMs = delayMs;
+    this.jitterMs = jitterMs;
+  }
+
+  private async simulateDelay(): Promise<void> {
+    if (this.delayMs <= 0) return;
+
+    let actualDelay = this.delayMs;
+    if (this.jitterMs > 0) {
+      const jitterOffset = Math.random() * (this.jitterMs * 2) - this.jitterMs;
+      actualDelay += jitterOffset;
+    }
+
+    actualDelay = Math.max(0, actualDelay);
+
+    if (actualDelay > 0) {
+      await new Promise(resolve => setTimeout(resolve, actualDelay));
+    }
   }
 
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
     this.getPoolsCallCount++;
     this.doLog('info', `getPools called for token: ${tokenAddress}`);
     const pools = this.poolsMap.get(tokenAddress.toLowerCase()) || [];
-    if (this.delayMs > 0) {
-      await new Promise(resolve => setTimeout(resolve, this.delayMs));
-    }
+    await this.simulateDelay();
     this.doLog('info', `getPools returned for token: ${tokenAddress}`, pools);
     return pools;
   }
@@ -80,9 +96,7 @@ export class MockDEXAdapter implements DEXAdapter {
     this.doLog('info', `getRawData called for pool: ${poolAddress}`);
     const data = this.rawDataMap.get(poolAddress.toLowerCase());
 
-    if (this.delayMs > 0) {
-      await new Promise(resolve => setTimeout(resolve, this.delayMs));
-    }
+    await this.simulateDelay();
 
     if (data === undefined) {
       const error = new Error(`Raw data not found for pool ${poolAddress}`);

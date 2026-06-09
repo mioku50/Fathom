@@ -230,6 +230,78 @@ describe('MockDEXAdapter', () => {
 
     vi.useRealTimers();
   });
+
+  it('should simulate network delay with positive jitter', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(1); // Max positive jitter
+    adapter.setDelay(100, 20); // Base 100, Jitter 20 -> 100 + 20 = 120
+    const mockPools: PoolInfo[] = [{ address: '0xpool1', dex: 'test_mock', fee: 0.003 }];
+    adapter.setPools('0xTokenA', mockPools);
+
+    let resolved = false;
+    const promise = adapter.getPools('0xTokenA').then((res) => {
+      resolved = true;
+      return res;
+    });
+
+    await vi.advanceTimersByTimeAsync(119);
+    expect(resolved).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await promise;
+    expect(resolved).toBe(true);
+    expect(result).toEqual(mockPools);
+
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('should simulate network delay with negative jitter', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0); // Max negative jitter
+    adapter.setDelay(100, 20); // Base 100, Jitter 20 -> 100 - 20 = 80
+    const mockPools: PoolInfo[] = [{ address: '0xpool1', dex: 'test_mock', fee: 0.003 }];
+    adapter.setPools('0xTokenA', mockPools);
+
+    let resolved = false;
+    const promise = adapter.getPools('0xTokenA').then((res) => {
+      resolved = true;
+      return res;
+    });
+
+    await vi.advanceTimersByTimeAsync(79);
+    expect(resolved).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await promise;
+    expect(resolved).toBe(true);
+    expect(result).toEqual(mockPools);
+
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('should clamp simulated delay to 0 if negative jitter exceeds base delay', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0); // Max negative jitter
+    adapter.setDelay(10, 20); // Base 10, Jitter 20 -> 10 - 20 = -10 -> Clamped to 0
+    const mockPools: PoolInfo[] = [{ address: '0xpool1', dex: 'test_mock', fee: 0.003 }];
+    adapter.setPools('0xTokenA', mockPools);
+
+    let resolved = false;
+    const promise = adapter.getPools('0xTokenA').then((res) => {
+      resolved = true;
+      return res;
+    });
+
+    // Since delay is 0, it should resolve immediately without advancing timers (after microtasks)
+    const result = await promise;
+    expect(resolved).toBe(true);
+    expect(result).toEqual(mockPools);
+
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
 });
 
 describe('MockDEXAdapter Logging', () => {
