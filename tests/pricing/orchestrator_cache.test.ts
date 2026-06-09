@@ -128,4 +128,69 @@ describe('DEXOrchestrator Caching', () => {
 
     expect(adapter.getRawDataCallCount).toBe(1); // Adapter called only once (for A1)
   });
+
+  it('should properly handle concurrent requests before cache writes complete', async () => {
+    // Modify the mock cache to have an artificial delay
+    class DelayedCacheLayer extends MockCacheLayer {
+      async get(key: string): Promise<any> {
+        await new Promise(r => setTimeout(r, 10));
+        return super.get(key);
+      }
+      async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+        await new Promise(r => setTimeout(r, 10));
+        return super.set(key, value, ttlSeconds);
+      }
+    }
+
+    class DelayedAdapter extends MockAerodromeAdapter {
+      async getRawData(poolAddress: string): Promise<RawPoolData> {
+        this.getRawDataCallCount++;
+        await new Promise(r => setTimeout(r, 20));
+        return { reserve0: 100n, reserve1: 200n, updatedAt: 12345 };
+      }
+    }
+
+    const cache = new DelayedCacheLayer();
+    const adapter = new DelayedAdapter();
+    const orchestrator = new DEXOrchestrator([adapter], cache);
+
+    const pools = [{ address: '0xA1', dex: 'aerodrome', fee: 0.003 }];
+
+    // Fire 5 concurrent requests before any can populate the cache
+    const promises = [];
+    for (let i = 0; i < 5; i++) {
+      promises.push(orchestrator.getAllRawData(pools));
+    }
+
+    await Promise.all(promises);
+
+    // Because there is no Promise deduping layer in the current orchestrator implementation,
+    // all 5 concurrent requests will miss the cache simultaneously and call the adapter.
+    expect(adapter.getRawDataCallCount).toBe(5);
+  });
+
+  it('should correctly hit cache limit rules (TTL) for pools and raw data', async () => {
+    const cache = new MockCacheLayer();
+    const adapter = new MockAerodromeAdapter();
+    const orchestrator = new DEXOrchestrator([adapter], cache);
+
+    const setSpy = vi.spyOn(cache, 'set');
+
+    // 1. Fetch pools (should set TTL to 3600)
+    await orchestrator.getAllPools('0xTOKEN_TTL');
+    expect(setSpy).toHaveBeenCalledWith(
+      'orchestrator:pools:0xtoken_ttl',
+      expect.any(Array),
+      3600
+    );
+
+    // 2. Fetch raw data (should set TTL to 60)
+    const pools = [{ address: '0xA1_TTL', dex: 'aerodrome', fee: 0.003 }];
+    await orchestrator.getAllRawData(pools);
+    expect(setSpy).toHaveBeenCalledWith(
+      'orchestrator:raw:0xa1_ttl',
+      expect.any(Object),
+      60
+    );
+  });
 });
