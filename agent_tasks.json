@@ -723,7 +723,7 @@
       "title": "Extend MockDEXAdapter with Request Metrics",
       "description": "Extend the MockDEXAdapter to track the number of times getPools and getRawData are called during a test to aid in testing batching and caching logic.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/mock_dex_adapter.ts",
@@ -764,6 +764,42 @@
       "acceptance": [
         "Tests cover edge cases correctly",
         "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "mock-adapter-delay-simulation",
+      "title": "Add Delay Simulation to MockDEXAdapter",
+      "description": "Add the ability to simulate network latency in the MockDEXAdapter by allowing configuration of artificial delays for getPools and getRawData calls.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/mock_dex_adapter.ts",
+        "tests/pricing/mock_dex_adapter.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "MockDEXAdapter accepts an optional delay configuration",
+        "getPools and getRawData methods simulate the configured delay before returning",
+        "Tests verify the delay behavior"
+      ]
+    },
+    {
+      "id": "mock-adapter-reset-method",
+      "title": "Implement Reset Method for MockDEXAdapter",
+      "description": "Add a reset method to the MockDEXAdapter that clears all configured pools, raw data, counters, and errors, returning the adapter to its initial state.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/mock_dex_adapter.ts",
+        "tests/pricing/mock_dex_adapter.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "MockDEXAdapter has a reset method",
+        "Calling reset clears poolsMap, rawDataMap, errorCount, getPoolsCallCount, and getRawDataCallCount",
+        "Tests verify the reset behavior"
       ]
     }
   ]
