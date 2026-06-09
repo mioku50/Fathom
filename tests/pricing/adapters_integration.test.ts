@@ -6,7 +6,80 @@ import { AerodromeAdapter } from '../../src/adapters/aerodrome';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../../src/dex_adapter';
 import { MockDEXAdapter } from './mock_dex_adapter';
 
+
+class MockCache {
+  private store = new Map<string, any>();
+  async get(key: string) { return this.store.get(key); }
+  async set(key: string, value: any, ttl?: number) { this.store.set(key, value); }
+}
+
 describe('Pricing Engine Adapters Integration', () => {
+  it('should use cache for getAllPools when provided', async () => {
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setPools('0xWETH', [{ address: '0xuniswap_v2Pool', dex: 'uniswap_v2', fee: 0.003 }]);
+    const cache = new MockCache();
+    await cache.set('orchestrator:pools:0xweth', [{ address: '0xCachedPool', dex: 'cached_dex', fee: 0.01 }]);
+
+    const orchestrator = new DEXOrchestrator([uniV2], cache);
+    const pools = await orchestrator.getAllPools('0xWETH');
+
+    expect(pools).toHaveLength(1);
+    expect(pools[0].address).toBe('0xCachedPool');
+    expect(pools[0].dex).toBe('cached_dex');
+  });
+
+  it('should cache results from getAllPools', async () => {
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setPools('0xWETH', [{ address: '0xuniswap_v2Pool', dex: 'uniswap_v2', fee: 0.003 }]);
+    const cache = new MockCache();
+
+    const orchestrator = new DEXOrchestrator([uniV2], cache);
+    const pools = await orchestrator.getAllPools('0xWETH');
+
+    expect(pools).toHaveLength(1);
+
+    const cached = await cache.get('orchestrator:pools:0xweth');
+    expect(cached).toHaveLength(1);
+    expect(cached[0].address).toBe('0xuniswap_v2Pool');
+  });
+
+  it('should use cache for getAllRawData when provided', async () => {
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    const cache = new MockCache();
+    await cache.set('orchestrator:raw:0xpool', { reserve0: 500n, reserve1: 1000n, updatedAt: 123 });
+
+    const orchestrator = new DEXOrchestrator([uniV2], cache);
+    const testPools: PoolInfo[] = [{ address: '0xpool', dex: 'uniswap_v2', fee: 0.003 }];
+    const data = await orchestrator.getAllRawData(testPools);
+
+    expect(data).toHaveLength(1);
+    expect(data[0].rawData.reserve0).toBe(500n);
+  });
+
+  it('should handle missing adapter in getAllRawData', async () => {
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    uniV2.setRawData('0xValidPool', { reserve0: 100n, reserve1: 200n, updatedAt: 123456 });
+
+    const orchestrator = new DEXOrchestrator([uniV2]);
+    const testPools: PoolInfo[] = [
+      { address: '0xValidPool', dex: 'uniswap_v2', fee: 0.003 },
+      { address: '0xMissingAdapterPool', dex: 'missing_dex', fee: 0.003 }
+    ];
+
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const rawDataResults = await orchestrator.getAllRawData(testPools);
+
+    expect(rawDataResults).toHaveLength(1);
+    expect(rawDataResults[0].pool.dex).toBe('uniswap_v2');
+    expect(consoleWarnSpy).toHaveBeenCalledWith('No adapter found for DEX: missing_dex');
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
+
   it('should instantiate all supported adapters and use them in Orchestrator', async () => {
     // Note: in a real environment these need an RPC url or mock public client,
     // but the Orchestrator doesn't care, it just calls their interfaces.
