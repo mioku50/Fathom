@@ -104,4 +104,81 @@ describe('KVCacheLayer', () => {
     // This should not throw
     await cache.set('0xABC', 'base', mockPriceResponse, 60)
   })
+
+  it('Should return null for an expired TTL', async () => {
+    vi.useFakeTimers()
+    const mockStore: Record<string, { value: any; expiresAt: number }> = {}
+
+    const mockPut = vi.fn().mockImplementation(async (key, value, options) => {
+      mockStore[key] = {
+        value: JSON.parse(value),
+        expiresAt: Date.now() + options.expirationTtl * 1000
+      }
+    })
+
+    const mockGet = vi.fn().mockImplementation(async (key) => {
+      const item = mockStore[key]
+      if (!item) return null
+      if (Date.now() >= item.expiresAt) {
+        return null // Simulate TTL expiration
+      }
+      return item.value
+    })
+
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const cache = new KVCacheLayer(mockKV)
+
+    // Set item with 60 seconds TTL
+    await cache.set('0xABC', 'base', mockPriceResponse, 60)
+
+    // Verify it's in the cache immediately
+    const resultBefore = await cache.get('0xABC', 'base')
+    expect(resultBefore).toEqual(mockPriceResponse)
+
+    // Advance time by 61 seconds
+    vi.advanceTimersByTime(61000)
+
+    // Verify it's expired
+    const resultAfter = await cache.get('0xABC', 'base')
+    expect(resultAfter).toBeNull()
+
+    vi.useRealTimers()
+  })
+
+  it('Should handle unexpected cache eviction (miss on get after set)', async () => {
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    // Even after a successful put, get returns null (simulating unexpected eviction)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const cache = new KVCacheLayer(mockKV)
+
+    // Set should succeed
+    await cache.set('0xABC', 'base', mockPriceResponse, 60)
+
+    // Get should return null cleanly and increment misses
+    const result = await cache.get('0xABC', 'base')
+
+    expect(result).toBeNull()
+    expect(getCacheStats()).toEqual({ hits: 0, misses: 1 })
+  })
+
+  it('Should handle partial KV namespace failures gracefully', async () => {
+    // Put throws an error, but Get works normally
+    const mockPut = vi.fn().mockRejectedValue(new Error('KV write failed'))
+    const mockGet = vi.fn().mockResolvedValue(mockPriceResponse)
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const cache = new KVCacheLayer(mockKV)
+
+    // Put should catch the error and not crash
+    await cache.set('0xABC', 'base', mockPriceResponse, 60)
+
+    // Get should still work
+    const result = await cache.get('0xABC', 'base')
+
+    expect(result).toEqual(mockPriceResponse)
+    expect(getCacheStats()).toEqual({ hits: 1, misses: 0 })
+  })
 })
