@@ -27,8 +27,10 @@ export class KVCacheLayer {
       const cached = await this.kv.get(key, 'json')
 
       if (cached) {
+        console.log(`[Cache] HIT - ${key}`)
         return cached as PriceResponse
       }
+      console.log(`[Cache] MISS - ${key}`)
     } catch (e) {
       // Ignore cache read errors to prevent them from breaking the API
       console.error('KV Cache read error:', e)
