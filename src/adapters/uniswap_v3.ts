@@ -3,6 +3,7 @@ import { base } from 'viem/chains';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../dex_adapter';
 
 export class UniswapV3Adapter implements DEXAdapter {
+  readonly id = 'uniswap_v3';
   private client;
   // Common quote tokens for Base (WETH, USDC)
   private quoteTokens: Address[] = [

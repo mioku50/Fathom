@@ -3,6 +3,7 @@ import { base } from 'viem/chains';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../dex_adapter';
 
 export class AerodromeAdapter implements DEXAdapter {
+  readonly id = 'aerodrome';
   private client;
   // Common quote tokens for Base (WETH, USDC)
   private quoteTokens: Address[] = [
