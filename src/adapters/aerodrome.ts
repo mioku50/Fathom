@@ -59,7 +59,10 @@ export class AerodromeAdapter implements DEXAdapter {
               fee: stable ? 0.0005 : 0.003 // Simplified, actual fees vary
             });
           }
-        } catch (error) {
+        } catch (error: any) {
+          if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) {
+            throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken}`);
+          }
           // Ignore errors for non-existent pools
           console.error(`Error checking pool for ${tokenAddress} and ${quoteToken}:`, error);
         }
@@ -97,7 +100,10 @@ export class AerodromeAdapter implements DEXAdapter {
         reserve1: reserves[1],
         updatedAt: Number(reserves[2])
       };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) {
+        throw new Error(`RPC rate limit exceeded while fetching raw data for pool ${poolAddress}`);
+      }
       throw new Error(`Failed to fetch raw data for pool ${poolAddress}: ${error}`);
     }
   }
