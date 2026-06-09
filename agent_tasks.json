@@ -424,7 +424,7 @@
     },
     {
       "id": "add-cache-invalidation-endpoint",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Add cache invalidation endpoint",
@@ -472,6 +472,25 @@
       "acceptance": [
         "Requests with invalid token addresses return 400",
         "Tests verify validation logic"
+      ]
+    },
+    {
+      "id": "rate-limit-middleware",
+      "status": "todo",
+      "area": "api",
+      "risk": "medium",
+      "title": "Add rate limit middleware",
+      "description": "Implement a basic rate limiter using Cloudflare KV or another mechanism to prevent abuse on non-x402 endpoints.",
+      "allowed_paths": [
+        "src/middleware/rate_limit.ts",
+        "src/index.ts",
+        "tests/middleware.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Rate limit middleware is implemented",
+        "Middleware correctly limits excessive requests",
+        "Tests verify the rate limiting functionality"
       ]
     }
   ]
