@@ -5,6 +5,18 @@ export interface FathomEnv {
   CACHE_DEFAULT_TTL_SECONDS?: string
 }
 
+let hits = 0
+let misses = 0
+
+export function getCacheStats() {
+  return { hits, misses }
+}
+
+export function resetCacheStats() {
+  hits = 0
+  misses = 0
+}
+
 export class KVCacheLayer {
   private kv?: KVNamespace
   private defaultTTL: number
@@ -28,9 +40,11 @@ export class KVCacheLayer {
       const cached = await this.kv.get(key, 'json')
 
       if (cached) {
+        hits++
         console.log(`[Cache] HIT - ${key}`)
         return cached as PriceResponse
       }
+      misses++
       console.log(`[Cache] MISS - ${key}`)
     } catch (e) {
       // Ignore cache read errors to prevent them from breaking the API

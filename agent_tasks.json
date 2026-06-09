@@ -543,7 +543,7 @@
     },
     {
       "id": "cache-stats-endpoint",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Add cache statistics endpoint",
@@ -593,6 +593,24 @@
       ],
       "acceptance": [
         "Integration test passes and verifies the endpoint flow"
+      ]
+    },
+    {
+      "id": "improve-error-handling-in-middleware",
+      "title": "Improve Error Handling in Rate Limit Middleware",
+      "description": "Currently rate limiting handles generic errors but we should ensure it specifically logs kv related errors and returns a 500 when the backend storage fails, preventing infinite passes if KV breaks.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/middleware/rate_limit.ts",
+        "tests/middleware.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Middleware logs KV errors clearly",
+        "Middleware returns 500 or continues safely depending on the design",
+        "Tests verify error resilience"
       ]
     }
   ]

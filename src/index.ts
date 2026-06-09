@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import type { PriceResponse } from './schema'
-import { KVCacheLayer, type FathomEnv } from './cache'
+import { KVCacheLayer, type FathomEnv, getCacheStats } from './cache'
 import { x402Middleware } from './middleware/x402'
 import { validateAddressesMiddleware } from './middleware/validation'
 import { rateLimitMiddleware } from './middleware/rate_limit'
@@ -12,6 +12,10 @@ app.use('/v1/health', rateLimitMiddleware(60, 60000))
 
 app.get('/v1/health', (c) => {
   return c.json({ status: 'ok', service: 'fathom-api' })
+})
+
+app.get('/v1/cache/stats', (c) => {
+  return c.json(getCacheStats())
 })
 
 app.get('/v1/price', validateAddressesMiddleware, x402Middleware, async (c) => {
