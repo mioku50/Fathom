@@ -789,7 +789,7 @@
       "title": "Implement Reset Method for MockDEXAdapter",
       "description": "Add a reset method to the MockDEXAdapter that clears all configured pools, raw data, counters, and errors, returning the adapter to its initial state.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/mock_dex_adapter.ts",
@@ -835,6 +835,21 @@
         "MockDEXAdapter accepts an optional jitter configuration",
         "Delay simulation randomly varies within the configured jitter range",
         "Tests verify the jitter behavior"
+      ]
+    },
+    {
+      "id": "fix-price-calculator-unit-tests",
+      "title": "Fix PriceCalculator Unit Tests",
+      "description": "Add edge case tests for the PriceCalculator.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/price_calculator.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "PriceCalculator edge case tests are added and passing"
       ]
     }
   ]
