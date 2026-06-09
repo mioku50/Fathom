@@ -1040,7 +1040,7 @@
       "title": "Write Health Metrics Integration Tests Extra",
       "description": "Add integration tests to verify the /v1/health endpoint includes basic application metrics if possible, or verify health endpoint routing.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1080,8 +1080,23 @@
       "acceptance": [
         "Test coverage for adapters integration rate limit cases is expanded."
       ]
+    },
+    {
+      "id": "add-metadata-caching-integration-tests-42289190ab",
+      "title": "Add metadata caching integration tests",
+      "description": "Write an integration test to ensure that /v1/metadata correctly interacts with FATHOM_KV caching mechanism",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Test passes and verifies caching on /v1/metadata"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 60
+  "total_tasks": 61
 }

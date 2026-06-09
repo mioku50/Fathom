@@ -157,6 +157,11 @@ describe('Fathom API Integration Test', () => {
     expect(body.status).toBe('ok')
     expect(body.service).toBe('fathom-api')
     expect(body.timestamp).toBeDefined()
+
+    // Rigorously verify that the timestamp is a valid ISO date string
+    const parsedDate = new Date(body.timestamp)
+    expect(isNaN(parsedDate.getTime())).toBe(false)
+    expect(parsedDate.toISOString()).toBe(body.timestamp)
   })
 
 })
