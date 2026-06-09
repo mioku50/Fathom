@@ -1212,7 +1212,7 @@
       "title": "Write Viem Client Error Tests for Uniswap V2 Adapter",
       "description": "Add tests to verify Uniswap V2 adapter gracefully handles RPC rate limits.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/adapters/**",
@@ -1259,8 +1259,23 @@
         "Endpoint successfully reports cache size and other available KV metrics.",
         "Tests verify cache metrics behavior."
       ]
+    },
+    {
+      "id": "add-cache-metrics-integration-tests-9k3p2x",
+      "title": "Add Cache Metrics Integration Tests",
+      "description": "Write integration tests for the /v1/cache/metrics endpoint.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify cache metrics endpoint correctly queries and returns KV info."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 71
+  "total_tasks": 72
 }

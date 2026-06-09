@@ -69,6 +69,13 @@ describe('UniswapV2Adapter', () => {
 
       await expect(adapter.getPools('0xTokenAddress')).rejects.toThrow('RPC rate limit exceeded while checking pool for 0xTokenAddress and 0x4200000000000000000000000000000000000006');
     });
+
+    it('should explicitly handle different rate limit error messages', async () => {
+      // Mock getPair throwing a different rate limit error
+      mockReadContract.mockRejectedValue(new Error('rate limit exceeded for endpoint'));
+
+      await expect(adapter.getPools('0xTokenAddress')).rejects.toThrow('RPC rate limit exceeded while checking pool for 0xTokenAddress and 0x4200000000000000000000000000000000000006');
+    });
   });
 
   describe('getRawData', () => {
