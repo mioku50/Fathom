@@ -14,7 +14,11 @@ app.get('/v1/price', x402Middleware, async (c) => {
   const token = c.req.query('token') || '0x0000000000000000000000000000000000000000'
   const chain = c.req.query('chain') || 'base'
 
-  const cacheLayer = new KVCacheLayer(c.env?.FATHOM_KV)
+  const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
+    ? Math.max(60, parseInt(c.env.CACHE_DEFAULT_TTL_SECONDS) || 60)
+    : 60
+
+  const cacheLayer = new KVCacheLayer(c.env?.FATHOM_KV, defaultTTL)
 
   const cachedResponse = await cacheLayer.get(token, chain)
   if (cachedResponse) {
@@ -24,7 +28,7 @@ app.get('/v1/price', x402Middleware, async (c) => {
   const dummyResponse = generateDummyResponse(token, chain)
 
   // Cache the generated response before returning
-  c.executionCtx.waitUntil(cacheLayer.set(token, chain, dummyResponse, 60))
+  c.executionCtx.waitUntil(cacheLayer.set(token, chain, dummyResponse))
 
   return c.json(dummyResponse)
 })
@@ -46,7 +50,11 @@ app.get('/v1/prices', x402Middleware, async (c) => {
     return c.json({ error: 'Maximum 10 tokens allowed per request' }, 400)
   }
 
-  const cacheLayer = new KVCacheLayer(c.env?.FATHOM_KV)
+  const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
+    ? Math.max(60, parseInt(c.env.CACHE_DEFAULT_TTL_SECONDS) || 60)
+    : 60
+
+  const cacheLayer = new KVCacheLayer(c.env?.FATHOM_KV, defaultTTL)
   const results: PriceResponse[] = []
 
   for (const token of tokens) {
@@ -58,7 +66,7 @@ app.get('/v1/prices', x402Middleware, async (c) => {
 
     const dummyResponse = generateDummyResponse(token, chain)
 
-    c.executionCtx.waitUntil(cacheLayer.set(token, chain, dummyResponse, 60))
+    c.executionCtx.waitUntil(cacheLayer.set(token, chain, dummyResponse))
     results.push(dummyResponse)
   }
 
