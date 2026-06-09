@@ -2,6 +2,7 @@ import type { PriceResponse } from './schema'
 
 export interface FathomEnv {
   FATHOM_KV?: KVNamespace
+  CACHE_DEFAULT_TTL_SECONDS?: string
 }
 
 export class KVCacheLayer {

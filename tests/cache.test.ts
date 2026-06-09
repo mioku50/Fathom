@@ -75,6 +75,21 @@ describe('KVCacheLayer', () => {
     )
   })
 
+  it('Should use custom defaultTTL if provided in constructor', async () => {
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockKV = { get: vi.fn(), put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+
+    const cache = new KVCacheLayer(mockKV, 120)
+    // pass undefined for explicit ttlSeconds
+    await cache.set('0xABC', 'base', mockPriceResponse)
+
+    expect(mockPut).toHaveBeenCalledWith(
+      'price:base:0xabc',
+      JSON.stringify(mockPriceResponse),
+      { expirationTtl: 120 }
+    )
+  })
+
   it('Should ignore errors gracefully on cache set', async () => {
     const mockPut = vi.fn().mockRejectedValue(new Error('KV connection lost'))
     const mockKV = { get: vi.fn(), put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
