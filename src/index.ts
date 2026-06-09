@@ -11,7 +11,7 @@ const app = new Hono<{ Bindings: FathomEnv }>()
 app.use('/v1/health', rateLimitMiddleware(60, 60000))
 
 app.get('/v1/health', (c) => {
-  return c.json({ status: 'ok', service: 'fathom-api' })
+  return c.json({ status: 'ok', service: 'fathom-api', timestamp: new Date().toISOString() })
 })
 
 app.get('/v1/cache/stats', (c) => {
