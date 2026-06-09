@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MockDEXAdapter } from './mock_dex_adapter';
 import { PoolInfo, RawPoolData } from '../../src/dex_adapter';
 
@@ -79,5 +79,54 @@ describe('MockDEXAdapter', () => {
     adapter.setRawData('0xpool_revert', error);
 
     await expect(adapter.getRawData('0xpool_revert')).rejects.toThrow('execution reverted: UniswapV2: INSUFFICIENT_LIQUIDITY');
+  });
+});
+
+describe('MockDEXAdapter Logging', () => {
+  it('should log when a boolean logger is provided', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const loggingAdapter = new MockDEXAdapter('test_log', true);
+    loggingAdapter.setPools('0xTokenA', [{ address: '0xpool1', dex: 'test_log', fee: 0.003 }]);
+
+    await loggingAdapter.getPools('0xTokenA');
+
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[MockDEXAdapter:test_log] getPools called for token: 0xTokenA'));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[MockDEXAdapter:test_log] getPools returned for token: 0xTokenA'), expect.any(Array));
+
+    consoleSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it('should use custom logger if provided', async () => {
+    const customLogger = {
+      log: vi.fn(),
+      error: vi.fn()
+    };
+
+    const loggingAdapter = new MockDEXAdapter('test_custom', customLogger);
+    loggingAdapter.setPools('0xTokenB', [{ address: '0xpool2', dex: 'test_custom', fee: 0.003 }]);
+
+    await loggingAdapter.getPools('0xTokenB');
+
+    expect(customLogger.log).toHaveBeenCalledWith('getPools called for token: 0xTokenB');
+    expect(customLogger.log).toHaveBeenCalledWith('getPools returned for token: 0xTokenB', expect.any(Array));
+  });
+
+  it('should log errors appropriately', async () => {
+    const customLogger = {
+      log: vi.fn(),
+      error: vi.fn()
+    };
+
+    const loggingAdapter = new MockDEXAdapter('test_custom_error', customLogger);
+    const error = new Error('Simulated RPC Error');
+    loggingAdapter.setRawData('0xpool_error', error);
+
+    await expect(loggingAdapter.getRawData('0xpool_error')).rejects.toThrow('Simulated RPC Error');
+
+    expect(customLogger.log).toHaveBeenCalledWith('getRawData called for pool: 0xpool_error');
+    expect(customLogger.error).toHaveBeenCalledWith('getRawData threw error for pool: 0xpool_error', error);
   });
 });

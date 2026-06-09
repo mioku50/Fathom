@@ -566,7 +566,7 @@
       "title": "Add Logging to MockDEXAdapter",
       "description": "Add optional logging capabilities to MockDEXAdapter to assist in debugging and tracing simulated interactions during complex pricing tests.",
       "area": "pricing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/mock_dex_adapter.ts",
@@ -611,6 +611,39 @@
         "Middleware logs KV errors clearly",
         "Middleware returns 500 or continues safely depending on the design",
         "Tests verify error resilience"
+      ]
+    },
+    {
+      "id": "test-price-calculator-mock-adapter-logging",
+      "title": "Test PriceCalculator with MockDEXAdapter Logging",
+      "description": "Create tests in PriceCalculator to verify that when MockDEXAdapter with logging is injected, it operates correctly without interfering with pricing calculation flows.",
+      "area": "pricing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Test exists validating PriceCalculator with a logging MockDEXAdapter",
+        "Tests pass successfully"
+      ]
+    },
+    {
+      "id": "add-mock-dex-adapter-error-metrics",
+      "title": "Add Error Metrics Tracking to MockDEXAdapter",
+      "description": "Expand MockDEXAdapter to track the number of simulated errors it throws during a test run to allow test suites to verify fault tolerance logic.",
+      "area": "pricing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "MockDEXAdapter has an error count property that increments when it simulates throwing an error",
+        "Tests exist to verify error tracking",
+        "Tests pass successfully"
       ]
     }
   ]
