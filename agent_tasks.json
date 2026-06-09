@@ -322,7 +322,7 @@
     },
     {
       "id": "implement-batch-prices-endpoint",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "low",
       "title": "Implement /v1/prices batch endpoint",
@@ -369,6 +369,24 @@
       "acceptance": [
         "Logs on cache hit",
         "Logs on cache miss"
+      ]
+    },
+    {
+      "id": "refactor-price-dummy-generation",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Refactor dummy price generation",
+      "description": "Extract the dummy price generation object into a shared utility function so it is not duplicated across /v1/price and /v1/prices endpoints.",
+      "allowed_paths": [
+        "src/**",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Utility function generates dummy response",
+        "Endpoints use the utility function",
+        "Tests continue to pass"
       ]
     }
   ]

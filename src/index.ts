@@ -46,4 +46,58 @@ app.get('/v1/price', x402Middleware, async (c) => {
   return c.json(dummyResponse)
 })
 
+app.get('/v1/prices', x402Middleware, async (c) => {
+  const tokensParam = c.req.query('tokens') || ''
+  const chain = c.req.query('chain') || 'base'
+
+  if (!tokensParam) {
+    return c.json({ error: 'tokens parameter is required' }, 400)
+  }
+
+  const tokens = tokensParam.split(',').map(t => t.trim()).filter(Boolean)
+  if (tokens.length === 0) {
+    return c.json({ error: 'tokens parameter cannot be empty' }, 400)
+  }
+
+  if (tokens.length > 10) {
+    return c.json({ error: 'Maximum 10 tokens allowed per request' }, 400)
+  }
+
+  const cacheLayer = new KVCacheLayer(c.env?.FATHOM_KV)
+  const results: PriceResponse[] = []
+
+  for (const token of tokens) {
+    const cachedResponse = await cacheLayer.get(token, chain)
+    if (cachedResponse) {
+      results.push(cachedResponse)
+      continue
+    }
+
+    const dummyResponse: PriceResponse = {
+      token,
+      chain,
+      symbol: "DUMMY",
+      price_usd: 1.0,
+      price_low: 0.95,
+      price_high: 1.05,
+      twap_5m: 1.01,
+      confidence: 85,
+      label: "reliable",
+      liquidity_usd: 100000,
+      main_pool: {
+        dex: "aerodrome",
+        address: "0x123",
+        fee: 0.003
+      },
+      flags: [],
+      updated_at: new Date().toISOString()
+    }
+
+    c.executionCtx.waitUntil(cacheLayer.set(token, chain, dummyResponse, 60))
+    results.push(dummyResponse)
+  }
+
+  return c.json(results)
+})
+
 export default app
