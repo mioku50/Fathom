@@ -35,8 +35,12 @@ export const rateLimitMiddleware = (limit = 10, windowMs = 60000) => {
       const ttlSeconds = Math.max(60, Math.floor(windowMs / 1000))
       c.executionCtx.waitUntil(kv.put(key, count.toString(), { expirationTtl: ttlSeconds }))
     } catch (e) {
-      // Ignore KV errors to prevent breaking the API
+      // Log the KV error and return 500 to prevent infinite passes
       console.error('KV Rate Limit error:', e)
+      return c.json(
+        { error: 'internal_error', message: 'Rate limit storage unavailable' },
+        500
+      )
     }
 
     await next()
