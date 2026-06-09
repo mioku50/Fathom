@@ -892,11 +892,12 @@
       "title": "Write Orchestrator Caching Unit Tests",
       "description": "Add tests to verify that DEXOrchestrator properly interacts with the cache layer (e.g. setting/retrieving data from cache when appropriate).",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/orchestrator_cache.test.ts",
-        "agent_tasks.json"
+        "agent_tasks.json",
+        "src/orchestrator.ts"
       ],
       "acceptance": [
         "DEXOrchestrator caching unit tests are added and passing"
@@ -938,6 +939,22 @@
         "New /v1/metadatas endpoint handles requests for a comma-separated list of token addresses",
         "Returns JSON array containing metadata for each token",
         "Tests verify successful batch fetch and error handling"
+      ]
+    },
+    {
+      "id": "write-pricing-orchestrator-cache-integration-tests",
+      "title": "Write Orchestrator Cache Integration Tests",
+      "description": "Add integration tests to ensure DEXOrchestrator's cache layer properly interacts with KV cache mock logic under concurrent loads.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify DEXOrchestrator caches raw data under concurrency",
+        "Tests verify DEXOrchestrator cache correctly hits cache limit rules"
       ]
     }
   ]
