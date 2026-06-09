@@ -511,7 +511,7 @@
     },
     {
       "id": "add-mock-adapter-error-tests",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "low",
       "title": "Add Error Handling Tests to MockDEXAdapter",
@@ -559,6 +559,25 @@
         "Cache stats endpoint is implemented at /v1/cache/stats",
         "Returns basic operational metrics",
         "Tests verify the endpoint works and requires no payment"
+      ]
+    },
+    {
+      "id": "add-logging-to-mock-dex-adapter",
+      "title": "Add Logging to MockDEXAdapter",
+      "description": "Add optional logging capabilities to MockDEXAdapter to assist in debugging and tracing simulated interactions during complex pricing tests.",
+      "area": "pricing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/mock_dex_adapter.ts",
+        "tests/pricing/mock_dex_adapter.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "MockDEXAdapter accepts an optional logger or logging flag in its constructor",
+        "When enabled, getPools and getRawData calls log their parameters and returned values (or errors)",
+        "Tests are updated to verify logging behavior",
+        "Tests pass successfully"
       ]
     }
   ]
