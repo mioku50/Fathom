@@ -872,11 +872,13 @@
       "title": "Add token metadata endpoint",
       "description": "Create a /v1/metadata endpoint to fetch token metadata (symbol, name, decimals) directly from contract calls.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/api/**",
         "tests/api/**",
+        "src/index.ts",
+        "tests/index.test.ts",
         "agent_tasks.json"
       ],
       "acceptance": [
@@ -916,6 +918,26 @@
         "Token metadata is cached upon first retrieval",
         "Subsequent requests use cached metadata",
         "Tests verify caching behavior"
+      ]
+    },
+    {
+      "id": "support-batch-metadata",
+      "title": "Add batch token metadata endpoint",
+      "description": "Create a /v1/metadatas endpoint to fetch token metadata for multiple tokens in a single request.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/api/**",
+        "tests/api/**",
+        "src/index.ts",
+        "tests/index.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "New /v1/metadatas endpoint handles requests for a comma-separated list of token addresses",
+        "Returns JSON array containing metadata for each token",
+        "Tests verify successful batch fetch and error handling"
       ]
     }
   ]
