@@ -119,14 +119,16 @@ app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) =
   const cacheKey = `metadata-${chain}-${token}`
 
   if (c.env?.FATHOM_KV) {
-    const cachedResponseStr = await c.env.FATHOM_KV.get(cacheKey)
-    if (cachedResponseStr) {
-      try {
+    try {
+      const cachedResponseStr = await c.env.FATHOM_KV.get(cacheKey)
+      if (cachedResponseStr) {
         const cachedResponse = JSON.parse(cachedResponseStr)
+        console.log(`[Cache] HIT - ${cacheKey}`)
         return c.json(cachedResponse)
-      } catch (e) {
-        // ignore parse error and fetch fresh
       }
+      console.log(`[Cache] MISS - ${cacheKey}`)
+    } catch (e) {
+      console.error('KV Cache read/parse error for metadata:', e)
     }
   }
 
@@ -134,7 +136,10 @@ app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) =
     const metadata = await getTokenMetadata(token)
 
     if (c.env?.FATHOM_KV) {
-      c.executionCtx.waitUntil(c.env.FATHOM_KV.put(cacheKey, JSON.stringify(metadata), { expirationTtl: defaultTTL }))
+      c.executionCtx.waitUntil(
+        c.env.FATHOM_KV.put(cacheKey, JSON.stringify(metadata), { expirationTtl: defaultTTL })
+          .catch(e => console.error('KV Cache write error for metadata:', e))
+      )
     }
 
     return c.json(metadata)
