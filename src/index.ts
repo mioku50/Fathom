@@ -3,9 +3,12 @@ import type { PriceResponse } from './schema'
 import { KVCacheLayer, type FathomEnv } from './cache'
 import { x402Middleware } from './middleware/x402'
 import { validateAddressesMiddleware } from './middleware/validation'
+import { rateLimitMiddleware } from './middleware/rate_limit'
 import { generateDummyResponse } from './utils'
 
 const app = new Hono<{ Bindings: FathomEnv }>()
+
+app.use('/v1/health', rateLimitMiddleware(60, 60000))
 
 app.get('/v1/health', (c) => {
   return c.json({ status: 'ok', service: 'fathom-api' })
