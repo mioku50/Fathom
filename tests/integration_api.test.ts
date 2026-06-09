@@ -164,4 +164,46 @@ describe('Fathom API Integration Test', () => {
     expect(parsedDate.toISOString()).toBe(body.timestamp)
   })
 
+
+  it('Should correctly apply rate limits on /v1/health', async () => {
+    // We want to test rate limiting
+    // limit is 60, but since the KV mock controls the count, we can simulate the limit being reached
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+
+    // First request returns null (no requests yet), second returns "60" (limit reached)
+    let getCallCount = 0
+    const mockGet = vi.fn().mockImplementation(() => {
+      getCallCount++
+      if (getCallCount === 1) return Promise.resolve(null)
+      return Promise.resolve("60")
+    })
+
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    // First request - should succeed
+    const req1 = new Request('http://localhost/v1/health', {
+      headers: { 'cf-connecting-ip': '1.2.3.4' }
+    })
+
+    const res1 = await app.fetch(req1, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res1.status).toBe(200)
+
+    // Second request - mockGet will return "60", so count becomes 61 > 60
+    const req2 = new Request('http://localhost/v1/health', {
+      headers: { 'cf-connecting-ip': '1.2.3.4' }
+    })
+
+    const res2 = await app.fetch(req2, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res2.status).toBe(429)
+
+    const body = await res2.json() as any
+    expect(body.error).toBe('rate_limited')
+    expect(body.message).toBe('Too many requests')
+
+    // Verify KV interaction
+    expect(mockGet).toHaveBeenCalledWith('ratelimit:1.2.3.4:/v1/health')
+    expect(mockPut).toHaveBeenCalledWith('ratelimit:1.2.3.4:/v1/health', '1', expect.objectContaining({ expirationTtl: 60 }))
+  })
+
 })

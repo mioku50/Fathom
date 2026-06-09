@@ -1055,7 +1055,7 @@
       "title": "Write Rate Limit Integration Tests",
       "description": "Add integration tests to verify the rate limiting middleware on the /v1/health endpoint.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1095,8 +1095,23 @@
       "acceptance": [
         "Test passes and verifies caching on /v1/metadata"
       ]
+    },
+    {
+      "id": "write-cache-stats-integration-tests-421xyz",
+      "title": "Write Cache Stats Integration Tests",
+      "description": "Add integration tests to verify the cache stats on /v1/cache/stats.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify cache stats are returned correctly on /v1/cache/stats"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 61
+  "total_tasks": 62
 }
