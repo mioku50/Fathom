@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../src/dex_adapter';
 
 class MockDEXAdapter implements DEXAdapter {
+  readonly id = 'mock';
+
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
     if (tokenAddress === '0x123') {
       return [
