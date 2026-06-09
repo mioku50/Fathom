@@ -304,7 +304,7 @@
     },
     {
       "id": "setup-x402-payment-layer",
-      "status": "todo",
+      "status": "done",
       "area": "api",
       "risk": "medium",
       "title": "Setup x402 payment wrapper",
@@ -353,6 +353,22 @@
         "README exists",
         "README explains adapter integration",
         "README explains pricing and confidence scoring"
+      ]
+    },
+    {
+      "id": "improve-logging-in-cache",
+      "status": "todo",
+      "area": "api",
+      "risk": "low",
+      "title": "Improve logging in cache layer",
+      "description": "Add detailed console logs in KVCacheLayer when cache hit and cache miss occur to improve debugging.",
+      "allowed_paths": [
+        "src/cache.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Logs on cache hit",
+        "Logs on cache miss"
       ]
     }
   ]
