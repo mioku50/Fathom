@@ -1177,7 +1177,7 @@
       "title": "Add Cache Invalidation Endpoint",
       "description": "Add a new endpoint /v1/cache/invalidate to explicitly clear cache entries for a given token or pool address.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "medium",
       "allowed_paths": [
         "src/api/**",
@@ -1220,8 +1220,46 @@
       "acceptance": [
         "Uniswap V2 adapter tests cover RPC rate limit errors explicitly"
       ]
+    },
+    {
+      "id": "add-cache-clear-all-endpoint-lm5tssk1",
+      "title": "Add Cache Clear All Endpoint",
+      "description": "Add a new endpoint /v1/cache/clear to clear all cache. Required for testing and emergency manual clears.",
+      "area": "api",
+      "status": "todo",
+      "risk": "medium",
+      "allowed_paths": [
+        "src/api/**",
+        "src/index.ts",
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Endpoint successfully clears all cache in FATHOM_KV.",
+        "Requires admin x402 payment or auth header.",
+        "Tests verify cache clear all behavior."
+      ]
+    },
+    {
+      "id": "add-cache-metrics-endpoint-x4uxzkvu",
+      "title": "Add Cache Metrics Endpoint",
+      "description": "Add a new endpoint /v1/cache/metrics to report cache size and eviction metrics.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/api/**",
+        "src/index.ts",
+        "tests/integration_api.test.ts",
+        "agent_tasks.json",
+        "src/cache.ts"
+      ],
+      "acceptance": [
+        "Endpoint successfully reports cache size and other available KV metrics.",
+        "Tests verify cache metrics behavior."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 69
+  "todo_tasks": 4,
+  "total_tasks": 71
 }
