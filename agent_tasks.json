@@ -1025,7 +1025,7 @@
       "title": "Write Adapters Error Integration Tests",
       "description": "Expand test coverage in tests/pricing/adapters_integration.test.ts to cover unexpected error states for the adapter classes.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/**",
@@ -1065,8 +1065,23 @@
         "Tests verify rate limiting on /v1/health",
         "Subsequent requests are blocked after limit"
       ]
+    },
+    {
+      "id": "write-uncovered-adapters-rate-limit-tests-7f8d4bd1",
+      "title": "Write Adapters Rate Limit Error tests",
+      "description": "Add missing error integration tests for DEXOrchestrator to handle rate limits explicitly in edge cases.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Test coverage for adapters integration rate limit cases is expanded."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 59
+  "total_tasks": 60
 }
