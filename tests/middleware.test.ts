@@ -91,4 +91,23 @@ describe('Rate Limit Middleware with KV', () => {
     const res4 = await app.fetch(req2, env, ctx) // 1 for 4.4.4.4 - should succeed
     expect(res4.status).toBe(200)
   })
+
+  it('should return 500 when KV storage fails', async () => {
+    const req = new Request('http://localhost/test', {
+      headers: { 'cf-connecting-ip': '5.5.5.5' }
+    })
+    const failingMockKV = {
+      ...mockKV,
+      get: vi.fn(async () => {
+        throw new Error('KV is down')
+      })
+    }
+    const env = { FATHOM_KV: failingMockKV as KVNamespace }
+    const ctx = { waitUntil: vi.fn() } as any
+
+    const res = await app.fetch(req, env, ctx)
+    expect(res.status).toBe(500)
+    const data = await res.json()
+    expect(data).toEqual({ error: 'internal_error', message: 'Rate limit storage unavailable' })
+  })
 })
