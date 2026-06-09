@@ -495,7 +495,7 @@
     },
     {
       "id": "refactor-adapters-integration-test-to-use-mock",
-      "status": "todo",
+      "status": "done",
       "area": "pricing",
       "risk": "low",
       "title": "Refactor Adapters Integration Test to use MockDEXAdapter",
