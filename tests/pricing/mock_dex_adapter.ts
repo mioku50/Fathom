@@ -10,6 +10,7 @@ export class MockDEXAdapter implements DEXAdapter {
   private poolsMap: Map<string, PoolInfo[]> = new Map();
   private rawDataMap: Map<string, RawPoolData | Error> = new Map();
   private logger?: Logger | boolean;
+  private delayMs: number = 0;
   public errorCount: number = 0;
   public getPoolsCallCount: number = 0;
   public getRawDataCallCount: number = 0;
@@ -47,10 +48,17 @@ export class MockDEXAdapter implements DEXAdapter {
     this.rawDataMap.set(poolAddress.toLowerCase(), data);
   }
 
+  setDelay(delayMs: number): void {
+    this.delayMs = delayMs;
+  }
+
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
     this.getPoolsCallCount++;
     this.doLog('info', `getPools called for token: ${tokenAddress}`);
     const pools = this.poolsMap.get(tokenAddress.toLowerCase()) || [];
+    if (this.delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, this.delayMs));
+    }
     this.doLog('info', `getPools returned for token: ${tokenAddress}`, pools);
     return pools;
   }
@@ -63,6 +71,10 @@ export class MockDEXAdapter implements DEXAdapter {
     this.getRawDataCallCount++;
     this.doLog('info', `getRawData called for pool: ${poolAddress}`);
     const data = this.rawDataMap.get(poolAddress.toLowerCase());
+
+    if (this.delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, this.delayMs));
+    }
 
     if (data === undefined) {
       const error = new Error(`Raw data not found for pool ${poolAddress}`);

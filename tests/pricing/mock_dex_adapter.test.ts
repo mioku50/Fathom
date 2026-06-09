@@ -126,6 +126,83 @@ describe('MockDEXAdapter', () => {
     }
     expect(adapter.getRawDataCallCount).toBe(2);
   });
+
+  it('should simulate network delay in getPools', async () => {
+    vi.useFakeTimers();
+    adapter.setDelay(100);
+    const mockPools: PoolInfo[] = [{ address: '0xpool1', dex: 'test_mock', fee: 0.003 }];
+    adapter.setPools('0xTokenA', mockPools);
+
+    let resolved = false;
+    const promise = adapter.getPools('0xTokenA').then((res) => {
+      resolved = true;
+      return res;
+    });
+
+    // Advance by half the delay, should not be resolved yet
+    await vi.advanceTimersByTimeAsync(50);
+    expect(resolved).toBe(false);
+
+    // Advance by the remaining delay, should resolve
+    await vi.advanceTimersByTimeAsync(50);
+    const result = await promise;
+    expect(resolved).toBe(true);
+    expect(result).toEqual(mockPools);
+
+    vi.useRealTimers();
+  });
+
+  it('should simulate network delay in getRawData', async () => {
+    vi.useFakeTimers();
+    adapter.setDelay(100);
+    const mockData: RawPoolData = { reserve0: 100n, reserve1: 200n, updatedAt: 123 };
+    adapter.setRawData('0xpool1', mockData);
+
+    let resolved = false;
+    const promise = adapter.getRawData('0xpool1').then((res) => {
+      resolved = true;
+      return res;
+    });
+
+    // Advance by half the delay, should not be resolved yet
+    await vi.advanceTimersByTimeAsync(50);
+    expect(resolved).toBe(false);
+
+    // Advance by the remaining delay, should resolve
+    await vi.advanceTimersByTimeAsync(50);
+    const result = await promise;
+    expect(resolved).toBe(true);
+    expect(result).toEqual(mockData);
+
+    vi.useRealTimers();
+  });
+
+  it('should simulate network delay even when returning an error in getRawData', async () => {
+    vi.useFakeTimers();
+    adapter.setDelay(100);
+    const error = new Error('RPC Error');
+    adapter.setRawData('0xpool1', error);
+
+    let caughtError = null;
+    let resolved = false;
+    const promise = adapter.getRawData('0xpool1').then(() => {
+      resolved = true;
+    }).catch(e => {
+      caughtError = e;
+    });
+
+    // Advance by half the delay, should not be caught yet
+    await vi.advanceTimersByTimeAsync(50);
+    expect(caughtError).toBeNull();
+    expect(resolved).toBe(false);
+
+    // Advance by the remaining delay, should reject
+    await vi.advanceTimersByTimeAsync(50);
+    await promise;
+    expect(caughtError).toBe(error);
+
+    vi.useRealTimers();
+  });
 });
 
 describe('MockDEXAdapter Logging', () => {
