@@ -946,7 +946,7 @@
       "title": "Write Orchestrator Cache Integration Tests",
       "description": "Add integration tests to ensure DEXOrchestrator's cache layer properly interacts with KV cache mock logic under concurrent loads.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/**",
@@ -988,6 +988,21 @@
       ],
       "acceptance": [
         "Tests verify the endpoint functions correctly with actual middleware and routes"
+      ]
+    },
+    {
+      "id": "write-uncovered-adapters-integration-tests",
+      "title": "Write Adapters Integration Tests for Uncovered Scenarios",
+      "description": "Expand test coverage in tests/pricing/adapters_integration.test.ts to cover uncovered scenarios.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Test coverage for adapters integration includes edge cases."
       ]
     }
   ]
