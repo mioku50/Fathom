@@ -706,7 +706,7 @@
       "title": "Expand Cache Test Coverage",
       "description": "Add tests to ensure the cache layer correctly handles expired TTLs, cache eviction, and partial KV namespace failures.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/cache.test.ts",
@@ -748,6 +748,22 @@
       ],
       "acceptance": [
         "Tests verify the rate limiting functionality on the health endpoint"
+      ]
+    },
+    {
+      "id": "write-pricing-engine-unit-tests",
+      "title": "Write Pricing Engine Unit Tests",
+      "description": "Add more comprehensive unit tests for the pricing calculation logic to cover edge cases like 0 liquidity or NaN price inputs.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/calculator.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests cover edge cases correctly",
+        "Tests pass successfully"
       ]
     }
   ]
