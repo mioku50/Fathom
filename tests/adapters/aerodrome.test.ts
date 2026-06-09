@@ -57,6 +57,12 @@ describe('AerodromeAdapter', () => {
 
       expect(pools).toHaveLength(0);
     });
+
+    it('should explicitly handle rate limit errors', async () => {
+      mockReadContract.mockRejectedValue(new Error('HTTP request failed: 429 Too Many Requests'));
+
+      await expect(adapter.getPools('0x123')).rejects.toThrow('RPC rate limit exceeded while checking pool for 0x123 and 0x4200000000000000000000000000000000000006');
+    });
   });
 
   describe('getRawData', () => {
@@ -84,6 +90,12 @@ describe('AerodromeAdapter', () => {
       mockReadContract.mockRejectedValue(new Error('Network error'));
 
       await expect(adapter.getRawData('0xabc123')).rejects.toThrow(/Failed to fetch raw data for pool/);
+    });
+
+    it('should explicitly handle rate limit errors on getRawData', async () => {
+      mockReadContract.mockRejectedValue(new Error('Rate limit exceeded. Try again in 10s'));
+
+      await expect(adapter.getRawData('0xabc123')).rejects.toThrow('RPC rate limit exceeded while fetching raw data for pool 0xabc123');
     });
   });
 });
