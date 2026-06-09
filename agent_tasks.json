@@ -651,7 +651,7 @@
       "title": "Add Health Check Endpoint",
       "description": "Add a /v1/health endpoint that returns basic service status.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/index.ts",
@@ -699,6 +699,23 @@
         "TWAP logic is moved to twap_helper.ts",
         "PriceCalculator utilizes the new helper",
         "Tests verify the helper works correctly"
+      ]
+    },
+    {
+      "id": "expand-cache-test-coverage",
+      "title": "Expand Cache Test Coverage",
+      "description": "Add tests to ensure the cache layer correctly handles expired TTLs, cache eviction, and partial KV namespace failures.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/cache.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify TTL expiration behavior",
+        "Tests handle simulated KV errors gracefully",
+        "Tests pass successfully"
       ]
     }
   ]

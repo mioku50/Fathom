@@ -9,8 +9,11 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
-    const body = await res.json()
-    expect(body).toEqual({ status: 'ok', service: 'fathom-api' })
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.service).toBe('fathom-api')
+    expect(body.timestamp).toBeDefined()
+    expect(typeof body.timestamp).toBe('string')
   })
 
   it('Should return ok for /v1/cache/stats and not require payment', async () => {
