@@ -67,6 +67,14 @@ export class MockDEXAdapter implements DEXAdapter {
     this.errorCount = 0;
   }
 
+  reset(): void {
+    this.poolsMap.clear();
+    this.rawDataMap.clear();
+    this.errorCount = 0;
+    this.getPoolsCallCount = 0;
+    this.getRawDataCallCount = 0;
+  }
+
   async getRawData(poolAddress: string): Promise<RawPoolData> {
     this.getRawDataCallCount++;
     this.doLog('info', `getRawData called for pool: ${poolAddress}`);

@@ -100,6 +100,33 @@ describe('MockDEXAdapter', () => {
     expect(adapter.errorCount).toBe(0);
   });
 
+  it('should reset state correctly when reset is called', async () => {
+    const mockPools: PoolInfo[] = [{ address: '0xpool1', dex: 'test_mock', fee: 0.003 }];
+    adapter.setPools('0xTokenA', mockPools);
+    const mockData: RawPoolData = { reserve0: 10n, reserve1: 20n, updatedAt: 123 };
+    adapter.setRawData('0xpool1', mockData);
+
+    await adapter.getPools('0xTokenA');
+    await adapter.getRawData('0xpool1');
+    const error = new Error('Simulated Error');
+    adapter.setRawData('0xpool_error', error);
+    await expect(adapter.getRawData('0xpool_error')).rejects.toThrow('Simulated Error');
+
+    expect(adapter.getPoolsCallCount).toBe(1);
+    expect(adapter.getRawDataCallCount).toBe(2);
+    expect(adapter.errorCount).toBe(1);
+
+    adapter.reset();
+
+    const pools = await adapter.getPools('0xTokenA');
+    expect(pools).toEqual([]);
+    await expect(adapter.getRawData('0xpool1')).rejects.toThrow('Raw data not found for pool 0xpool1');
+
+    expect(adapter.errorCount).toBe(1); // the above reject increments error count
+    expect(adapter.getPoolsCallCount).toBe(1);
+    expect(adapter.getRawDataCallCount).toBe(1);
+  });
+
   it('should track the number of getPools calls', async () => {
     expect(adapter.getPoolsCallCount).toBe(0);
 
