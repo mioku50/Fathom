@@ -6,7 +6,7 @@ import type { FathomEnv } from '../src/cache'
 describe('Fathom API', () => {
   it('Should return ok for /v1/health', async () => {
     const req = new Request('http://localhost/v1/health')
-    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as ExecutionContext)
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json()
@@ -15,7 +15,7 @@ describe('Fathom API', () => {
 
   it('Should return valid schema for /v1/price (no cache)', async () => {
     const req = new Request('http://localhost/v1/price?token=0xABC&chain=base')
-    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as ExecutionContext)
+    const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as PriceResponse
@@ -42,7 +42,7 @@ describe('Fathom API', () => {
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
     const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base')
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as ExecutionContext)
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     expect(mockGet).toHaveBeenCalledWith('price:base:0xdef', 'json')
@@ -77,7 +77,7 @@ describe('Fathom API', () => {
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
     const req = new Request('http://localhost/v1/price?token=0xDEF&chain=base')
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as ExecutionContext)
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as PriceResponse
