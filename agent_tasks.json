@@ -1597,7 +1597,7 @@
       "title": "Document API Response Schema",
       "description": "Create a brief document detailing the exact JSON structure returned by the core price endpoint, including error formats.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/api_schema.md",
@@ -1637,9 +1637,39 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "document-rate-limit-middleware",
+      "title": "Document Rate Limit Middleware",
+      "description": "Add JSDoc style comments explaining the rate limiting window and sliding logic in src/middleware/rate_limit.ts.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/middleware/rate_limit.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "JSDoc comments are added to rateLimitMiddleware."
+      ]
+    },
+    {
+      "id": "document-validation-middleware",
+      "title": "Document Validation Middleware",
+      "description": "Add JSDoc style comments to src/middleware/validation.ts explaining its purpose and error conditions.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/middleware/validation.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "JSDoc comments are added to validateAddressesMiddleware."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 94,
+  "todo_tasks": 4,
+  "total_tasks": 96,
   "needs_replenishment": false
 }
