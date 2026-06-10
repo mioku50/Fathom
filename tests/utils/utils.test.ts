@@ -95,4 +95,23 @@ describe('generateDummyResponse', () => {
         expect(response.main_pool.address).toBe('0x123');
         expect(response.main_pool.fee).toBe(0.003);
     });
+
+    it('generates a PriceResponse with an empty flags array', () => {
+        const response = generateDummyResponse('0x123', 'base');
+        expect(Array.isArray(response.flags)).toBe(true);
+        expect(response.flags.length).toBe(0);
+    });
+
+    it('generates a PriceResponse with a 1-character token and chain', () => {
+        const response = generateDummyResponse('a', 'b');
+        expect(response.token).toBe('a');
+        expect(response.chain).toBe('b');
+    });
+
+    it('generates a PriceResponse with extremely long token string', () => {
+        const longToken = 'x'.repeat(5000);
+        const response = generateDummyResponse(longToken, 'base');
+        expect(response.token).toBe(longToken);
+        expect(response.chain).toBe('base');
+    });
 });
