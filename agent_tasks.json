@@ -1778,7 +1778,7 @@
       "title": "Improve Docs for Utils Logger Part 2",
       "description": "Review and refine inline documentation in logger.ts.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/utils/logger.ts",
@@ -1817,9 +1817,40 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "add-integration-test-for-dex-orchestrator",
+      "title": "Add Integration Test for DEX Orchestrator",
+      "description": "Create an integration test to verify the DEX Orchestrator can successfully fall back to secondary adapters when the primary fails.",
+      "area": "pricing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/adapters_integration.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Fallback integration test passes."
+      ]
+    },
+    {
+      "id": "refactor-logger-metadata-typing",
+      "title": "Refactor Logger Metadata Typing",
+      "description": "Update the logger metadata typing to accept a generic type argument instead of any.",
+      "area": "core",
+      "status": "todo",
+      "risk": "medium",
+      "allowed_paths": [
+        "src/utils/logger.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Logger type accepts generics.",
+        "Typecheck passes."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 106,
+  "todo_tasks": 4,
+  "total_tasks": 108,
   "needs_replenishment": false
 }
