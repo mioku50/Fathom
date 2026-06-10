@@ -1550,11 +1550,12 @@
       "title": "Add Unit Tests for Logging Helpers",
       "description": "Add basic unit tests to ensure logging helpers format messages correctly.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
-        "agent_tasks.json"
+        "agent_tasks.json",
+        "src/utils/**"
       ],
       "acceptance": [
         "Tests verify logging helper formatting."
@@ -1608,7 +1609,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 92,
   "needs_replenishment": false
 }
