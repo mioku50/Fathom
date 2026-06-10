@@ -24,5 +24,26 @@ else
   echo "❌ /v1/cache/metrics failed with status $METRICS_RESPONSE"
 fi
 
+# 3. x402-protected endpoint check
+echo "[3] Checking x402-protected /v1/price ..."
+if [ -n "$FATHOM_AUTH_HEADER" ] || [ -n "$FATHOM_X402_PAYMENT" ]; then
+  echo "   Credentials found. Running x402 protected check..."
+  # Use Auth Header if available, else fallback to X-PAYMENT
+  if [ -n "$FATHOM_AUTH_HEADER" ]; then
+    HEADER_ARG="-H \"Authorization: $FATHOM_AUTH_HEADER\""
+  else
+    HEADER_ARG="-H \"X-PAYMENT: $FATHOM_X402_PAYMENT\""
+  fi
+
+  PRICE_RESPONSE=$(eval curl -s -o /dev/null -w \"%{http_code}\" $HEADER_ARG "$LIVE_URL/v1/price")
+  if [ "$PRICE_RESPONSE" -eq 200 ]; then
+    echo "✅ /v1/price is OK (200) with credentials"
+  else
+    echo "❌ /v1/price failed with status $PRICE_RESPONSE"
+  fi
+else
+  echo "⏭️  Skipping admin/x402-protected checks (no local credentials provided)."
+fi
+
 echo "------------------------------------------------------"
 echo "Smoke tests completed."

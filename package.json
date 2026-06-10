@@ -7,7 +7,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "test": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke:live": "bash scripts/live_smoke_test.sh"
   },
   "dependencies": {
     "hono": "^4.0.0",

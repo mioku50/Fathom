@@ -87,7 +87,7 @@
       "title": "Add Live Smoke Script",
       "description": "Add a local manual smoke-test script for the live Worker.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "scripts/**",
@@ -1530,7 +1530,7 @@
       ]
     }
   ],
-  "todo_tasks": 5,
+  "todo_tasks": 4,
   "total_tasks": 87,
   "needs_replenishment": false
 }
