@@ -114,4 +114,22 @@ describe('generateDummyResponse', () => {
         expect(response.token).toBe(longToken);
         expect(response.chain).toBe('base');
     });
+
+    it('generates a PriceResponse with a null-byte in strings', () => {
+        const response = generateDummyResponse('a\0b', 'c\0d');
+        expect(response.token).toBe('a\0b');
+        expect(response.chain).toBe('c\0d');
+    });
+
+    it('generates a PriceResponse with html/script injection strings', () => {
+        const response = generateDummyResponse('<script>alert(1)</script>', '"><img src=x onerror=alert(1)>');
+        expect(response.token).toBe('<script>alert(1)</script>');
+        expect(response.chain).toBe('"><img src=x onerror=alert(1)>');
+    });
+
+    it('generates a PriceResponse with undefined-like string values', () => {
+        const response = generateDummyResponse('undefined', 'null');
+        expect(response.token).toBe('undefined');
+        expect(response.chain).toBe('null');
+    });
 });
