@@ -31,4 +31,9 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Test', undefined);
         expect(result).toBe('[INFO] Test');
     });
+
+    it('handles metadata with different data types', () => {
+        const result = formatLogMessage('debug', 'Mixed meta', { num: 123, bool: true, str: 'text', nullVal: null });
+        expect(result).toBe('[DEBUG] Mixed meta {"num":123,"bool":true,"str":"text","nullVal":null}');
+    });
 });
