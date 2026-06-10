@@ -201,4 +201,29 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('debug', 'Empty string value', { emptyStr: '' });
         expect(result).toBe('[DEBUG] Empty string value {"emptyStr":""}');
     });
+
+    it('handles numeric message correctly when passed as string', () => {
+        const result = formatLogMessage('info', '12345');
+        expect(result).toBe('[INFO] 12345');
+    });
+
+    it('handles floating point values in metadata', () => {
+        const result = formatLogMessage('debug', 'Float meta', { floatVal: 123.456 });
+        expect(result).toBe('[DEBUG] Float meta {"floatVal":123.456}');
+    });
+
+    it('handles scientific notation numbers in metadata', () => {
+        const result = formatLogMessage('info', 'Scientific meta', { sciVal: 1.2e-4 });
+        expect(result).toBe('[INFO] Scientific meta {"sciVal":0.00012}');
+    });
+
+    it('handles negative numbers in metadata', () => {
+        const result = formatLogMessage('warn', 'Negative meta', { negVal: -999 });
+        expect(result).toBe('[WARN] Negative meta {"negVal":-999}');
+    });
+
+    it('handles extremely small decimal numbers in metadata', () => {
+        const result = formatLogMessage('debug', 'Small float', { smallVal: 0.0000000001 });
+        expect(result).toBe('[DEBUG] Small float {"smallVal":1e-10}');
+    });
 });
