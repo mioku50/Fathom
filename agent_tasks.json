@@ -1429,9 +1429,28 @@
       "acceptance": [
         "Tests verify console.error is called for invalid addresses."
       ]
+    },
+    {
+      "id": "document-live-base-sepolia-smoke-tests",
+      "title": "Document Live Base Sepolia Smoke Tests",
+      "description": "Add a safe smoke-test script for the existing live Worker deployment on Base Sepolia. The script must only query safe public endpoints like /v1/health and /v1/cache/metrics, without requiring secret values.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/live_smoke_test.md",
+        "scripts/live_smoke_test.sh",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Safe smoke-test script exists for live Base Sepolia deployment.",
+        "Script does not hardcode or require secrets.",
+        "Script checks /v1/health and /v1/cache/metrics.",
+        "Documentation is updated with instructions on how to use the script."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 82,
+  "todo_tasks": 4,
+  "total_tasks": 83,
   "needs_replenishment": false
 }
