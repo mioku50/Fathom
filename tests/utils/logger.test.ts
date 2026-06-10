@@ -63,4 +63,21 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Null prototype object', meta);
         expect(result).toBe('[INFO] Null prototype object {"key":"value"}');
     });
+
+    it('handles functions in metadata (stringifies to undefined/omitted)', () => {
+        const result = formatLogMessage('info', 'Function meta', { fn: () => {} });
+        expect(result).toBe('[INFO] Function meta {}');
+    });
+
+    it('handles a message passed as a number (coercion behavior)', () => {
+        // @ts-ignore: Intentionally testing JS behavior when non-strings are passed
+        const result = formatLogMessage('warn', 404, { url: '/not-found' });
+        expect(result).toBe('[WARN] 404 {"url":"/not-found"}');
+    });
+
+    it('handles Symbol in metadata (stringifies to undefined/omitted)', () => {
+        const sym = Symbol('test');
+        const result = formatLogMessage('debug', 'Symbol meta', { id: sym });
+        expect(result).toBe('[DEBUG] Symbol meta {}');
+    });
 });

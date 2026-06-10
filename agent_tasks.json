@@ -1688,7 +1688,7 @@
       "title": "Add More Utility Unit Tests Part 4",
       "description": "Add additional utility tests for coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -1727,9 +1727,24 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "improve-docs-for-utils-logger-1",
+      "title": "Improve Docs for Utils Logger",
+      "description": "Add inline documentation for formatLogMessage in logger.ts.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/utils/logger.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "formatLogMessage has JSDoc comments."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 100,
+  "total_tasks": 101,
   "needs_replenishment": false
 }
