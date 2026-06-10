@@ -6,6 +6,10 @@ on:
     types: [closed]
     branches: [main]
 
+concurrency:
+  group: fathom-jules-next-task
+  cancel-in-progress: false
+
 jobs:
   next-task:
     runs-on: ubuntu-latest
@@ -27,6 +31,9 @@ jobs:
           Mission:
           Continue developing Fathom toward a production-ready MVP through the autonomous task loop.
 
+          Important setup rule:
+          Work from the repository root provided by Jules. Do not run `cd /app`.
+
           Read first:
           - README.md
           - AGENTS.md
@@ -36,6 +43,8 @@ jobs:
           - docs/codex_worker_plan.md
 
           Start by running:
+          pwd
+          ls -la
           python -m fathom_agent.codex_bridge validate
           python -m fathom_agent.codex_bridge status
           python -m fathom_agent.codex_bridge next-task
@@ -47,6 +56,7 @@ jobs:
           - Implement exactly one task id per PR.
           - Stay inside the selected task's allowed_paths.
           - Run validation/tests before finishing.
+          - Run python scripts/format_agent_tasks.py agent_tasks.json before finishing.
           - Update agent_tasks.json after completing the task.
           - If new work is discovered, add it as new todo tasks instead of expanding the current PR.
           - If fewer than replenishment_policy.minimum_todo_tasks remain, add a small batch of low/medium-risk tasks.
