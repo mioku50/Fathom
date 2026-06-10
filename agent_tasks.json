@@ -1854,7 +1854,7 @@
       "title": "Add More Utility Unit Tests Part 10",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -1896,9 +1896,24 @@
         "Tests check KV health boolean",
         "Vitest passes"
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-11-1781128686414-0",
+      "title": "Add More Utility Unit Tests Part 11",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 111,
+  "total_tasks": 112,
   "needs_replenishment": false
 }
