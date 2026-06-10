@@ -77,4 +77,22 @@ describe('generateDummyResponse', () => {
         expect(response.token).toBe('  ');
         expect(response.chain).toBe(' \n\t ');
     });
+
+    it('generates a PriceResponse where pools is undefined', () => {
+        const response = generateDummyResponse('0x123', 'base');
+        expect(response.pools).toBeUndefined();
+    });
+
+    it('generates a PriceResponse where confidence is exactly 85', () => {
+        const response = generateDummyResponse('0x123', 'base');
+        expect(response.confidence).toBe(85);
+    });
+
+    it('generates a PriceResponse with specific main_pool structure', () => {
+        const response = generateDummyResponse('0x123', 'base');
+        expect(response.main_pool).toBeDefined();
+        expect(response.main_pool.dex).toBe('aerodrome');
+        expect(response.main_pool.address).toBe('0x123');
+        expect(response.main_pool.fee).toBe(0.003);
+    });
 });
