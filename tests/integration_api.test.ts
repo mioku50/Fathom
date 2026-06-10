@@ -446,6 +446,7 @@ describe('Fathom API Integration Test', () => {
   })
 
   it('Should handle errors on /v1/cache/clear/pool gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const mockDelete = vi.fn().mockRejectedValue(new Error('KV Delete Error'))
     const mockKV = { delete: mockDelete } as unknown as KVNamespace
 
@@ -462,6 +463,8 @@ describe('Fathom API Integration Test', () => {
 
     const body = await res.json() as any
     expect(body.error).toBe('Failed to clear pool cache')
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
   })
 
   it('Should fail /v1/cache/clear/pool if missing x402 payment', async () => {
@@ -567,6 +570,7 @@ describe('Fathom API Integration Test', () => {
   })
 
   it('Should handle errors on /v1/cache/metrics gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const mockList = vi.fn().mockRejectedValue(new Error('KV List Error'))
     const mockKV = { list: mockList } as unknown as KVNamespace
 
@@ -578,6 +582,8 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(500)
     const body = await res.json() as any
     expect(body.error).toBe('Failed to retrieve cache metrics')
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
   })
 
 
@@ -612,6 +618,7 @@ describe('Fathom API Integration Test', () => {
   })
 
   it('Should handle errors thrown during pagination gracefully on /v1/cache/metrics', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const mockList = vi.fn()
       .mockResolvedValueOnce({
         keys: [{ name: 'key1' }],
@@ -631,6 +638,8 @@ describe('Fathom API Integration Test', () => {
     const body = await res.json() as any
     expect(body.error).toBe('Failed to retrieve cache metrics')
     expect(mockList).toHaveBeenCalledTimes(2)
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
   })
 
 });
