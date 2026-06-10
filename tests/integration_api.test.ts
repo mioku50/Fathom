@@ -73,6 +73,48 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(400)
   })
 
+  it('Should fail /v1/prices if validation fails with invalid token format', async () => {
+    const env: FathomEnv = {}
+
+    // Multiple tokens where one is invalid
+    const tokens = '0x1234567890123456789012345678901234567890,invalid-token'
+    const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toContain('invalid-token')
+  })
+
+  it('Should ignore blank tokens caused by extra commas in /v1/prices validation', async () => {
+    const env: FathomEnv = {}
+
+    // Valid tokens with trailing/extra commas
+    const tokens = '0x1234567890123456789012345678901234567890,,0x0987654321098765432109876543210987654321,'
+    const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    // Mock KV for cache layer needed for a successful path
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const mockGet = vi.fn().mockResolvedValue(null)
+    const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+    env.FATHOM_KV = mockKV
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    // 402 or 200 depending on middleware order, but if it passes validation it won't be 400.
+    // It will actually process successfully because we provided X-PAYMENT.
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    // It should have processed 2 tokens
+    expect(Object.keys(body).length).toBe(2)
+  })
+
   it('Should fail end-to-end request if x402 payment is missing', async () => {
     const env: FathomEnv = {}
 
