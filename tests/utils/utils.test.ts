@@ -132,4 +132,33 @@ describe('generateDummyResponse', () => {
         expect(response.token).toBe('undefined');
         expect(response.chain).toBe('null');
     });
+
+    it('generates a response with correct property types', () => {
+        const response = generateDummyResponse('0x123', 'base');
+        expect(typeof response.token).toBe('string');
+        expect(typeof response.chain).toBe('string');
+        expect(typeof response.symbol).toBe('string');
+        expect(typeof response.price_usd).toBe('number');
+        expect(typeof response.price_low).toBe('number');
+        expect(typeof response.price_high).toBe('number');
+        expect(typeof response.twap_5m).toBe('number');
+        expect(typeof response.confidence).toBe('number');
+        expect(typeof response.label).toBe('string');
+        expect(typeof response.liquidity_usd).toBe('number');
+        expect(typeof response.main_pool).toBe('object');
+        expect(Array.isArray(response.flags)).toBe(true);
+        expect(typeof response.updated_at).toBe('string');
+    });
+
+    it('generates consistent responses across multiple calls', () => {
+        const response1 = generateDummyResponse('0x123', 'base');
+        const response2 = generateDummyResponse('0x123', 'base');
+
+        // They should be identical except potentially updated_at if called in different milliseconds,
+        // but typically vitest runs them fast enough or we just ignore updated_at
+        const r1 = { ...response1, updated_at: '' };
+        const r2 = { ...response2, updated_at: '' };
+
+        expect(r1).toEqual(r2);
+    });
 });

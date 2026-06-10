@@ -98,4 +98,19 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', longMsg);
         expect(result).toBe(`[INFO] ${longMsg}`);
     });
+
+    it('handles null explicitly passed as metadata', () => {
+        const result = formatLogMessage('info', 'Null meta', null as any);
+        expect(result).toBe('[INFO] Null meta');
+    });
+
+    it('handles empty string log level', () => {
+        const result = formatLogMessage('', 'Empty level');
+        expect(result).toBe('[] Empty level');
+    });
+
+    it('handles multiline messages', () => {
+        const result = formatLogMessage('error', 'Line 1\nLine 2\nLine 3');
+        expect(result).toBe('[ERROR] Line 1\nLine 2\nLine 3');
+    });
 });
