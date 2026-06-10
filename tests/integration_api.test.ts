@@ -88,6 +88,34 @@ describe('Fathom API Integration Test', () => {
     expect(body.error.code).toBe('payment_required')
   })
 
+  it('Should fail /v1/prices if x402 payment is missing', async () => {
+    const env: FathomEnv = {}
+
+    const tokens = '0x1234567890123456789012345678901234567890'
+    const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`)
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(402)
+
+    const body = await res.json() as any
+    expect(body.error).toBeDefined()
+    expect(body.error.code).toBe('payment_required')
+  })
+
+  it('Should fail /v1/metadata if x402 payment is missing', async () => {
+    const env: FathomEnv = {}
+
+    const token = '0x1234567890123456789012345678901234567890'
+    const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`)
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(402)
+
+    const body = await res.json() as any
+    expect(body.error).toBeDefined()
+    expect(body.error.code).toBe('payment_required')
+  })
+
 
   it('Should successfully process request, set cache and return valid structure through /v1/metadata', async () => {
     // Mock KV for cache layer
