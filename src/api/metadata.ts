@@ -46,8 +46,9 @@ export async function getTokenMetadata(tokenAddress: Address, rpcUrl?: string, n
       decimals
     };
   } catch (error) {
-    console.error(`Error fetching metadata for ${tokenAddress}:`, error);
-    throw new Error(`Failed to fetch token metadata for ${tokenAddress}`);
+    const errorContext = `[network: ${network || 'base'}, rpc: ${rpcUrl ? 'provided' : 'default'}]`;
+    console.error(`Error fetching metadata for ${tokenAddress} ${errorContext}:`, error);
+    throw new Error(`Failed to fetch token metadata for ${tokenAddress} ${errorContext}`);
   }
 }
 
@@ -55,7 +56,8 @@ export async function getBatchTokenMetadata(tokens: Address[], rpcUrl?: string, 
   try {
     return await Promise.all(tokens.map(token => getTokenMetadata(token, rpcUrl, network)));
   } catch (error) {
-    console.error('Error fetching batch metadata:', error);
-    throw new Error('Failed to fetch batch token metadata');
+    const errorContext = `[network: ${network || 'base'}, rpc: ${rpcUrl ? 'provided' : 'default'}]`;
+    console.error(`Error fetching batch metadata ${errorContext}:`, error);
+    throw new Error(`Failed to fetch batch token metadata ${errorContext}`);
   }
 }
