@@ -108,7 +108,7 @@
       "title": "Prepare X402 Live Validation Plan",
       "description": "Document manual live x402 validation steps.",
       "area": "documentation",
-      "status": "todo",
+      "status": "done",
       "risk": "high",
       "allowed_paths": [
         "docs/**",
@@ -1530,7 +1530,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 87,
   "needs_replenishment": false
 }
