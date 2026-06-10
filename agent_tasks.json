@@ -1265,7 +1265,7 @@
       "title": "Add Cache Metrics Integration Tests",
       "description": "Write integration tests for the /v1/cache/metrics endpoint.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1309,8 +1309,24 @@
         "Tests cover successful metrics retrieval.",
         "Tests cover error handling for KV not configured."
       ]
+    },
+    {
+      "id": "add-unit-tests-health-endpoint-1g6grs",
+      "title": "Add Health Unit Tests",
+      "description": "Write unit tests for the health endpoint.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/index.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify health endpoint."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 74
+  "total_tasks": 75,
+  "needs_replenishment": false
 }
