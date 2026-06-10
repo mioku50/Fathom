@@ -164,4 +164,26 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('debug', 'toJSON custom', meta);
         expect(result).toBe('[DEBUG] toJSON custom {"custom":"json-val"}');
     });
+
+    it('handles undefined metadata when level is missing', () => {
+        const result = formatLogMessage('', 'Missing level', undefined);
+        expect(result).toBe('[] Missing level');
+    });
+
+    it('handles boolean message content (coercion behavior)', () => {
+        // @ts-ignore: Intentionally testing JS behavior when non-strings are passed
+        const result = formatLogMessage('info', true);
+        expect(result).toBe('[INFO] true');
+    });
+
+    it('handles Array metadata with complex nested objects', () => {
+        const complexArray = [
+            { id: 1, nested: { prop: 'val1' } },
+            { id: 2, arr: [3, 4] },
+            null,
+            "string"
+        ];
+        const result = formatLogMessage('debug', 'Complex Array', { data: complexArray });
+        expect(result).toBe('[DEBUG] Complex Array {"data":[{"id":1,"nested":{"prop":"val1"}},{"id":2,"arr":[3,4]},null,"string"]}');
+    });
 });
