@@ -1330,7 +1330,7 @@
       "title": "Add Cache Metrics Integration Tests V3",
       "description": "Add integration tests for /v1/cache/metrics endpoint.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1369,9 +1369,24 @@
       "acceptance": [
         "Tests verify address validation behavior."
       ]
+    },
+    {
+      "id": "improve-cache-metrics-integration-coverage-b8a5144e",
+      "title": "Improve Cache Metrics Integration Test Coverage b8a5144e",
+      "description": "Add more edge cases to /v1/cache/metrics integration tests to ensure robust validation.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify cache metrics endpoint handles empty states and missing kv setup gracefully."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 78,
+  "total_tasks": 79,
   "needs_replenishment": false
 }
