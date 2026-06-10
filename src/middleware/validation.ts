@@ -4,6 +4,7 @@ import { isAddress } from 'viem'
 export const validateAddressesMiddleware = createMiddleware(async (c, next) => {
   const token = c.req.query('token')
   if (token && !isAddress(token)) {
+    console.error(`[Validation Middleware] Invalid token address format: ${token}`)
     return c.json({ error: 'invalid_request', message: 'Invalid token address format' }, 400)
   }
 
@@ -12,6 +13,7 @@ export const validateAddressesMiddleware = createMiddleware(async (c, next) => {
     const tokens = tokensParam.split(',').map(t => t.trim()).filter(Boolean)
     for (const t of tokens) {
       if (!isAddress(t)) {
+        console.error(`[Validation Middleware] Invalid token address format in batch: ${t}`)
         return c.json({ error: 'invalid_request', message: `Invalid token address format: ${t}` }, 400)
       }
     }
