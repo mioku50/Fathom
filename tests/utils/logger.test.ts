@@ -113,4 +113,33 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('error', 'Line 1\nLine 2\nLine 3');
         expect(result).toBe('[ERROR] Line 1\nLine 2\nLine 3');
     });
+
+    it('handles log levels with leading and trailing whitespace', () => {
+        const result = formatLogMessage('  info  ', 'Message');
+        expect(result).toBe('[  INFO  ] Message');
+    });
+
+    it('handles JSON string within the message', () => {
+        const result = formatLogMessage('debug', 'Payload: {"key": "value"}');
+        expect(result).toBe('[DEBUG] Payload: {"key": "value"}');
+    });
+
+    it('handles metadata with keys containing special characters and spaces', () => {
+        const result = formatLogMessage('warn', 'Special keys', { 'key with spaces': 1, '@special!': 'value' });
+        expect(result).toBe('[WARN] Special keys {"key with spaces":1,"@special!":"value"}');
+    });
+
+    it('handles deeply nested complex metadata structures', () => {
+        const complexMeta = {
+            level1: {
+                level2: {
+                    level3: {
+                        arr: [1, 2, { deepKey: 'deepValue' }]
+                    }
+                }
+            }
+        };
+        const result = formatLogMessage('info', 'Deep nest', complexMeta);
+        expect(result).toBe('[INFO] Deep nest {"level1":{"level2":{"level3":{"arr":[1,2,{"deepKey":"deepValue"}]}}}}');
+    });
 });
