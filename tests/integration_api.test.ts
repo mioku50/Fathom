@@ -446,6 +446,27 @@ describe('Fathom API Integration Test', () => {
     expect(mockDelete).toHaveBeenCalledWith('key3')
   })
 
+  it('Should return cache size metrics from /v1/cache/metrics', async () => {
+    const mockList = vi.fn().mockResolvedValue({
+      keys: [{ name: 'key1' }, { name: 'key2' }],
+      list_complete: true
+    })
+    const mockKV = { list: mockList } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.metrics).toBeDefined()
+    expect(body.metrics.total_keys).toBe(2)
+    expect(mockList).toHaveBeenCalled()
+  })
+
+
   it('Should fail /v1/cache/clear if missing x402 payment', async () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/clear', {
