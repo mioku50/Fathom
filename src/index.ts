@@ -145,6 +145,31 @@ app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
   return c.json({ status: 'ok', message: 'Cache invalidated successfully' })
 })
 
+app.post('/v1/cache/clear/pool', x402Middleware, async (c) => {
+  const pool = c.req.query('pool')
+
+  if (!pool) {
+    return c.json({ error: 'pool parameter is required' }, 400)
+  }
+
+  if (!c.env?.FATHOM_KV) {
+    return c.json({ error: 'Internal Server Error: KV not configured' }, 500)
+  }
+
+  try {
+    const poolsCacheKey = `orchestrator:pools:${pool.toLowerCase()}`
+    const rawCacheKey = `orchestrator:raw:${pool.toLowerCase()}`
+
+    await c.env.FATHOM_KV.delete(poolsCacheKey)
+    await c.env.FATHOM_KV.delete(rawCacheKey)
+
+    return c.json({ status: 'ok', message: 'Pool cache cleared successfully' })
+  } catch (e) {
+    console.error('KV Cache clear pool error:', e)
+    return c.json({ error: 'Failed to clear pool cache' }, 500)
+  }
+})
+
 app.post('/v1/cache/clear', x402Middleware, async (c) => {
   if (!c.env?.FATHOM_KV) {
     return c.json({ error: 'Internal Server Error: KV not configured' }, 500)
