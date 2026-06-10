@@ -414,14 +414,16 @@ describe('Fathom API', () => {
     expect(mockDelete).toHaveBeenCalledWith('price:base:0x0000000000000000000000000000000000000000')
   })
 
-  it('Should successfully return metadata for /v1/metadata', async () => {
+  it('Should successfully return metadata for /v1/metadata and pass env config', async () => {
     const mockPut = vi.fn().mockResolvedValue(undefined)
     const mockGet = vi.fn().mockResolvedValue(null)
     const env = {
       FATHOM_KV: {
         get: mockGet,
         put: mockPut
-      }
+      },
+      BASE_RPC_URL: 'http://custom-rpc.test',
+      X402_NETWORK: 'base-sepolia'
     } as unknown as FathomEnv
 
     const req = new Request('http://localhost/v1/metadata?token=0x1234567890123456789012345678901234567890&chain=base', {
@@ -439,6 +441,14 @@ describe('Fathom API', () => {
       name: 'Test Token',
       decimals: 18
     })
+
+    // verify env args were passed to getTokenMetadata
+    const { getTokenMetadata } = await import('../src/api/metadata')
+    expect(getTokenMetadata).toHaveBeenCalledWith(
+      '0x1234567890123456789012345678901234567890',
+      'http://custom-rpc.test',
+      'base-sepolia'
+    )
 
     // verify it was cached
     expect(mockPut).toHaveBeenCalled()
@@ -498,14 +508,16 @@ describe('Fathom API', () => {
   })
 
 
-  it('Should return metadata for multiple tokens successfully for /v1/metadatas', async () => {
+  it('Should return metadata for multiple tokens successfully for /v1/metadatas and pass env config', async () => {
     const mockPut = vi.fn().mockResolvedValue(undefined)
     const mockGet = vi.fn().mockResolvedValue(null)
     const env = {
       FATHOM_KV: {
         get: mockGet,
         put: mockPut
-      }
+      },
+      BASE_RPC_URL: 'http://custom-rpc.test',
+      X402_NETWORK: 'base-sepolia'
     } as unknown as FathomEnv
 
     const req = new Request('http://localhost/v1/metadatas?tokens=0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321&chain=base', {
@@ -520,6 +532,14 @@ describe('Fathom API', () => {
     expect(body.length).toBe(2)
     expect(body[0].address).toBe('0x1234567890123456789012345678901234567890')
     expect(body[1].address).toBe('0x0987654321098765432109876543210987654321')
+
+    // verify env args were passed to getBatchTokenMetadata
+    const { getBatchTokenMetadata } = await import('../src/api/metadata')
+    expect(getBatchTokenMetadata).toHaveBeenCalledWith(
+      ['0x1234567890123456789012345678901234567890', '0x0987654321098765432109876543210987654321'],
+      'http://custom-rpc.test',
+      'base-sepolia'
+    )
 
     // verify both were cached
     expect(mockPut).toHaveBeenCalledTimes(2)
