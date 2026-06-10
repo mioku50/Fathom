@@ -36,4 +36,14 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('debug', 'Mixed meta', { num: 123, bool: true, str: 'text', nullVal: null });
         expect(result).toBe('[DEBUG] Mixed meta {"num":123,"bool":true,"str":"text","nullVal":null}');
     });
+
+    it('handles nested objects in metadata', () => {
+        const result = formatLogMessage('warn', 'Nested meta', { user: { id: 1, role: 'admin' } });
+        expect(result).toBe('[WARN] Nested meta {"user":{"id":1,"role":"admin"}}');
+    });
+
+    it('handles arrays in metadata', () => {
+        const result = formatLogMessage('info', 'Array meta', { tags: ['a', 'b', 'c'] });
+        expect(result).toBe('[INFO] Array meta {"tags":["a","b","c"]}');
+    });
 });
