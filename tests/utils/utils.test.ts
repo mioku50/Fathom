@@ -57,4 +57,24 @@ describe('generateDummyResponse', () => {
 
         vi.useRealTimers();
     });
+
+    it('generates a valid PriceResponse with unicode characters in token and chain', () => {
+        const response = generateDummyResponse('🦄', '✨chain');
+        expect(response.token).toBe('🦄');
+        expect(response.chain).toBe('✨chain');
+    });
+
+    it('generates a valid PriceResponse with very long strings', () => {
+        const longToken = 'a'.repeat(1000);
+        const longChain = 'b'.repeat(1000);
+        const response = generateDummyResponse(longToken, longChain);
+        expect(response.token).toBe(longToken);
+        expect(response.chain).toBe(longChain);
+    });
+
+    it('generates a valid PriceResponse with whitespace strings', () => {
+        const response = generateDummyResponse('  ', ' \n\t ');
+        expect(response.token).toBe('  ');
+        expect(response.chain).toBe(' \n\t ');
+    });
 });

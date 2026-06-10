@@ -46,4 +46,21 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Array meta', { tags: ['a', 'b', 'c'] });
         expect(result).toBe('[INFO] Array meta {"tags":["a","b","c"]}');
     });
+
+    it('handles undefined properties in metadata', () => {
+        const result = formatLogMessage('info', 'Undefined property', { prop1: 'value', prop2: undefined });
+        expect(result).toBe('[INFO] Undefined property {"prop1":"value"}');
+    });
+
+    it('handles mixed case log levels', () => {
+        const result = formatLogMessage('InFo', 'Mixed case', { data: 1 });
+        expect(result).toBe('[INFO] Mixed case {"data":1}');
+    });
+
+    it('handles Object.create(null) metadata', () => {
+        const meta = Object.create(null);
+        meta.key = 'value';
+        const result = formatLogMessage('info', 'Null prototype object', meta);
+        expect(result).toBe('[INFO] Null prototype object {"key":"value"}');
+    });
 });
