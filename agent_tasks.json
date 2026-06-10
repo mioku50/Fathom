@@ -1360,7 +1360,7 @@
       "title": "Add Address Middleware Tests",
       "description": "Write integration tests for validateAddressesMiddleware covering validation edge cases.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1399,9 +1399,39 @@
       "acceptance": [
         "Test coverage improved for Mock DEX Adapter with custom configuration."
       ]
+    },
+    {
+      "id": "implement-middleware-logging-xyz125",
+      "title": "Implement Middleware Logging",
+      "description": "Add detailed error logging to validateAddressesMiddleware when addresses are invalid.",
+      "area": "observability",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/middleware/validation.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Logging is present for invalid addresses."
+      ]
+    },
+    {
+      "id": "test-middleware-logging-xyz126",
+      "title": "Test Middleware Logging",
+      "description": "Add tests to verify error logging in validateAddressesMiddleware.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify console.error is called for invalid addresses."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 80,
+  "todo_tasks": 4,
+  "total_tasks": 82,
   "needs_replenishment": false
 }
