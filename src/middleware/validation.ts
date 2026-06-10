@@ -1,6 +1,17 @@
 import { createMiddleware } from 'hono/factory'
 import { isAddress } from 'viem'
 
+/**
+ * Middleware to validate token addresses in API requests.
+ *
+ * This middleware intercepts requests and checks the `token` and `tokens` query parameters.
+ * If these parameters are present, it verifies that they are valid Ethereum addresses
+ * using `viem`'s `isAddress` function.
+ *
+ * @returns {Response} - If a single `token` or any token in the `tokens` list is invalid,
+ *                       it returns a 400 Bad Request response with an `invalid_request` error.
+ *                       Otherwise, it passes control to the next middleware or route handler.
+ */
 export const validateAddressesMiddleware = createMiddleware(async (c, next) => {
   const token = c.req.query('token')
   if (token && !isAddress(token)) {
