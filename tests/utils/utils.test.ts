@@ -237,4 +237,21 @@ describe('generateDummyResponse', () => {
         const response = generateDummyResponse('lowercasetoken', 'base');
         expect(response.token).toBe('lowercasetoken');
     });
+
+    it('generates a valid PriceResponse with array values in chain', () => {
+        // Technically TypeScript prevents this but at runtime it could happen
+        // Using coercion to test runtime robustness
+        const response = generateDummyResponse('0x123', ['array', 'chain'] as any);
+        expect(response.chain).toEqual(['array', 'chain']);
+    });
+
+    it('generates a valid PriceResponse with boolean values in chain', () => {
+        const response = generateDummyResponse('0x123', true as any);
+        expect(response.chain).toBe(true);
+    });
+
+    it('generates a valid PriceResponse with object values in token', () => {
+        const response = generateDummyResponse({ key: 'value' } as any, 'base');
+        expect(response.token).toEqual({ key: 'value' });
+    });
 });

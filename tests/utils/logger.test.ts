@@ -226,4 +226,40 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('debug', 'Small float', { smallVal: 0.0000000001 });
         expect(result).toBe('[DEBUG] Small float {"smallVal":1e-10}');
     });
+
+    it('handles Map objects in metadata (stringifies to empty object)', () => {
+        const result = formatLogMessage('info', 'Map meta', { map: new Map([['key', 'value']]) });
+        expect(result).toBe('[INFO] Map meta {"map":{}}');
+    });
+
+    it('handles Set objects in metadata (stringifies to empty object)', () => {
+        const result = formatLogMessage('info', 'Set meta', { set: new Set(['value']) });
+        expect(result).toBe('[INFO] Set meta {"set":{}}');
+    });
+
+    it('handles RegExp objects in metadata (stringifies to empty object)', () => {
+        const result = formatLogMessage('info', 'RegExp meta', { regex: /test/ });
+        expect(result).toBe('[INFO] RegExp meta {"regex":{}}');
+    });
+
+    it('handles Error objects in metadata (stringifies to empty object unless custom enumerable properties exist)', () => {
+        const result = formatLogMessage('error', 'Error meta', { err: new Error('test') });
+        expect(result).toBe('[ERROR] Error meta {"err":{}}');
+    });
+
+    it('handles NaN in metadata (stringifies to null)', () => {
+        const result = formatLogMessage('warn', 'NaN meta', { val: NaN });
+        expect(result).toBe('[WARN] NaN meta {"val":null}');
+    });
+
+    it('handles Infinity and -Infinity in metadata (stringifies to null)', () => {
+        const result = formatLogMessage('warn', 'Infinity meta', { inf: Infinity, negInf: -Infinity });
+        expect(result).toBe('[WARN] Infinity meta {"inf":null,"negInf":null}');
+    });
+
+    it('handles Date objects in metadata (stringifies to ISO string)', () => {
+        const date = new Date('2023-01-01T00:00:00.000Z');
+        const result = formatLogMessage('info', 'Date meta', { date });
+        expect(result).toBe('[INFO] Date meta {"date":"2023-01-01T00:00:00.000Z"}');
+    });
 });
