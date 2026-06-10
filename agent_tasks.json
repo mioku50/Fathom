@@ -1838,7 +1838,7 @@
       "title": "Refactor Logger Metadata Typing",
       "description": "Update the logger metadata typing to accept a generic type argument instead of any.",
       "area": "core",
-      "status": "todo",
+      "status": "done",
       "risk": "medium",
       "allowed_paths": [
         "src/utils/logger.ts",
@@ -1879,9 +1879,26 @@
         "Error logs contain additional context like chain or parameters.",
         "Typecheck and tests pass."
       ]
+    },
+    {
+      "id": "create-health-check-tests",
+      "title": "Create Health Check Tests",
+      "description": "Add integration tests for the /v1/health endpoint to ensure it correctly returns system status and KV availability.",
+      "area": "tests",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/api/health.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify 200 OK response",
+        "Tests check KV health boolean",
+        "Vitest passes"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 110,
+  "total_tasks": 111,
   "needs_replenishment": false
 }
