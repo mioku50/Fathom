@@ -393,6 +393,88 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(402)
   })
 
+  it('Should successfully clear pool cache through /v1/cache/clear/pool', async () => {
+    const mockDelete = vi.fn().mockResolvedValue(undefined)
+    const mockKV = { get: vi.fn(), put: vi.fn(), delete: mockDelete, list: vi.fn() } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const pool = '0x0987654321098765432109876543210987654321'
+    const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.message).toBe('Pool cache cleared successfully')
+
+    expect(mockDelete).toHaveBeenCalledWith(`orchestrator:pools:${pool.toLowerCase()}`)
+    expect(mockDelete).toHaveBeenCalledWith(`orchestrator:raw:${pool.toLowerCase()}`)
+  })
+
+  it('Should fail /v1/cache/clear/pool if missing pool parameter', async () => {
+    const env: FathomEnv = {}
+    const req = new Request('http://localhost/v1/cache/clear/pool', {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(400)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('pool parameter is required')
+  })
+
+  it('Should fail /v1/cache/clear/pool if KV not configured', async () => {
+    const env: FathomEnv = {}
+    const pool = '0x0987654321098765432109876543210987654321'
+    const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('Internal Server Error: KV not configured')
+  })
+
+  it('Should handle errors on /v1/cache/clear/pool gracefully', async () => {
+    const mockDelete = vi.fn().mockRejectedValue(new Error('KV Delete Error'))
+    const mockKV = { delete: mockDelete } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const pool = '0x0987654321098765432109876543210987654321'
+    const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
+      method: 'POST',
+      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('Failed to clear pool cache')
+  })
+
+  it('Should fail /v1/cache/clear/pool if missing x402 payment', async () => {
+    const env: FathomEnv = {}
+    const pool = '0x0987654321098765432109876543210987654321'
+    const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
+      method: 'POST'
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(402)
+  })
+
   it('Should fail /v1/cache/invalidate if missing token or pool', async () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/invalidate?chain=base', {
