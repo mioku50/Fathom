@@ -1298,7 +1298,7 @@
       "title": "Add Cache Metrics Integration Tests V2",
       "description": "Write further integration tests for the /v1/cache/metrics endpoint covering more edge cases.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1339,9 +1339,39 @@
       "acceptance": [
         "Tests verify cache metrics endpoint correctly queries and returns KV info."
       ]
+    },
+    {
+      "id": "add-middleware-integration-tests-xyz123",
+      "title": "Add Middleware Integration Tests",
+      "description": "Write further integration tests covering the custom error handling and middleware execution flow edge cases.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify error cases in x402 payment validation."
+      ]
+    },
+    {
+      "id": "add-address-middleware-tests-xyz124",
+      "title": "Add Address Middleware Tests",
+      "description": "Write integration tests for validateAddressesMiddleware covering validation edge cases.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify address validation behavior."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 76,
+  "todo_tasks": 4,
+  "total_tasks": 78,
   "needs_replenishment": false
 }
