@@ -1345,7 +1345,7 @@
       "title": "Add Middleware Integration Tests",
       "description": "Write further integration tests covering the custom error handling and middleware execution flow edge cases.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1384,9 +1384,24 @@
       "acceptance": [
         "Tests verify cache metrics endpoint handles empty states and missing kv setup gracefully."
       ]
+    },
+    {
+      "id": "improve-mock-dex-adapter-tests-31554ef7",
+      "title": "Improve Mock DEX Adapter tests",
+      "description": "Add more robust test coverage for the Mock DEX adapter to handle custom mock configurations.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/pricing/mock_dex_adapter.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Test coverage improved for Mock DEX Adapter with custom configuration."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 79,
+  "total_tasks": 80,
   "needs_replenishment": false
 }
