@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { getTokenMetadata, getBatchTokenMetadata } from '../../src/api/metadata';
 import * as viem from 'viem';
+import { base, baseSepolia } from 'viem/chains';
 
 vi.mock('viem', async () => {
   const actual = await vi.importActual<typeof import('viem')>('viem');
@@ -86,6 +87,50 @@ describe('metadata module', () => {
       decimals: 6
     });
     expect(mockReadContract).toHaveBeenCalledTimes(6);
+  });
+
+  it('getTokenMetadata correctly configures client for base-sepolia network', async () => {
+    const mockReadContract = vi.fn().mockImplementation(async ({ functionName }) => {
+      if (functionName === 'symbol') return 'TST';
+      if (functionName === 'name') return 'Test Token';
+      if (functionName === 'decimals') return 18;
+      throw new Error(`Unknown function: ${functionName}`);
+    });
+
+    vi.mocked(viem.createPublicClient).mockReturnValue({
+      readContract: mockReadContract
+    } as any);
+
+    const tokenAddress = '0x1234567890123456789012345678901234567890';
+    await getTokenMetadata(tokenAddress as viem.Address, 'http://rpc.test', 'base-sepolia');
+
+    expect(viem.createPublicClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: baseSepolia
+      })
+    );
+  });
+
+  it('getTokenMetadata defaults to base network', async () => {
+    const mockReadContract = vi.fn().mockImplementation(async ({ functionName }) => {
+      if (functionName === 'symbol') return 'TST';
+      if (functionName === 'name') return 'Test Token';
+      if (functionName === 'decimals') return 18;
+      throw new Error(`Unknown function: ${functionName}`);
+    });
+
+    vi.mocked(viem.createPublicClient).mockReturnValue({
+      readContract: mockReadContract
+    } as any);
+
+    const tokenAddress = '0x1234567890123456789012345678901234567890';
+    await getTokenMetadata(tokenAddress as viem.Address);
+
+    expect(viem.createPublicClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: base
+      })
+    );
   });
 
   it('getBatchTokenMetadata handles errors if any token fetch fails', async () => {
