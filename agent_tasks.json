@@ -1673,7 +1673,7 @@
       "title": "Add More Utility Unit Tests Part 3",
       "description": "Add additional utility tests for edge cases.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -1712,9 +1712,24 @@
       "acceptance": [
         "Methods in orchestrator.ts have JSDoc comments."
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-5",
+      "title": "Add More Utility Unit Tests Part 5",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 99,
+  "total_tasks": 100,
   "needs_replenishment": false
 }
