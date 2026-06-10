@@ -590,4 +590,47 @@ describe('Fathom API Integration Test', () => {
     const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
   })
+
+  it('Should return total_keys as 0 if KV list is empty on /v1/cache/metrics', async () => {
+    const mockList = vi.fn().mockResolvedValue({
+      keys: [],
+      list_complete: true
+    })
+    const mockKV = { list: mockList } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.metrics).toBeDefined()
+    expect(body.metrics.total_keys).toBe(0)
+    expect(mockList).toHaveBeenCalledTimes(1)
+  })
+
+  it('Should handle errors thrown during pagination gracefully on /v1/cache/metrics', async () => {
+    const mockList = vi.fn()
+      .mockResolvedValueOnce({
+        keys: [{ name: 'key1' }],
+        list_complete: false,
+        cursor: 'cursor1'
+      })
+      .mockRejectedValueOnce(new Error('KV Pagination Error'))
+
+    const mockKV = { list: mockList } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+    const body = await res.json() as any
+    expect(body.error).toBe('Failed to retrieve cache metrics')
+    expect(mockList).toHaveBeenCalledTimes(2)
+  })
+
 });
