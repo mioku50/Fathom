@@ -80,4 +80,22 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('debug', 'Symbol meta', { id: sym });
         expect(result).toBe('[DEBUG] Symbol meta {}');
     });
+
+    it('handles circular references in metadata (should throw or fail if JSON.stringify throws)', () => {
+        const circularMeta: any = { a: 1 };
+        circularMeta.self = circularMeta;
+        // JSON.stringify will throw TypeError: Converting circular structure to JSON
+        expect(() => formatLogMessage('error', 'Circular', circularMeta)).toThrow();
+    });
+
+    it('handles BigInt in metadata (JSON.stringify throws unless replacer is used)', () => {
+        // By default JSON.stringify throws on BigInt
+        expect(() => formatLogMessage('info', 'BigInt meta', { val: 123n })).toThrow();
+    });
+
+    it('handles extremely long message string', () => {
+        const longMsg = 'x'.repeat(10000);
+        const result = formatLogMessage('info', longMsg);
+        expect(result).toBe(`[INFO] ${longMsg}`);
+    });
 });
