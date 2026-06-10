@@ -39,4 +39,11 @@ describe('generateDummyResponse', () => {
         expect(response.token).toBe('');
         expect(response.chain).toBe('');
     });
+
+    it('generates a valid PriceResponse with special characters', () => {
+        const response = generateDummyResponse('!@#$', 'chain-123_test');
+        expect(response.token).toBe('!@#$');
+        expect(response.chain).toBe('chain-123_test');
+        expect(response.symbol).toBe('DUMMY');
+    });
 });
