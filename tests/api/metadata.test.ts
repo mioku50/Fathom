@@ -44,7 +44,7 @@ describe('metadata module', () => {
     } as any);
 
     const tokenAddress = '0x1234567890123456789012345678901234567890';
-    await expect(getTokenMetadata(tokenAddress as viem.Address)).rejects.toThrow(`Failed to fetch token metadata for ${tokenAddress}`);
+    await expect(getTokenMetadata(tokenAddress as viem.Address)).rejects.toThrow(`Failed to fetch token metadata for ${tokenAddress} [network: base, rpc: default]`);
   });
 
   it('getBatchTokenMetadata successfully retrieves metadata for multiple tokens', async () => {
@@ -150,6 +150,6 @@ describe('metadata module', () => {
       '0x0987654321098765432109876543210987654321'
     ];
 
-    await expect(getBatchTokenMetadata(tokens as viem.Address[])).rejects.toThrow('Failed to fetch batch token metadata');
+    await expect(getBatchTokenMetadata(tokens as viem.Address[])).rejects.toThrow('Failed to fetch batch token metadata [network: base, rpc: default]');
   });
 });

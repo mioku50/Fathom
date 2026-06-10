@@ -1869,7 +1869,7 @@
       "title": "Refactor Metadata API Error Logging",
       "description": "Improve error logging in the metadata API endpoints by adding more context to error messages when token fetching fails.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/api/metadata.ts",
@@ -1911,9 +1911,39 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-12-1781129328352-0",
+      "title": "Add More Utility Unit Tests Part 12",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-13-1781129328352-1",
+      "title": "Add More Utility Unit Tests Part 13",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 112,
+  "todo_tasks": 4,
+  "total_tasks": 114,
   "needs_replenishment": false
 }
