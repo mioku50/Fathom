@@ -446,11 +446,17 @@ describe('Fathom API Integration Test', () => {
     expect(mockDelete).toHaveBeenCalledWith('key3')
   })
 
-  it('Should return cache size metrics from /v1/cache/metrics', async () => {
-    const mockList = vi.fn().mockResolvedValue({
-      keys: [{ name: 'key1' }, { name: 'key2' }],
-      list_complete: true
-    })
+  it('Should return cache size metrics from /v1/cache/metrics with pagination', async () => {
+    const mockList = vi.fn()
+      .mockResolvedValueOnce({
+        keys: [{ name: 'key1' }, { name: 'key2' }],
+        list_complete: false,
+        cursor: 'cursor1'
+      })
+      .mockResolvedValueOnce({
+        keys: [{ name: 'key3' }],
+        list_complete: true
+      })
     const mockKV = { list: mockList } as unknown as KVNamespace
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
@@ -462,8 +468,34 @@ describe('Fathom API Integration Test', () => {
 
     const body = await res.json() as any
     expect(body.metrics).toBeDefined()
-    expect(body.metrics.total_keys).toBe(2)
-    expect(mockList).toHaveBeenCalled()
+    expect(body.metrics.total_keys).toBe(3)
+    expect(mockList).toHaveBeenCalledTimes(2)
+    expect(mockList).toHaveBeenNthCalledWith(1, { cursor: undefined })
+    expect(mockList).toHaveBeenNthCalledWith(2, { cursor: 'cursor1' })
+  })
+
+  it('Should fail /v1/cache/metrics if KV not configured', async () => {
+    const env: FathomEnv = {}
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+    const body = await res.json() as any
+    expect(body.error).toBe('Internal Server Error: KV not configured')
+  })
+
+  it('Should handle errors on /v1/cache/metrics gracefully', async () => {
+    const mockList = vi.fn().mockRejectedValue(new Error('KV List Error'))
+    const mockKV = { list: mockList } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+    const body = await res.json() as any
+    expect(body.error).toBe('Failed to retrieve cache metrics')
   })
 
 
