@@ -1808,7 +1808,7 @@
       "title": "Add More Utility Unit Tests Part 9",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -1848,9 +1848,24 @@
         "Logger type accepts generics.",
         "Typecheck passes."
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-10",
+      "title": "Add More Utility Unit Tests Part 10",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 108,
+  "total_tasks": 109,
   "needs_replenishment": false
 }
