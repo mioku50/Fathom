@@ -1628,7 +1628,7 @@
       "title": "Add More Utility Unit Tests Part 2",
       "description": "Add additional utility tests.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -1667,9 +1667,39 @@
       "acceptance": [
         "JSDoc comments are added to validateAddressesMiddleware."
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-3",
+      "title": "Add More Utility Unit Tests Part 3",
+      "description": "Add additional utility tests for edge cases.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-4",
+      "title": "Add More Utility Unit Tests Part 4",
+      "description": "Add additional utility tests for coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 96,
+  "todo_tasks": 4,
+  "total_tasks": 98,
   "needs_replenishment": false
 }
