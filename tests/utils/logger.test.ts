@@ -186,4 +186,19 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('debug', 'Complex Array', { data: complexArray });
         expect(result).toBe('[DEBUG] Complex Array {"data":[{"id":1,"nested":{"prop":"val1"}},{"id":2,"arr":[3,4]},null,"string"]}');
     });
+
+    it('handles metadata with multiple boolean properties', () => {
+        const result = formatLogMessage('info', 'Booleans', { a: true, b: false, c: true });
+        expect(result).toBe('[INFO] Booleans {"a":true,"b":false,"c":true}');
+    });
+
+    it('handles metadata with multiple null properties', () => {
+        const result = formatLogMessage('warn', 'Nulls', { a: null, b: null, c: null });
+        expect(result).toBe('[WARN] Nulls {"a":null,"b":null,"c":null}');
+    });
+
+    it('handles metadata containing empty string value', () => {
+        const result = formatLogMessage('debug', 'Empty string value', { emptyStr: '' });
+        expect(result).toBe('[DEBUG] Empty string value {"emptyStr":""}');
+    });
 });

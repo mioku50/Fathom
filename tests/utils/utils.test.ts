@@ -193,4 +193,22 @@ describe('generateDummyResponse', () => {
         response.flags.push('test-flag');
         expect(response.flags).toEqual(['test-flag']);
     });
+
+    it('generates a valid PriceResponse with backticks in token and chain', () => {
+        const response = generateDummyResponse('`token`', '`chain`');
+        expect(response.token).toBe('`token`');
+        expect(response.chain).toBe('`chain`');
+    });
+
+    it('generates a valid PriceResponse with an empty space inside token and chain', () => {
+        const response = generateDummyResponse('t o k e n', 'c h a i n');
+        expect(response.token).toBe('t o k e n');
+        expect(response.chain).toBe('c h a i n');
+    });
+
+    it('generates a valid PriceResponse with numbers as strings', () => {
+        const response = generateDummyResponse('12345', '67890');
+        expect(response.token).toBe('12345');
+        expect(response.chain).toBe('67890');
+    });
 });
