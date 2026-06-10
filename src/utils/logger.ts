@@ -17,7 +17,7 @@
  * @param metadata - Optional key-value pairs providing additional context to append as a JSON string.
  * @returns A structured log string formatted as "[LEVEL] message {"meta":"data"}".
  */
-export function formatLogMessage(level: string, message: string, metadata?: Record<string, any>): string {
+export function formatLogMessage<T extends Record<string, any> = Record<string, any>>(level: string, message: string, metadata?: T): string {
   const metaString = metadata ? ` ${JSON.stringify(metadata)}` : '';
   return `[${level.toUpperCase()}] ${message}${metaString}`;
 }
