@@ -1658,7 +1658,7 @@
       "title": "Document Validation Middleware",
       "description": "Add JSDoc style comments to src/middleware/validation.ts explaining its purpose and error conditions.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/middleware/validation.ts",
@@ -1697,9 +1697,24 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "improve-docs-for-dex-orchestrator",
+      "title": "Improve Docs for Dex Orchestrator",
+      "description": "Add inline documentation for orchestrator.ts methods.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/pricing/orchestrator.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Methods in orchestrator.ts have JSDoc comments."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 98,
+  "total_tasks": 99,
   "needs_replenishment": false
 }
