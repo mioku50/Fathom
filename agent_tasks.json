@@ -1500,7 +1500,7 @@
       "title": "Test Middleware Logging",
       "description": "Add tests to verify error logging in validateAddressesMiddleware.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1534,7 +1534,7 @@
       "title": "Test Middleware Validation Logging",
       "description": "Add tests to verify console.error is called correctly during middleware validation.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1544,9 +1544,39 @@
       "acceptance": [
         "Tests verify console.error is invoked for invalid format."
       ]
+    },
+    {
+      "id": "add-unit-tests-logging-helpers-xyz128",
+      "title": "Add Unit Tests for Logging Helpers",
+      "description": "Add basic unit tests to ensure logging helpers format messages correctly.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify logging helper formatting."
+      ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-xyz129",
+      "title": "Add Unit Tests for General Utils",
+      "description": "Add unit tests to increase coverage for pure utility functions.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Test coverage improved for general utility functions."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 88,
+  "total_tasks": 90,
   "needs_replenishment": false
 }

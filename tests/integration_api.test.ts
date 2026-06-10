@@ -69,8 +69,13 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
     const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
+
+    expect(consoleSpy).toHaveBeenCalledWith(`[Validation Middleware] Invalid token address format: ${token}`)
+    consoleSpy.mockRestore()
   })
 
   it('Should fail /v1/prices if validation fails with invalid token format', async () => {
@@ -82,12 +87,17 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
     const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
     expect(body.error).toBe('invalid_request')
     expect(body.message).toContain('invalid-token')
+
+    expect(consoleSpy).toHaveBeenCalledWith(`[Validation Middleware] Invalid token address format in batch: invalid-token`)
+    consoleSpy.mockRestore()
   })
 
   it('Should ignore blank tokens caused by extra commas in /v1/prices validation', async () => {
