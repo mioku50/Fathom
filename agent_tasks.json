@@ -1485,7 +1485,7 @@
       "title": "Implement Middleware Logging",
       "description": "Add detailed error logging to validateAddressesMiddleware when addresses are invalid.",
       "area": "observability",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/middleware/validation.ts",
@@ -1528,9 +1528,25 @@
         "Script checks /v1/health and /v1/cache/metrics.",
         "Documentation is updated with instructions on how to use the script."
       ]
+    },
+    {
+      "id": "test-middleware-logging-xyz127",
+      "title": "Test Middleware Validation Logging",
+      "description": "Add tests to verify console.error is called correctly during middleware validation.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "tests/index.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify console.error is invoked for invalid format."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 87,
+  "total_tasks": 88,
   "needs_replenishment": false
 }
