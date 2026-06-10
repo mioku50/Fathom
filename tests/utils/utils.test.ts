@@ -211,4 +211,30 @@ describe('generateDummyResponse', () => {
         expect(response.token).toBe('12345');
         expect(response.chain).toBe('67890');
     });
+
+    it('generates a valid PriceResponse when chain name is unusually long', () => {
+        const longChain = 'chain_'.repeat(100);
+        const response = generateDummyResponse('token123', longChain);
+        expect(response.chain).toBe(longChain);
+    });
+
+    it('generates a valid PriceResponse when token is a numeric string with leading zeros', () => {
+        const response = generateDummyResponse('00012345', 'base');
+        expect(response.token).toBe('00012345');
+    });
+
+    it('generates a valid PriceResponse when token contains newline characters', () => {
+        const response = generateDummyResponse('token\nwith\nnewlines', 'base');
+        expect(response.token).toBe('token\nwith\nnewlines');
+    });
+
+    it('generates a valid PriceResponse when token is purely uppercase', () => {
+        const response = generateDummyResponse('UPPERCASETOKEN', 'base');
+        expect(response.token).toBe('UPPERCASETOKEN');
+    });
+
+    it('generates a valid PriceResponse when token is purely lowercase', () => {
+        const response = generateDummyResponse('lowercasetoken', 'base');
+        expect(response.token).toBe('lowercasetoken');
+    });
 });
