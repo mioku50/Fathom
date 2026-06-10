@@ -173,4 +173,24 @@ describe('generateDummyResponse', () => {
         const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
         expect(iso8601Regex.test(response.updated_at)).toBe(true);
     });
+
+    it('generates a valid PriceResponse when passing very short symbol names (token/chain)', () => {
+        const response = generateDummyResponse('t', 'c');
+        expect(response.token).toBe('t');
+        expect(response.chain).toBe('c');
+    });
+
+    it('generates a valid PriceResponse where token and chain are the same string', () => {
+        const response = generateDummyResponse('same-string', 'same-string');
+        expect(response.token).toBe('same-string');
+        expect(response.chain).toBe('same-string');
+    });
+
+    it('ensures the flags array remains mutable if modified later', () => {
+        const response = generateDummyResponse('0x123', 'base');
+        expect(response.flags).toEqual([]);
+
+        response.flags.push('test-flag');
+        expect(response.flags).toEqual(['test-flag']);
+    });
 });
