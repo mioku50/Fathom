@@ -1,5 +1,5 @@
 import { createPublicClient, http, Address, parseAbi } from 'viem';
-import { base } from 'viem/chains';
+import { base, baseSepolia } from 'viem/chains';
 
 const ERC20_ABI = parseAbi([
   "function symbol() view returns (string)",
@@ -14,9 +14,10 @@ export type TokenMetadata = {
   decimals: number;
 };
 
-export async function getTokenMetadata(tokenAddress: Address, rpcUrl?: string): Promise<TokenMetadata> {
+export async function getTokenMetadata(tokenAddress: Address, rpcUrl?: string, network?: string): Promise<TokenMetadata> {
+  const chain = network === 'base-sepolia' ? baseSepolia : base;
   const client = createPublicClient({
-    chain: base,
+    chain: chain,
     transport: http(rpcUrl)
   });
 
@@ -51,9 +52,9 @@ export async function getTokenMetadata(tokenAddress: Address, rpcUrl?: string): 
   }
 }
 
-export async function getBatchTokenMetadata(tokens: Address[], rpcUrl?: string): Promise<TokenMetadata[]> {
+export async function getBatchTokenMetadata(tokens: Address[], rpcUrl?: string, network?: string): Promise<TokenMetadata[]> {
   try {
-    return await Promise.all(tokens.map(token => getTokenMetadata(token, rpcUrl)));
+    return await Promise.all(tokens.map(token => getTokenMetadata(token, rpcUrl, network)));
   } catch (error) {
     console.error('Error fetching batch metadata:', error);
     throw new Error('Failed to fetch batch token metadata');

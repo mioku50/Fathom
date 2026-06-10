@@ -3,6 +3,8 @@ import type { PriceResponse } from './schema'
 export interface FathomEnv {
   FATHOM_KV?: KVNamespace
   CACHE_DEFAULT_TTL_SECONDS?: string
+  BASE_RPC_URL?: string
+  X402_NETWORK?: string
 }
 
 let hits = 0

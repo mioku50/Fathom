@@ -42,6 +42,86 @@
   },
   "tasks": [
     {
+      "id": "document-live-base-sepolia-smoke-tests-b9464a6f",
+      "title": "Document Live Base Sepolia Smoke Tests",
+      "description": "Add docs and/or a script for safe live smoke tests against: https://fathom-api.mioku-fathom.workers.dev",
+      "area": "documentation",
+      "status": "done",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/**",
+        "scripts/**",
+        "package.json",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Documents live Worker URL, worker name, network base-sepolia, chain id 84532, and public x402 recipient.",
+        "Adds safe smoke checks for public endpoints like /v1/health and /v1/cache/metrics.",
+        "Does not require secret values.",
+        "Does not deploy."
+      ]
+    },
+    {
+      "id": "wire-base-sepolia-rpc-env-18d1a2a6",
+      "title": "Wire Base Sepolia RPC Env",
+      "description": "Make metadata/RPC code environment-aware for Base Sepolia.",
+      "area": "api",
+      "status": "done",
+      "risk": "medium",
+      "allowed_paths": [
+        "src/api/metadata.ts",
+        "src/index.ts",
+        "tests/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "BASE_RPC_URL is read from env and passed into metadata functions.",
+        "X402_NETWORK=base-sepolia maps to baseSepolia / chain id 84532.",
+        "Existing Base mainnet behavior remains supported if configured.",
+        "Tests cover Base Sepolia chain selection using mocks/stubs.",
+        "No real secret values are hardcoded."
+      ]
+    },
+    {
+      "id": "add-live-smoke-script-f98ff5ba",
+      "title": "Add Live Smoke Script",
+      "description": "Add a local manual smoke-test script for the live Worker.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "scripts/**",
+        "package.json",
+        "docs/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Script accepts FATHOM_LIVE_URL, defaulting to https://fathom-api.mioku-fathom.workers.dev.",
+        "Script checks /v1/health and /v1/cache/metrics.",
+        "Script skips admin/x402-protected checks unless the required local env vars are present.",
+        "Script never prints secret values.",
+        "Script does not deploy."
+      ]
+    },
+    {
+      "id": "prepare-x402-live-validation-plan-aee8bbff",
+      "title": "Prepare X402 Live Validation Plan",
+      "description": "Document manual live x402 validation steps.",
+      "area": "documentation",
+      "status": "todo",
+      "risk": "high",
+      "allowed_paths": [
+        "docs/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Documents how to validate x402 payment flow on Base Sepolia manually.",
+        "Does not execute live payments.",
+        "Does not request or expose private keys, Cloudflare tokens, RPC secrets, or admin token values.",
+        "Mark this task as high-risk/manual and do not execute autonomously."
+      ]
+    },
+    {
       "id": "bootstrap-governance-loop",
       "status": "done",
       "area": "governance",
@@ -1390,7 +1470,7 @@
       "title": "Improve Mock DEX Adapter tests",
       "description": "Add more robust test coverage for the Mock DEX adapter to handle custom mock configurations.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/mock_dex_adapter.test.ts",
@@ -1450,7 +1530,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
-  "total_tasks": 83,
+  "todo_tasks": 5,
+  "total_tasks": 87,
   "needs_replenishment": false
 }
