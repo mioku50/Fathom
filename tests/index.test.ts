@@ -596,4 +596,44 @@ describe('Fathom API', () => {
     const body = await res.json() as any
     expect(body.error).toBe('Maximum 10 tokens allowed per request')
   })
+
+  it('Should successfully return 200 for /v1/health', async () => {
+    const mockKV = { get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined), delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/health', {
+      method: 'GET'
+    })
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.status).toBe('ok')
+    expect(body.service).toBe('fathom-api')
+    expect(body).toHaveProperty('timestamp')
+  })
+
+  it('Should return 429 Too Many Requests for /v1/health when rate limit is exceeded', async () => {
+    const mockGet = vi.fn().mockResolvedValue('60') // Simulate limit reached
+    const mockKV = { get: mockGet, put: vi.fn().mockResolvedValue(undefined), delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/health', {
+      method: 'GET'
+    })
+
+    // To properly simulate the IP being known, we need to add a CF-Connecting-IP header
+    const reqWithIp = new Request('http://localhost/v1/health', {
+      method: 'GET',
+      headers: { 'CF-Connecting-IP': '1.2.3.4' }
+    })
+
+    const res = await app.fetch(reqWithIp, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(429)
+
+    const body = await res.json() as any
+    expect(body.error).toBe('rate_limited')
+  })
+
 })
