@@ -1748,7 +1748,7 @@
       "title": "Add More Utility Unit Tests Part 6",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -1787,9 +1787,24 @@
       "acceptance": [
         "Logger docs are verified."
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-8",
+      "title": "Add More Utility Unit Tests Part 8",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 104,
+  "total_tasks": 105,
   "needs_replenishment": false
 }
