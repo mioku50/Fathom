@@ -20,6 +20,34 @@ app.get('/v1/cache/stats', (c) => {
   return c.json(getCacheStats())
 })
 
+app.get('/v1/cache/metrics', async (c) => {
+  if (!c.env?.FATHOM_KV) {
+    return c.json({ error: 'Internal Server Error: KV not configured' }, 500)
+  }
+
+  try {
+    let cursor: string | undefined = undefined
+    let totalKeys = 0
+
+    do {
+      const listResult: KVNamespaceListResult<string> = await c.env.FATHOM_KV.list({ cursor })
+
+      totalKeys += listResult.keys.length
+      cursor = listResult.list_complete ? undefined : listResult.cursor
+    } while (cursor)
+
+    return c.json({
+      metrics: {
+        total_keys: totalKeys
+      }
+    })
+  } catch (e) {
+    console.error('KV Cache metrics error:', e)
+    return c.json({ error: 'Failed to retrieve cache metrics' }, 500)
+  }
+})
+
+
 app.get('/v1/price', validateAddressesMiddleware, x402Middleware, async (c) => {
   const token = c.req.query('token') || '0x0000000000000000000000000000000000000000'
   const chain = c.req.query('chain') || 'base'
