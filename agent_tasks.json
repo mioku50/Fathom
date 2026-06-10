@@ -1566,7 +1566,7 @@
       "title": "Add Unit Tests for General Utils",
       "description": "Add unit tests to increase coverage for pure utility functions.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -1607,9 +1607,39 @@
         "docs/api_schema.md exists.",
         "It includes examples of both successful 200 responses and 400/429/500 error formats."
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-1",
+      "title": "Add More Utility Unit Tests Part 1",
+      "description": "Add additional utility tests.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-random-2",
+      "title": "Add More Utility Unit Tests Part 2",
+      "description": "Add additional utility tests.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 92,
+  "todo_tasks": 4,
+  "total_tasks": 94,
   "needs_replenishment": false
 }
