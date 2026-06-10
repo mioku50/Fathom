@@ -1315,7 +1315,7 @@
       "title": "Add Health Unit Tests",
       "description": "Write unit tests for the health endpoint.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/index.test.ts",
@@ -1371,7 +1371,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 78,
   "needs_replenishment": false
 }
