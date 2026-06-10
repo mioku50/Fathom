@@ -1515,7 +1515,7 @@
       "title": "Document Live Base Sepolia Smoke Tests",
       "description": "Add a safe smoke-test script for the existing live Worker deployment on Base Sepolia. The script must only query safe public endpoints like /v1/health and /v1/cache/metrics, without requiring secret values.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/live_smoke_test.md",
@@ -1574,9 +1574,41 @@
       "acceptance": [
         "Test coverage improved for general utility functions."
       ]
+    },
+    {
+      "id": "document-fathom-architecture-diagram",
+      "title": "Document Fathom Architecture Diagram",
+      "description": "Add a simple mermaid.js sequence diagram to the architecture document outlining the path of a request through the system.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/architecture.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "A mermaid.js sequence diagram is present in architecture.md",
+        "The sequence includes the client, rate limiter, auth, cache, and origin."
+      ]
+    },
+    {
+      "id": "document-api-response-schema",
+      "title": "Document API Response Schema",
+      "description": "Create a brief document detailing the exact JSON structure returned by the core price endpoint, including error formats.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/api_schema.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/api_schema.md exists.",
+        "It includes examples of both successful 200 responses and 400/429/500 error formats."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 90,
+  "todo_tasks": 4,
+  "total_tasks": 92,
   "needs_replenishment": false
 }
