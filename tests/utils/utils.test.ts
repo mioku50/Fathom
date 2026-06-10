@@ -161,4 +161,16 @@ describe('generateDummyResponse', () => {
 
         expect(r1).toEqual(r2);
     });
+
+    it('generates a valid PriceResponse with complex emojis for token and chain', () => {
+        const response = generateDummyResponse('👨‍👩‍👧‍👦', '🏳️‍🌈');
+        expect(response.token).toBe('👨‍👩‍👧‍👦');
+        expect(response.chain).toBe('🏳️‍🌈');
+    });
+
+    it('generates an updated_at string strictly matching ISO 8601 format', () => {
+        const response = generateDummyResponse('0x123', 'base');
+        const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+        expect(iso8601Regex.test(response.updated_at)).toBe(true);
+    });
 });
