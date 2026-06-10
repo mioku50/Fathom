@@ -1823,7 +1823,7 @@
       "title": "Add Integration Test for DEX Orchestrator",
       "description": "Create an integration test to verify the DEX Orchestrator can successfully fall back to secondary adapters when the primary fails.",
       "area": "pricing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/pricing/adapters_integration.test.ts",
@@ -1863,9 +1863,25 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "refactor-metadata-api-error-logging",
+      "title": "Refactor Metadata API Error Logging",
+      "description": "Improve error logging in the metadata API endpoints by adding more context to error messages when token fetching fails.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/api/metadata.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Error logs contain additional context like chain or parameters.",
+        "Typecheck and tests pass."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 109,
+  "total_tasks": 110,
   "needs_replenishment": false
 }

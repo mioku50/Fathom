@@ -163,6 +163,36 @@ describe('Pricing Engine Adapters Integration', () => {
 });
 
 describe('Real Adapters Error Handling', () => {
+  it('DEXOrchestrator should fall back to secondary adapters when primary fails', async () => {
+    // Primary adapter (failing)
+    const uniV2 = new MockDEXAdapter('uniswap_v2');
+    vi.spyOn(uniV2, 'getPools').mockRejectedValue(new Error('RPC rate limit exceeded'));
+
+    // Secondary adapters (working)
+    const uniV3 = new MockDEXAdapter('uniswap_v3');
+    uniV3.setPools('0xWETH', [{ address: '0xuniswap_v3Pool', dex: 'uniswap_v3', fee: 0.003 }]);
+
+    const aero = new MockDEXAdapter('aerodrome');
+    aero.setPools('0xWETH', [{ address: '0xaerodromePool', dex: 'aerodrome', fee: 0.003 }]);
+
+    const orchestrator = new DEXOrchestrator([uniV2, uniV3, aero]);
+
+    // Suppress expected console errors from the failing adapter
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const pools = await orchestrator.getAllPools('0xWETH');
+
+    // Should successfully retrieve pools from secondary adapters
+    expect(pools).toHaveLength(2);
+    expect(pools.map(p => p.dex)).toEqual(expect.arrayContaining(['uniswap_v3', 'aerodrome']));
+
+    // Error should have been logged for the failing primary adapter
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching pools from an adapter:', expect.any(Error));
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it('UniswapV2Adapter should handle 429 errors and generic errors correctly', async () => {
     const adapter = new UniswapV2Adapter();
     const mockClient = { readContract: vi.fn() };
