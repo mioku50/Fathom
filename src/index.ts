@@ -17,8 +17,24 @@ const app = new Hono<{ Bindings: ExtendedEnv }>()
 
 app.use('/v1/health', rateLimitMiddleware(60, 60000))
 
-app.get('/v1/health', (c) => {
-  return c.json({ status: 'ok', service: 'fathom-api', timestamp: new Date().toISOString() })
+app.get('/v1/health', async (c) => {
+  let kvHealthy = false
+  if (c.env?.FATHOM_KV) {
+    try {
+      // Perform a minimal operation to verify KV health
+      const listResult = await c.env.FATHOM_KV.list({ limit: 1 })
+      kvHealthy = Array.isArray(listResult?.keys)
+    } catch (e) {
+      console.error('KV health check failed:', e)
+    }
+  }
+
+  return c.json({
+    status: 'ok',
+    service: 'fathom-api',
+    timestamp: new Date().toISOString(),
+    kv_healthy: kvHealthy
+  })
 })
 
 app.get('/v1/cache/stats', (c) => {
