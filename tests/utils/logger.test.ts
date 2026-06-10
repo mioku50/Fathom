@@ -16,4 +16,19 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('WARN', 'Watch out');
         expect(result).toBe('[WARN] Watch out');
     });
+
+    it('handles empty message correctly', () => {
+        const result = formatLogMessage('debug', '');
+        expect(result).toBe('[DEBUG] ');
+    });
+
+    it('handles empty metadata correctly', () => {
+        const result = formatLogMessage('info', 'Test', {});
+        expect(result).toBe('[INFO] Test {}');
+    });
+
+    it('handles missing metadata explicitly undefined', () => {
+        const result = formatLogMessage('info', 'Test', undefined);
+        expect(result).toBe('[INFO] Test');
+    });
 });
