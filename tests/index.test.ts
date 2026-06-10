@@ -138,12 +138,18 @@ describe('Fathom API', () => {
     const req = new Request('http://localhost/v1/price?token=invalid_token&chain=base', {
       headers: { 'X-PAYMENT': 'mock_payment' }
     })
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
     const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
     expect(body.error).toBe('invalid_request')
     expect(body.message).toBe('Invalid token address format')
+
+    expect(consoleSpy).toHaveBeenCalledWith('[Validation Middleware] Invalid token address format: invalid_token')
+    consoleSpy.mockRestore()
   })
 
   it('Should return 402 payment required if no X-PAYMENT header is present', async () => {
@@ -212,12 +218,18 @@ describe('Fathom API', () => {
     const req = new Request('http://localhost/v1/prices?tokens=0x0000000000000000000000000000000000000000,invalid_token&chain=base', {
       headers: { 'X-PAYMENT': 'mock_payment' }
     })
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
     const res = await app.fetch(req, {}, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
     expect(body.error).toBe('invalid_request')
     expect(body.message).toBe('Invalid token address format: invalid_token')
+
+    expect(consoleSpy).toHaveBeenCalledWith('[Validation Middleware] Invalid token address format in batch: invalid_token')
+    consoleSpy.mockRestore()
   })
 
   it('Should return valid schema for /v1/prices (batch)', async () => {
