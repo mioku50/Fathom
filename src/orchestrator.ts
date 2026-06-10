@@ -10,10 +10,19 @@ export interface CacheLayer {
   set(key: string, value: any, ttlSeconds?: number): Promise<void>;
 }
 
+/**
+ * Orchestrates multiple DEX adapters to fetch pool information and raw data concurrently.
+ * Handles caching and partial adapter failures to ensure robustness.
+ */
 export class DEXOrchestrator {
   private adapters: DEXAdapter[];
   private cache?: CacheLayer;
 
+  /**
+   * Constructs a new DEXOrchestrator instance.
+   * @param adapters An array of DEXAdapters to be used by the orchestrator.
+   * @param cache An optional cache layer for caching pool data.
+   */
   constructor(adapters: DEXAdapter[], cache?: CacheLayer) {
     this.adapters = adapters;
     this.cache = cache;
