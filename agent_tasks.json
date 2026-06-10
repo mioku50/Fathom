@@ -1733,7 +1733,7 @@
       "title": "Improve Docs for Utils Logger",
       "description": "Add inline documentation for formatLogMessage in logger.ts.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/utils/logger.ts",
@@ -1772,9 +1772,24 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "improve-docs-for-utils-logger-2",
+      "title": "Improve Docs for Utils Logger Part 2",
+      "description": "Review and refine inline documentation in logger.ts.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/utils/logger.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Logger docs are verified."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 103,
+  "total_tasks": 104,
   "needs_replenishment": false
 }
