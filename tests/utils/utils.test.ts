@@ -254,4 +254,29 @@ describe('generateDummyResponse', () => {
         const response = generateDummyResponse({ key: 'value' } as any, 'base');
         expect(response.token).toEqual({ key: 'value' });
     });
+
+    it('generates a valid PriceResponse with deeply nested array as token (coercion)', () => {
+        const response = generateDummyResponse([[[['nested']]]] as any, 'base');
+        expect(response.token).toEqual([[[['nested']]]]);
+    });
+
+    it('generates a valid PriceResponse with BigInt values (coercion)', () => {
+        const response = generateDummyResponse(123456789n as any, 987654321n as any);
+        expect(response.token).toBe(123456789n);
+        expect(response.chain).toBe(987654321n);
+    });
+
+    it('generates a valid PriceResponse with functions as parameters (coercion)', () => {
+        const fnToken = () => 'token';
+        const fnChain = () => 'chain';
+        const response = generateDummyResponse(fnToken as any, fnChain as any);
+        expect(response.token).toBe(fnToken);
+        expect(response.chain).toBe(fnChain);
+    });
+
+    it('generates a valid PriceResponse with hex string representations', () => {
+        const response = generateDummyResponse('0x0000000000000000000000000000000000000000', '0x1');
+        expect(response.token).toBe('0x0000000000000000000000000000000000000000');
+        expect(response.chain).toBe('0x1');
+    });
 });
