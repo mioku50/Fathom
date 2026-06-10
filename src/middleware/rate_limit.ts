@@ -1,6 +1,17 @@
 import { createMiddleware } from 'hono/factory'
 import type { FathomEnv } from '../cache'
 
+/**
+ * Middleware that limits the number of requests per IP address within a specified time window.
+ * It uses Cloudflare KV to store the request count for a given IP and path.
+ * The TTL of the KV record is refreshed on every request, creating a sliding window.
+ * Note that Cloudflare KV has a minimum TTL of 60 seconds, so the actual window might
+ * be longer than `windowMs` if it is set to less than 60000ms.
+ *
+ * @param {number} [limit=10] - The maximum number of requests allowed in the window.
+ * @param {number} [windowMs=60000] - The duration of the sliding window in milliseconds.
+ * @returns {import('hono').MiddlewareHandler} The Hono middleware function.
+ */
 export const rateLimitMiddleware = (limit = 10, windowMs = 60000) => {
   return createMiddleware(async (c, next) => {
     // If we're not running in a Cloudflare Worker environment with KV bound, bypass rate limiting

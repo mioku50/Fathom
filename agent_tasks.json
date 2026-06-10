@@ -1643,7 +1643,7 @@
       "title": "Document Rate Limit Middleware",
       "description": "Add JSDoc style comments explaining the rate limiting window and sliding logic in src/middleware/rate_limit.ts.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/middleware/rate_limit.ts",
@@ -1699,7 +1699,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 98,
   "needs_replenishment": false
 }
