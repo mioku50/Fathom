@@ -1246,7 +1246,7 @@
       "title": "Add Cache Metrics Endpoint",
       "description": "Add a new endpoint /v1/cache/metrics to report cache size and eviction metrics.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/api/**",
@@ -1292,8 +1292,25 @@
         "Requires admin x402 payment or auth header.",
         "Tests verify cache clear pool behavior."
       ]
+    },
+    {
+      "id": "add-cache-metrics-integration-tests-v2-abc123",
+      "title": "Add Cache Metrics Integration Tests V2",
+      "description": "Write further integration tests for the /v1/cache/metrics endpoint covering more edge cases.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/integration_api.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests verify cache metrics behavior.",
+        "Tests cover successful metrics retrieval.",
+        "Tests cover error handling for KV not configured."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 73
+  "total_tasks": 74
 }
