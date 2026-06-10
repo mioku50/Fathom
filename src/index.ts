@@ -8,7 +8,12 @@ import { rateLimitMiddleware } from './middleware/rate_limit'
 import { generateDummyResponse } from './utils'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
 
-const app = new Hono<{ Bindings: FathomEnv }>()
+type ExtendedEnv = FathomEnv & {
+  BASE_RPC_URL?: string;
+  X402_NETWORK?: string;
+};
+
+const app = new Hono<{ Bindings: ExtendedEnv }>()
 
 app.use('/v1/health', rateLimitMiddleware(60, 60000))
 
@@ -233,7 +238,7 @@ app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) =
   }
 
   try {
-    const metadata = await getTokenMetadata(token)
+    const metadata = await getTokenMetadata(token, c.env?.BASE_RPC_URL, c.env?.X402_NETWORK)
 
     if (c.env?.FATHOM_KV) {
       c.executionCtx.waitUntil(
@@ -302,7 +307,7 @@ app.get('/v1/metadatas', validateAddressesMiddleware, x402Middleware, async (c) 
 
   if (missingTokens.length > 0) {
     try {
-      const fetchedMetadata = await getBatchTokenMetadata(missingTokens)
+      const fetchedMetadata = await getBatchTokenMetadata(missingTokens, c.env?.BASE_RPC_URL, c.env?.X402_NETWORK)
 
       for (let j = 0; j < fetchedMetadata.length; j++) {
         const metadata = fetchedMetadata[j]
