@@ -712,4 +712,33 @@ describe('Fathom API Integration Test', () => {
     consoleSpy.mockRestore()
   })
 
+  it('Should handle missing env object completely gracefully on /v1/cache/metrics', async () => {
+    const env: any = undefined
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+    const body = await res.json() as any
+    expect(body.error).toBe('Internal Server Error: KV not configured')
+  })
+
+  it('Should handle malformed KV list response without keys array on /v1/cache/metrics', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const mockList = vi.fn().mockResolvedValue({
+      list_complete: true
+    })
+    const mockKV = { list: mockList } as unknown as KVNamespace
+
+    const env: FathomEnv = { FATHOM_KV: mockKV }
+
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(500)
+    const body = await res.json() as any
+    expect(body.error).toBe('Failed to retrieve cache metrics')
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
 });

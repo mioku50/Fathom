@@ -1375,7 +1375,7 @@
       "title": "Improve Cache Metrics Integration Test Coverage b8a5144e",
       "description": "Add more edge cases to /v1/cache/metrics integration tests to ensure robust validation.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/integration_api.test.ts",
@@ -1431,7 +1431,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 82,
   "needs_replenishment": false
 }
