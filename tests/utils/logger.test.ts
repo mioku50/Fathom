@@ -262,4 +262,19 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Date meta', { date });
         expect(result).toBe('[INFO] Date meta {"date":"2023-01-01T00:00:00.000Z"}');
     });
+
+    it('handles arrays of empty objects in metadata', () => {
+        const result = formatLogMessage('info', 'Empty objects array', { arr: [{}, {}] });
+        expect(result).toBe('[INFO] Empty objects array {"arr":[{},{}]}');
+    });
+
+    it('handles nested arrays in metadata', () => {
+        const result = formatLogMessage('info', 'Nested arrays', { arr: [[1, 2], [3, 4]] });
+        expect(result).toBe('[INFO] Nested arrays {"arr":[[1,2],[3,4]]}');
+    });
+
+    it('handles null values inside arrays in metadata', () => {
+        const result = formatLogMessage('info', 'Nulls in array', { arr: [1, null, 3] });
+        expect(result).toBe('[INFO] Nulls in array {"arr":[1,null,3]}');
+    });
 });
