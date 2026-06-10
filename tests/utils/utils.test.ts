@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { generateDummyResponse } from '../../src/utils';
 
 describe('generateDummyResponse', () => {
@@ -45,5 +45,16 @@ describe('generateDummyResponse', () => {
         expect(response.token).toBe('!@#$');
         expect(response.chain).toBe('chain-123_test');
         expect(response.symbol).toBe('DUMMY');
+    });
+
+    it('generates a response with accurate updated_at timestamp', () => {
+        vi.useFakeTimers();
+        const fakeTime = new Date('2023-10-15T12:00:00.000Z');
+        vi.setSystemTime(fakeTime);
+
+        const response = generateDummyResponse('0x123', 'base');
+        expect(response.updated_at).toBe(fakeTime.toISOString());
+
+        vi.useRealTimers();
     });
 });
