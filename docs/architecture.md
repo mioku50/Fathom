@@ -62,6 +62,41 @@ Fathom provides a RESTful API for fetching token prices and liquidity data. It f
 | 500 | `internal_error` | Internal server error |
 | 503 | `rpc_unavailable` | External RPC nodes are unresponsive |
 
+### Request Lifecycle
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant RateLimiter as Rate Limiter
+    participant Auth as Auth (x402)
+    participant Cache
+    participant Origin as Origin (Pricing Engine)
+
+    Client->>RateLimiter: GET /v1/price?token=0x...
+    RateLimiter-->>Client: 429 Too Many Requests (if limited)
+    RateLimiter->>Auth: Forward Request
+
+    alt Free Tier / Health Check
+        Auth->>Cache: Forward Request
+    else Paid Endpoint
+        Auth->>Auth: Check X-PAYMENT header
+        Auth-->>Client: 402 Payment Required (if missing/invalid)
+        Auth->>Cache: Forward Request (if valid)
+    end
+
+    Cache->>Cache: Check KV Store
+    alt Cache Hit
+        Cache-->>Client: 200 OK (Cached Data)
+    else Cache Miss
+        Cache->>Origin: Fetch Data
+        Origin->>Origin: Discover Pools & Fetch RPC Data
+        Origin->>Origin: Calculate Price & Confidence
+        Origin-->>Cache: Return Data
+        Cache->>Cache: Save to KV Store (Short TTL)
+        Cache-->>Client: 200 OK (Fresh Data)
+    end
+```
+
 ## Core components
 
 1. HTTP API

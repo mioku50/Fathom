@@ -1581,7 +1581,7 @@
       "title": "Document Fathom Architecture Diagram",
       "description": "Add a simple mermaid.js sequence diagram to the architecture document outlining the path of a request through the system.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/architecture.md",
@@ -1639,7 +1639,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 94,
   "needs_replenishment": false
 }
