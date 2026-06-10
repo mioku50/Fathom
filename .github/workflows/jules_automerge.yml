@@ -9,7 +9,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: fathom-autonomous-loop
+  group: fathom-automerge
   cancel-in-progress: false
 
 jobs:
@@ -23,6 +23,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ github.token }}
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -32,13 +36,41 @@ jobs:
         run: |
           python -m pip install -U pip pytest
 
+      - name: Auto-format agent task manifest
+        id: format_manifest
+        run: |
+          python scripts/format_agent_tasks.py agent_tasks.json
+
+          if ! git diff --quiet -- agent_tasks.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add agent_tasks.json
+            git commit -m "chore: format agent task manifest"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stop after formatting push
+        if: steps.format_manifest.outputs.changed == 'true'
+        run: |
+          echo "agent_tasks.json was formatted and pushed. A new PR check run will start."
+
       - name: Validate agent task manifest
+        if: steps.format_manifest.outputs.changed != 'true'
         run: python scripts/validate_agent_tasks.py agent_tasks.json
 
+      - name: Check agent task formatting
+        if: steps.format_manifest.outputs.changed != 'true'
+        run: python scripts/format_agent_tasks.py --check agent_tasks.json
+
       - name: Run Python tests
+        if: steps.format_manifest.outputs.changed != 'true'
         run: pytest tests/test_agent_tasks.py
 
       - name: Run TypeScript checks if package.json exists
+        if: steps.format_manifest.outputs.changed != 'true'
         run: |
           if [ -f package.json ]; then
             npm install
@@ -47,14 +79,14 @@ jobs:
           fi
 
       - name: Merge PR
-        if: success()
+        if: steps.format_manifest.outputs.changed != 'true' && success()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh pr merge ${{ github.event.pull_request.number }} --merge --delete-branch
 
       - name: Trigger next Jules task after merge
-        if: success()
+        if: steps.format_manifest.outputs.changed != 'true' && success()
         run: |
           PROMPT=$(cat <<'PROMPT_EOF'
           You are the autonomous production development worker for Fathom.
@@ -62,6 +94,9 @@ jobs:
           Repository: mioku50/Fathom
 
           Continue developing Fathom toward a production-ready MVP through the autonomous task loop.
+
+          Important setup rule:
+          Work from the repository root provided by Jules. Do not run `cd /app`.
 
           Read first:
           - README.md
@@ -72,6 +107,8 @@ jobs:
           - docs/codex_worker_plan.md
 
           Start by running:
+          pwd
+          ls -la
           python -m fathom_agent.codex_bridge validate
           python -m fathom_agent.codex_bridge status
           python -m fathom_agent.codex_bridge next-task
@@ -84,6 +121,7 @@ jobs:
           - Stay inside the selected task's allowed_paths.
           - Run validation/tests before finishing.
           - Update agent_tasks.json after completing the task.
+          - Run python scripts/format_agent_tasks.py agent_tasks.json before finishing.
           - If new work is discovered, add it as new todo tasks instead of expanding the current PR.
           - If fewer than replenishment_policy.minimum_todo_tasks remain, add a small batch of low/medium-risk tasks.
           - Never ask the user what to do next while safe low/medium-risk work exists.
@@ -100,11 +138,14 @@ jobs:
           - High and critical risk tasks require human review.
 
           Validation commands:
+          python scripts/format_agent_tasks.py agent_tasks.json
           python scripts/validate_agent_tasks.py agent_tasks.json
           pytest tests/test_agent_tasks.py
           python -m fathom_agent.codex_bridge validate
           python -m fathom_agent.codex_bridge status
           python -m fathom_agent.codex_bridge next-task
+          npm test --if-present
+          npm run typecheck --if-present
 
           PR requirements:
           - Mention the selected task id.
