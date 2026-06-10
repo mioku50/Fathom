@@ -279,4 +279,22 @@ describe('generateDummyResponse', () => {
         expect(response.token).toBe('0x0000000000000000000000000000000000000000');
         expect(response.chain).toBe('0x1');
     });
+
+    it('generates a valid PriceResponse with missing main_pool properties (simulated via manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.main_pool = {} as any;
+        expect(response.main_pool.dex).toBeUndefined();
+    });
+
+    it('generates a valid PriceResponse with unusual twap_5m', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.twap_5m = 0;
+        expect(response.twap_5m).toBe(0);
+    });
+
+    it('generates a valid PriceResponse with negative price_usd', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.price_usd = -1;
+        expect(response.price_usd).toBe(-1);
+    });
 });
