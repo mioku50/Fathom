@@ -142,4 +142,26 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Deep nest', complexMeta);
         expect(result).toBe('[INFO] Deep nest {"level1":{"level2":{"level3":{"arr":[1,2,{"deepKey":"deepValue"}]}}}}');
     });
+
+    it('handles empty message with metadata', () => {
+        const result = formatLogMessage('info', '', { test: 123 });
+        expect(result).toBe('[INFO]  {"test":123}');
+    });
+
+    it('handles custom object toString behavior in metadata', () => {
+        const meta = {
+            toString() { return 'custom-string'; },
+            val: 1
+        };
+        const result = formatLogMessage('info', 'Custom toString', meta);
+        expect(result).toBe('[INFO] Custom toString {"val":1}');
+    });
+
+    it('handles object with toJSON defined in metadata', () => {
+        const meta = {
+            toJSON() { return { custom: 'json-val' }; }
+        };
+        const result = formatLogMessage('debug', 'toJSON custom', meta);
+        expect(result).toBe('[DEBUG] toJSON custom {"custom":"json-val"}');
+    });
 });
