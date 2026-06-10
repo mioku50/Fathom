@@ -1885,11 +1885,12 @@
       "title": "Create Health Check Tests",
       "description": "Add integration tests for the /v1/health endpoint to ensure it correctly returns system status and KV availability.",
       "area": "tests",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/api/health.test.ts",
-        "agent_tasks.json"
+        "agent_tasks.json",
+        "src/index.ts"
       ],
       "acceptance": [
         "Tests verify 200 OK response",
@@ -1943,7 +1944,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 114,
   "needs_replenishment": false
 }
