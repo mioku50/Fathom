@@ -1,6 +1,8 @@
 name = "fathom-api"
 main = "src/index.ts"
 compatibility_date = "2024-02-08"
+workers_dev = true
+preview_urls = true
 
 [observability]
 enabled = true
