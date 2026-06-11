@@ -187,4 +187,24 @@ describe('PriceReader', () => {
     expect(result.mainPoolData).toBeNull();
   });
 
+
+  it('should construct correctly with orchestrator', () => {
+    // Config/initialization test
+    const mockOrchestrator = {} as DEXOrchestrator;
+    const reader = new PriceReader(mockOrchestrator);
+    expect(reader).toBeDefined();
+    expect(reader).toBeInstanceOf(PriceReader);
+  });
+
+  it('should handle getBestPriceAndLiquidity with empty inputs gracefully', async () => {
+    // Edge case initialization test
+    orchestratorMock.getAllPools.mockResolvedValue([]);
+    orchestratorMock.getAllRawData.mockResolvedValue([]);
+
+    // An empty token string
+    const result = await priceReader.getBestPriceAndLiquidity('');
+    expect(result.poolsCount).toBe(0);
+    expect(result.bestPrice).toBe(0);
+    expect(result.bestLiquidity).toBe(0);
+  });
 });

@@ -2612,7 +2612,7 @@
         "tests/priceReader.test.ts",
         "agent_tasks.json"
       ],
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
       "acceptance": [
         "Tests cover PriceReader initialization and simple config inputs",
@@ -2648,9 +2648,26 @@
         "A new docs/deployment_hardening.md file is created.",
         "File contains security best practices for CI and cloud deployments."
       ]
+    },
+    {
+      "id": "add-more-price-reader-tests-1781187441120",
+      "title": "Add more price reader error tests",
+      "area": "tests",
+      "description": "Add more error handling and edge case tests for PriceReader.",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/priceReader.test.ts",
+        "agent_tasks.json"
+      ],
+      "status": "todo",
+      "dependencies": [],
+      "acceptance": [
+        "Error handling tests are added for PriceReader",
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 159,
+  "total_tasks": 160,
   "needs_replenishment": false
 }
