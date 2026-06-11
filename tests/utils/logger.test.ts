@@ -408,4 +408,28 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[INFO] Test {"arr":[1,2,[3,4]]}');
     });
 
+
+    // --- Added for Batch 4 Part 15 ---
+
+    it('handles metadata with mixed array elements batch 4 part 15', () => {
+        const result = formatLogMessage('info', 'Test', { mixed: [1, "two", { three: 3 }, null, [5]] });
+        expect(result).toBe('[INFO] Test {"mixed":[1,"two",{"three":3},null,[5]]}');
+    });
+
+    it('handles false boolean value alone in metadata batch 4 part 15', () => {
+        const result = formatLogMessage('debug', 'Test', { isFalse: false });
+        expect(result).toBe('[DEBUG] Test {"isFalse":false}');
+    });
+
+    it('handles numeric 0 alone in metadata batch 4 part 15', () => {
+        const result = formatLogMessage('debug', 'Test', { isZero: 0 });
+        expect(result).toBe('[DEBUG] Test {"isZero":0}');
+    });
+
+    it('handles undefined value in metadata batch 4 part 15', () => {
+        // undefined values are omitted by JSON.stringify
+        const result = formatLogMessage('debug', 'Test', { isUndefined: undefined });
+        expect(result).toBe('[DEBUG] Test {}');
+    });
+
 });
