@@ -2706,7 +2706,7 @@
         "tests/orchestrator.test.ts",
         "agent_tasks.json"
       ],
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
       "acceptance": [
         "Tests added",
@@ -2740,6 +2740,24 @@
       ],
       "acceptance": [
         "A new docs/security_policies.md file is created."
+      ]
+    },
+    {
+      "id": "add-price-reader-tests-1781199698296",
+      "title": "Add unit tests for Price Reader",
+      "area": "tests",
+      "description": "Implement tests for the price reader to improve test coverage.",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/price_reader.test.ts",
+        "src/price_reader.ts",
+        "agent_tasks.json"
+      ],
+      "status": "todo",
+      "dependencies": [],
+      "acceptance": [
+        "Tests added",
+        "Tests pass"
       ]
     }
   ],
