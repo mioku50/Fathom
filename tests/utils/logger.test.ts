@@ -865,4 +865,24 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[INFO] msg {"count":42,"price":3.14,"zero":0,"negative":-10}');
     });
 
+
+    it('handles formatLogMessage with a function inside metadata batch 21', () => {
+        const result = formatLogMessage('info', 'msg', { func: () => {} });
+        expect(result).toBe('[INFO] msg {}');
+    });
+
+    it('handles formatLogMessage with null level batch 21', () => {
+        const result = formatLogMessage(null as any, 'msg');
+        expect(result).toBe('[NULL] msg');
+    });
+
+    it('handles formatLogMessage with missing level batch 21', () => {
+        expect(() => formatLogMessage(undefined as any, 'msg')).toThrow(TypeError);
+        expect(() => formatLogMessage(undefined as any, 'msg')).toThrow('Missing level');
+    });
+
+    it('handles formatLogMessage with array of objects in metadata batch 21', () => {
+        const result = formatLogMessage('info', 'msg', { arr: [{a: 1}, {b: 2}] });
+        expect(result).toBe('[INFO] msg {"arr":[{"a":1},{"b":2}]}');
+    });
 });
