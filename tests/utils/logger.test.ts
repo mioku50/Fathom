@@ -277,4 +277,24 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Nulls in array', { arr: [1, null, 3] });
         expect(result).toBe('[INFO] Nulls in array {"arr":[1,null,3]}');
     });
+
+    it('handles symbol object properties in metadata', () => {
+        const sym = Symbol('foo');
+        const meta = { [sym]: 'value', normalKey: 'normalVal' };
+        const result = formatLogMessage('info', 'Symbols in object', meta);
+        // Symbols are ignored in JSON stringify
+        expect(result).toBe('[INFO] Symbols in object {"normalKey":"normalVal"}');
+    });
+
+    it('handles Error objects directly as message (coercion)', () => {
+        const err = new Error('Test error');
+        // @ts-ignore
+        const result = formatLogMessage('error', err);
+        expect(result).toMatch(/\[ERROR\] Error: Test error/);
+    });
+
+    it('throws TypeError for undefined log level (manual coercion)', () => {
+        // @ts-ignore
+        expect(() => formatLogMessage(undefined, 'Missing level')).toThrow(TypeError);
+    });
 });
