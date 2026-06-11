@@ -2848,7 +2848,7 @@
       "title": "Add deployment hardening documentation",
       "description": "Create docs/deployment_hardening.md to provide guidelines on securing Fathom deployments, including least privilege access and network isolation.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/deployment_hardening.md",
@@ -2890,10 +2890,25 @@
       "acceptance": [
         "Tests pass"
       ]
+    },
+    {
+      "id": "add-architecture-docs-1781221954038",
+      "title": "Add API architecture overview docs",
+      "description": "Create docs/api_architecture.md to provide a high-level overview of Fathom's API design.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/api_architecture.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/api_architecture.md is created with relevant information."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 174,
+  "total_tasks": 175,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
