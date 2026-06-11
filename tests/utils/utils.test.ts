@@ -358,4 +358,34 @@ describe('generateDummyResponse', () => {
         response.updated_at = bigDate;
         expect(response.updated_at).toBe(bigDate);
     });
+
+    it('generates a valid PriceResponse with symbol having special characters', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.symbol = '!@#$%^&*()';
+        expect(response.symbol).toBe('!@#$%^&*()');
+    });
+
+    it('generates a valid PriceResponse with label having numbers', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.label = 'label123';
+        expect(response.label).toBe('label123');
+    });
+
+    it('generates a valid PriceResponse with very small liquidity_usd', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.liquidity_usd = 0.0000001;
+        expect(response.liquidity_usd).toBe(0.0000001);
+    });
+
+    it('generates a valid PriceResponse with main_pool having non-string address', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.main_pool.address = 12345 as any;
+        expect(response.main_pool.address).toBe(12345);
+    });
+
+    it('generates a valid PriceResponse with main_pool having non-numeric fee', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.main_pool.fee = '0.003' as any;
+        expect(response.main_pool.fee).toBe('0.003');
+    });
 });

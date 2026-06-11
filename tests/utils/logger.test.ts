@@ -332,4 +332,19 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', function() {});
         expect(result).toMatch(/\[INFO\] function/);
     });
+
+    it('handles empty string metadata correctly', () => {
+        const result = formatLogMessage('info', 'Test', { empty: '' });
+        expect(result).toBe('[INFO] Test {"empty":""}');
+    });
+
+    it('handles metadata with nested arrays', () => {
+        const result = formatLogMessage('info', 'Test', { arr: [[1, 2], [3, 4]] });
+        expect(result).toBe('[INFO] Test {"arr":[[1,2],[3,4]]}');
+    });
+
+    it('handles metadata with boolean values', () => {
+        const result = formatLogMessage('info', 'Test', { flag: true, active: false });
+        expect(result).toBe('[INFO] Test {"flag":true,"active":false}');
+    });
 });
