@@ -1993,11 +1993,12 @@
       "title": "Add More Utility Unit Tests Part 15",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
-        "agent_tasks.json"
+        "agent_tasks.json",
+        "src/utils/logger.ts"
       ],
       "acceptance": [
         "Tests added for utility scripts."
@@ -2049,7 +2050,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 121,
   "needs_replenishment": false
 }
