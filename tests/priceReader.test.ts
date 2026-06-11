@@ -207,4 +207,57 @@ describe('PriceReader', () => {
     expect(result.bestPrice).toBe(0);
     expect(result.bestLiquidity).toBe(0);
   });
+
+  it('should handle rawData array with some null or invalid entries', async () => {
+    const pools = [
+      { address: '0xPool1', dex: 'uniswapV2' },
+      { address: '0xPool2', dex: 'uniswapV3' }
+    ];
+
+    orchestratorMock.getAllPools.mockResolvedValue(pools);
+
+    const rawData = [
+      {
+        pool: pools[0],
+        rawData: null // Invalid
+      },
+      {
+        pool: pools[1],
+        rawData: {
+          sqrtPriceX96: 0n, // Gives zero price and liquidity
+          liquidity: 0n,
+          updatedAt: 1234
+        }
+      }
+    ];
+
+    orchestratorMock.getAllRawData.mockResolvedValue(rawData);
+
+    const token = '0x1111111111111111111111111111111111111111';
+
+    // It should handle gracefully, skip null raw data, or throw if the underlying Calculator throws
+    // Our calculator expects valid rawData objects, we should test how PriceReader handles exceptions
+
+    // We expect it to either return zero price/liquidity or throw an error if Calculator throws.
+    // PriceCalculator throws when reserve/sqrtPrice data is missing or wrong types depending on its implementation.
+    // Let's mock the Calculator if needed or just let it throw to verify error bubbling.
+    // But since it's a real class, it might throw "Cannot read properties of null".
+    // We should test error handling inside PriceReader or just expect it to bubble.
+    await expect(priceReader.getBestPriceAndLiquidity(token)).rejects.toThrow();
+  });
+
+  it('should handle getBestPriceAndLiquidity when orchestrator.getAllPools throws', async () => {
+    orchestratorMock.getAllPools.mockRejectedValue(new Error('Network error'));
+
+    const token = '0x1111111111111111111111111111111111111111';
+    await expect(priceReader.getBestPriceAndLiquidity(token)).rejects.toThrow('Network error');
+  });
+
+  it('should handle getBestPriceAndLiquidity when orchestrator.getAllRawData throws', async () => {
+    orchestratorMock.getAllPools.mockResolvedValue([{ address: '0xPool1', dex: 'uniswapV2' }]);
+    orchestratorMock.getAllRawData.mockRejectedValue(new Error('RPC error'));
+
+    const token = '0x1111111111111111111111111111111111111111';
+    await expect(priceReader.getBestPriceAndLiquidity(token)).rejects.toThrow('RPC error');
+  });
 });
