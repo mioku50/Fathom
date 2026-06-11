@@ -455,4 +455,22 @@ describe('generateDummyResponse', () => {
         response.liquidity_usd = 1000000000;
         expect(response.liquidity_usd).toBe(1000000000);
     });
+
+
+    // --- Added for Batch 1 Part 16 ---
+
+    it('generates a valid PriceResponse when token is an empty array (coercion)', () => {
+        const response = generateDummyResponse([] as any, 'base');
+        expect(response.token).toEqual([]);
+    });
+
+    it('generates a valid PriceResponse with max safe integer as token (coercion)', () => {
+        const response = generateDummyResponse(Number.MAX_SAFE_INTEGER as any, 'base');
+        expect(response.token).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    it('generates a valid PriceResponse with min safe integer as token (coercion)', () => {
+        const response = generateDummyResponse(Number.MIN_SAFE_INTEGER as any, 'base');
+        expect(response.token).toBe(Number.MIN_SAFE_INTEGER);
+    });
 });
