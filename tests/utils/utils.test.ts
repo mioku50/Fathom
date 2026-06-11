@@ -473,4 +473,22 @@ describe('generateDummyResponse', () => {
         const response = generateDummyResponse(Number.MIN_SAFE_INTEGER as any, 'base');
         expect(response.token).toBe(Number.MIN_SAFE_INTEGER);
     });
+
+    // --- Added for Batch 18 Part 0 ---
+
+    it('generates a valid PriceResponse when token is an extremely long string', () => {
+        const longToken = 'a'.repeat(1000);
+        const response = generateDummyResponse(longToken, 'base');
+        expect(response.token).toBe(longToken);
+    });
+
+    it('generates a valid PriceResponse when token is null (coercion)', () => {
+        const response = generateDummyResponse(null as any, 'base');
+        expect(response.token).toBeNull();
+    });
+
+    it('generates a valid PriceResponse when chain is null (coercion)', () => {
+        const response = generateDummyResponse('token', null as any);
+        expect(response.chain).toBeNull();
+    });
 });
