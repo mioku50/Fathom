@@ -1978,7 +1978,7 @@
       "title": "Add More Utility Unit Tests Part 14",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -2049,7 +2049,7 @@
       ]
     }
   ],
-  "todo_tasks": 5,
+  "todo_tasks": 4,
   "total_tasks": 121,
   "needs_replenishment": false
 }
