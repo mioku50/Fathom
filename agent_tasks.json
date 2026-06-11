@@ -2624,10 +2624,11 @@
       "title": "Add Utility Tests",
       "description": "Add missing utility tests for formatting functions.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
-        "tests/utils/format.test.ts"
+        "tests/utils/format.test.ts",
+        "src/utils/format.ts"
       ],
       "acceptance": [
         "Tests pass"
@@ -2663,6 +2664,20 @@
       "dependencies": [],
       "acceptance": [
         "Error handling tests are added for PriceReader",
+        "Tests pass"
+      ]
+    },
+    {
+      "id": "add-price-endpoint-tests-1781188381939",
+      "title": "Add Price Endpoint Tests",
+      "description": "Add more tests for price endpoint.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/api.test.ts"
+      ],
+      "acceptance": [
         "Tests pass"
       ]
     }
