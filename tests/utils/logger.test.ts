@@ -391,4 +391,10 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[DEBUG] Test {"flag":true,"anotherFlag":false}');
     });
 
+
+    it('handles metadata with null values batch 3 part 15', () => {
+        const result = formatLogMessage('debug', 'Test', { val: null });
+        expect(result).toBe('[DEBUG] Test {"val":null}');
+    });
+
 });
