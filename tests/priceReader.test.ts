@@ -114,4 +114,77 @@ describe('PriceReader', () => {
       price_usd: 2
     });
   });
+
+  it('should handle token matching quote address (zero price/liquidity)', async () => {
+    const pools = [
+      { address: '0xPool1', dex: 'uniswapV2' }
+    ];
+
+    orchestratorMock.getAllPools.mockResolvedValue(pools);
+
+    const rawData = [
+      {
+        pool: pools[0],
+        rawData: {
+          reserve0: 1000000000000000000n,
+          reserve1: 1000000000000000000n,
+          updatedAt: 1234
+        }
+      }
+    ];
+
+    orchestratorMock.getAllRawData.mockResolvedValue(rawData);
+
+    const token = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // Matches quote exactly
+    const result = await priceReader.getBestPriceAndLiquidity(token);
+
+    // If it matches exactly, priceReader does:
+    // isToken0 = token.toLowerCase() < '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
+    // This evaluates to false (equal, not less).
+    // Reserve calculation will assign quote=reserve0, token=reserve1
+    // The price will be calculated normally, but practically it's just 1:1 if reserves are equal.
+
+    expect(result.poolsCount).toBe(1);
+    expect(result.bestPrice).toBe(1);
+    expect(result.bestLiquidity).toBe(2);
+  });
+
+  it('should handle zero prices correctly (reserves are 0)', async () => {
+    const pools = [
+      { address: '0xPool1', dex: 'uniswapV2' },
+      { address: '0xPool2', dex: 'uniswapV3' }
+    ];
+
+    orchestratorMock.getAllPools.mockResolvedValue(pools);
+
+    const rawData = [
+      {
+        pool: pools[0],
+        rawData: {
+          reserve0: 0n,
+          reserve1: 0n,
+          updatedAt: 1234
+        }
+      },
+      {
+        pool: pools[1],
+        rawData: {
+          sqrtPriceX96: 0n,
+          liquidity: 0n,
+          updatedAt: 1234
+        }
+      }
+    ];
+
+    orchestratorMock.getAllRawData.mockResolvedValue(rawData);
+
+    const token = '0x1111111111111111111111111111111111111111';
+    const result = await priceReader.getBestPriceAndLiquidity(token);
+
+    expect(result.poolsCount).toBe(2);
+    expect(result.bestPrice).toBe(0);
+    expect(result.bestLiquidity).toBe(0);
+    expect(result.mainPoolData).toBeNull();
+  });
+
 });
