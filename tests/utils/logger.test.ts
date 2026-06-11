@@ -347,4 +347,31 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Test', { flag: true, active: false });
         expect(result).toBe('[INFO] Test {"flag":true,"active":false}');
     });
+
+    it('handles numeric levels correctly', () => {
+        // @ts-ignore
+        const result = formatLogMessage(123, 'Test');
+        expect(result).toBe('[123] Test');
+    });
+
+    it('handles null level correctly', () => {
+        // @ts-ignore
+        const result = formatLogMessage(null, 'Test');
+        expect(result).toBe('[NULL] Test');
+    });
+
+    it('handles metadata with multiple nested objects', () => {
+        const result = formatLogMessage('info', 'Nested', { a: { b: { c: 1 } } });
+        expect(result).toBe('[INFO] Nested {"a":{"b":{"c":1}}}');
+    });
+
+    it('handles message with special characters', () => {
+        const result = formatLogMessage('info', 'Test !@#$%^&*()_+');
+        expect(result).toBe('[INFO] Test !@#$%^&*()_+');
+    });
+
+    it('handles message with newline characters', () => {
+        const result = formatLogMessage('info', 'Test\nLine 2');
+        expect(result).toBe('[INFO] Test\nLine 2');
+    });
 });
