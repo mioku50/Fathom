@@ -589,4 +589,25 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[ERROR] Empty key {"":"value"}');
     });
 
+
+    it('handles deeply nested object metadata batch 1 part 19', () => {
+        const result = formatLogMessage('info', 'Deep', { a: { b: { c: { d: 1 } } } });
+        expect(result).toBe('[INFO] Deep {"a":{"b":{"c":{"d":1}}}}');
+    });
+
+    it('handles special characters in message batch 1 part 19', () => {
+        const result = formatLogMessage('warn', 'Special !@#$%^&*()_+', { key: 'val' });
+        expect(result).toBe('[WARN] Special !@#$%^&*()_+ {"key":"val"}');
+    });
+
+    it('handles zero in metadata batch 1 part 19', () => {
+        const result = formatLogMessage('debug', 'Zero', { val: 0 });
+        expect(result).toBe('[DEBUG] Zero {"val":0}');
+    });
+
+    it('handles empty message with metadata batch 1 part 19', () => {
+        const result = formatLogMessage('trace', '', { empty: true });
+        expect(result).toBe('[TRACE]  {"empty":true}');
+    });
+
 });

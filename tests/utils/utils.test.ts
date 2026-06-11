@@ -522,4 +522,27 @@ describe('generateDummyResponse', () => {
         expect(response.chain).toBe('');
     });
 
+
+    it('generates a valid PriceResponse when token is very long batch 1 part 19', () => {
+        const token = 'a'.repeat(1000);
+        const response = generateDummyResponse(token, 'base');
+        expect(response.token).toBe(token);
+    });
+
+    it('generates a valid PriceResponse when chain is very long batch 1 part 19', () => {
+        const chain = 'b'.repeat(1000);
+        const response = generateDummyResponse('token', chain);
+        expect(response.chain).toBe(chain);
+    });
+
+    it('generates a valid PriceResponse with consistent flags array batch 1 part 19', () => {
+        const response = generateDummyResponse('token', 'chain');
+        expect(response.flags).toEqual([]);
+    });
+
+    it('generates a valid PriceResponse with consistent dummy label batch 1 part 19', () => {
+        const response = generateDummyResponse('t', 'c');
+        expect(response.label).toBe('reliable');
+    });
+
 });
