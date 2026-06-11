@@ -7,7 +7,28 @@ import { validateAddressesMiddleware } from './middleware/validation'
 import { rateLimitMiddleware } from './middleware/rate_limit'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
 
-import { DEXOrchestrator } from './orchestrator'
+import { DEXOrchestrator, type CacheLayer } from './orchestrator'
+
+
+class OrchestratorCacheAdapter implements CacheLayer {
+  constructor(private kv?: KVNamespace, private defaultTTL: number = 60) {}
+  async get(key: string): Promise<any> {
+    if (!this.kv) return null;
+    try {
+      const val = await this.kv.get(key, 'json');
+      return val;
+    } catch {
+      return null;
+    }
+  }
+  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+    if (!this.kv) return;
+    try {
+      await this.kv.put(key, JSON.stringify(value), { expirationTtl: ttlSeconds || this.defaultTTL });
+    } catch {}
+  }
+}
+
 import { AerodromeAdapter } from './adapters/aerodrome'
 import { UniswapV2Adapter } from './adapters/uniswap_v2'
 import { UniswapV3Adapter } from './adapters/uniswap_v3'
@@ -95,7 +116,7 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
     new UniswapV2Adapter(c.env?.BASE_RPC_URL),
     new UniswapV3Adapter(c.env?.BASE_RPC_URL)
   ];
-  const orchestrator = new DEXOrchestrator(adapters, cacheLayer);
+  const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
   const pools = await orchestrator.getAllPools(token);
   const rawData = await orchestrator.getAllRawData(pools);
@@ -198,7 +219,7 @@ const cachedResponse = await cacheLayer.get(token, chain)
       new UniswapV2Adapter(c.env?.BASE_RPC_URL),
       new UniswapV3Adapter(c.env?.BASE_RPC_URL)
     ];
-    const orchestrator = new DEXOrchestrator(adapters, cacheLayer);
+    const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
     const pools = await orchestrator.getAllPools(token);
     const rawData = await orchestrator.getAllRawData(pools);
