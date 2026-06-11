@@ -20,3 +20,8 @@ This document outlines the security best practices and deployment hardening stra
 - **HTTPS Only:** Enforce TLS 1.2+ for all communication with API endpoints. Ensure that non-HTTPS traffic is redirected or rejected.
 - **Rate Limiting:** Implement strict rate limiting on public-facing endpoints (e.g., health checks and external APIs) to prevent abuse and brute force attacks.
 - **Monitoring and Alerts:** Set up alerts for unusual traffic patterns, multiple failed requests, and internal server errors. Monitor CI deployment logs securely.
+
+## Fathom-Specific Hardening
+- **x402 Payment Verification:** Ensure `FATHOM_X402_FACILITATOR_URL` is configured to point to a trusted, internal facilitator service. Do not expose this variable publicly.
+- **RPC Endpoints:** Use private RPC endpoints for production deployments to avoid rate limiting and potential man-in-the-middle attacks on public nodes.
+- **Cache Security:** Secure the Cloudflare KV or Redis cache layer. Ensure that cache flush endpoints are protected by authentication or restricted to internal network access.
