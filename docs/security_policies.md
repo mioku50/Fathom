@@ -10,6 +10,8 @@ If you believe you have found a security vulnerability in Fathom, please DO NOT 
 
 Instead, please email security@example.com with a full description of the issue.
 
+We will acknowledge receipt of your vulnerability report within 48 hours and provide a timeline for resolution.
+
 ## Supported Versions
 
 Currently, only the main branch (v1) is actively supported with security updates.
