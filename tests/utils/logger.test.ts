@@ -901,4 +901,29 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('warn', 'msg', { data: { inner: null } });
         expect(result).toBe('[WARN] msg {"data":{"inner":null}}');
     });
+
+    it('handles formatLogMessage with numeric strings in metadata batch 23_1', () => {
+        const result = formatLogMessage('info', 'msg', { id: "123" });
+        expect(result).toBe('[INFO] msg {"id":"123"}');
+    });
+
+    it('handles formatLogMessage with mixed numeric and string values in metadata batch 23_1', () => {
+        const result = formatLogMessage('debug', 'mixed', { a: 1, b: "two" });
+        expect(result).toBe('[DEBUG] mixed {"a":1,"b":"two"}');
+    });
+
+    it('handles formatLogMessage with deeply nested structures in metadata batch 23_1', () => {
+        const result = formatLogMessage('warn', 'deep', { a: { b: { c: { d: 4 } } } });
+        expect(result).toBe('[WARN] deep {"a":{"b":{"c":{"d":4}}}}');
+    });
+
+    it('handles formatLogMessage with empty string metadata key batch 23_1', () => {
+        const result = formatLogMessage('info', 'empty key', { "": "value" });
+        expect(result).toBe('[INFO] empty key {"":"value"}');
+    });
+
+    it('handles formatLogMessage with array of strings in metadata batch 23_1', () => {
+        const result = formatLogMessage('info', 'arr', { tags: ["a", "b", "c"] });
+        expect(result).toBe('[INFO] arr {"tags":["a","b","c"]}');
+    });
 });
