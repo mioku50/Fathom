@@ -885,4 +885,20 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'msg', { arr: [{a: 1}, {b: 2}] });
         expect(result).toBe('[INFO] msg {"arr":[{"a":1},{"b":2}]}');
     });
+
+    it('handles formatLogMessage with boolean values in metadata batch 21_1', () => {
+        const result = formatLogMessage('debug', 'flags', { active: true, pending: false });
+        expect(result).toBe('[DEBUG] flags {"active":true,"pending":false}');
+    });
+
+    it('handles formatLogMessage with extremely long message batch 21_1', () => {
+        const longMsg = 'a'.repeat(1000);
+        const result = formatLogMessage('info', longMsg);
+        expect(result).toBe('[INFO] ' + longMsg);
+    });
+
+    it('handles formatLogMessage with nested null values batch 21_1', () => {
+        const result = formatLogMessage('warn', 'msg', { data: { inner: null } });
+        expect(result).toBe('[WARN] msg {"data":{"inner":null}}');
+    });
 });
