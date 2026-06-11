@@ -36,4 +36,18 @@ describe('generateDummyResponse', () => {
     expect(date.toISOString()).toBe(response.updated_at);
     expect(isNaN(date.getTime())).toBe(false);
   });
+
+  it('should handle special characters in token and chain', () => {
+    const response = generateDummyResponse('!@#$', '^*()');
+    expect(response.token).toBe('!@#$');
+    expect(response.chain).toBe('^*()');
+  });
+
+  it('should handle very long strings for token and chain', () => {
+    const longToken = 'A'.repeat(1000);
+    const longChain = 'B'.repeat(1000);
+    const response = generateDummyResponse(longToken, longChain);
+    expect(response.token).toBe(longToken);
+    expect(response.chain).toBe(longChain);
+  });
 });
