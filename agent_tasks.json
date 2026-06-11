@@ -2496,12 +2496,15 @@
       "title": "Harden x402 Payment Verification",
       "description": "Enhance x402 middleware to safely verify payment configuration and mocked facilitator behavior.",
       "area": "middleware",
-      "status": "todo",
+      "status": "done",
       "risk": "high",
       "allowed_paths": [
         "src/middleware/x402.ts",
         "tests/middleware/x402.test.ts",
-        "agent_tasks.json"
+        "agent_tasks.json",
+        "scripts/live_base_sepolia_e2e.sh",
+        "docs/live_base_sepolia_e2e.md",
+        "scripts/live_e2e_x402_helper.js"
       ],
       "acceptance": [
         "x402 middleware safely verifies payment config.",
@@ -2543,9 +2546,25 @@
         "Tests are written",
         "Tests pass"
       ]
+    },
+    {
+      "id": "improve-error-handling-1781178636419",
+      "title": "Improve Error Handling",
+      "description": "Add better error handling and logging to API routes.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/index.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "API endpoints return consistent error formats",
+        "Tests are updated"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 153,
+  "total_tasks": 154,
   "needs_replenishment": false
 }
