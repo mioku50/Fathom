@@ -23,4 +23,17 @@ describe('generateDummyResponse', () => {
     expect(response.flags).toEqual([]);
     expect(response.updated_at).toBeDefined();
   });
+
+  it('should handle empty strings for token and chain', () => {
+    const response = generateDummyResponse('', '');
+    expect(response.token).toBe('');
+    expect(response.chain).toBe('');
+  });
+
+  it('should generate an updated_at as a valid ISO string', () => {
+    const response = generateDummyResponse('AERO', 'base');
+    const date = new Date(response.updated_at);
+    expect(date.toISOString()).toBe(response.updated_at);
+    expect(isNaN(date.getTime())).toBe(false);
+  });
 });
