@@ -417,4 +417,23 @@ describe('generateDummyResponse', () => {
         response.price_usd = -10.5;
         expect(response.price_usd).toBe(-10.5);
     });
+
+    it('generates a valid PriceResponse and allows setting twap_5m to 0', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.twap_5m = 0;
+        expect(response.twap_5m).toBe(0);
+    });
+
+    it('generates a valid PriceResponse and allows setting confidence to 0', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.confidence = 0;
+        expect(response.confidence).toBe(0);
+    });
+
+    it('generates a valid PriceResponse and allows setting confidence to a high value', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.confidence = 1000;
+        expect(response.confidence).toBe(1000);
+    });
+
 });

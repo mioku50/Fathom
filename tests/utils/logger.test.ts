@@ -374,4 +374,21 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Test\nLine 2');
         expect(result).toBe('[INFO] Test\nLine 2');
     });
+
+    it('handles message with very long text', () => {
+        const longText = 'a'.repeat(1000);
+        const result = formatLogMessage('info', longText);
+        expect(result).toBe(`[INFO] ${longText}`);
+    });
+
+    it('handles message with carriage returns', () => {
+        const result = formatLogMessage('info', 'Test\r\nLine 2');
+        expect(result).toBe('[INFO] Test\r\nLine 2');
+    });
+
+    it('handles metadata with boolean values', () => {
+        const result = formatLogMessage('debug', 'Test', { flag: true, anotherFlag: false });
+        expect(result).toBe('[DEBUG] Test {"flag":true,"anotherFlag":false}');
+    });
+
 });
