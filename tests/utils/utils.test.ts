@@ -436,4 +436,11 @@ describe('generateDummyResponse', () => {
         expect(response.confidence).toBe(1000);
     });
 
+
+    it('generates a valid PriceResponse and allows setting liquidity_usd to 0 batch 3 part 15', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.liquidity_usd = 0;
+        expect(response.liquidity_usd).toBe(0);
+    });
+
 });
