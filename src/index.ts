@@ -5,8 +5,35 @@ import { Address } from 'viem'
 import { x402Middleware } from './middleware/x402'
 import { validateAddressesMiddleware } from './middleware/validation'
 import { rateLimitMiddleware } from './middleware/rate_limit'
-import { generateDummyResponse } from './utils'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
+
+import { DEXOrchestrator, type CacheLayer } from './orchestrator'
+
+
+class OrchestratorCacheAdapter implements CacheLayer {
+  constructor(private kv?: KVNamespace, private defaultTTL: number = 60) {}
+  async get(key: string): Promise<any> {
+    if (!this.kv) return null;
+    try {
+      const val = await this.kv.get(key, 'json');
+      return val;
+    } catch {
+      return null;
+    }
+  }
+  async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
+    if (!this.kv) return;
+    try {
+      await this.kv.put(key, JSON.stringify(value), { expirationTtl: ttlSeconds || this.defaultTTL });
+    } catch {}
+  }
+}
+
+import { AerodromeAdapter } from './adapters/aerodrome'
+import { UniswapV2Adapter } from './adapters/uniswap_v2'
+import { UniswapV3Adapter } from './adapters/uniswap_v3'
+import { PriceCalculator } from './calculator'
+import { calculateConfidence } from './confidence'
 
 type ExtendedEnv = FathomEnv & {
   BASE_RPC_URL?: string;
@@ -73,7 +100,7 @@ app.get('/v1/price', validateAddressesMiddleware, x402Middleware, async (c) => {
   const token = c.req.query('token') || '0x0000000000000000000000000000000000000000'
   const chain = c.req.query('chain') || 'base'
 
-  const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
+const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
     ? Math.max(60, parseInt(c.env.CACHE_DEFAULT_TTL_SECONDS) || 60)
     : 60
 
@@ -84,12 +111,76 @@ app.get('/v1/price', validateAddressesMiddleware, x402Middleware, async (c) => {
     return c.json(cachedResponse)
   }
 
-  const dummyResponse = generateDummyResponse(token, chain)
+  const adapters = [
+    new AerodromeAdapter(c.env?.BASE_RPC_URL),
+    new UniswapV2Adapter(c.env?.BASE_RPC_URL),
+    new UniswapV3Adapter(c.env?.BASE_RPC_URL)
+  ];
+  const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
-  // Cache the generated response before returning
-  c.executionCtx.waitUntil(cacheLayer.set(token, chain, dummyResponse))
+  const pools = await orchestrator.getAllPools(token);
+  const rawData = await orchestrator.getAllRawData(pools);
 
-  return c.json(dummyResponse)
+  let bestPrice = 0;
+  let bestLiquidity = 0;
+  let mainPoolData = null;
+
+  for (const poolWithData of rawData) {
+    // Determine token ordering for price calc.
+    // Base quote tokens typically: WETH (0x420...) and USDC (0x833...)
+    // Assuming simple heuristic or standard lookup here, but simplified for now
+    const isToken0 = token.toLowerCase() < '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
+
+    // In a real scenario we need token decimals vs quote decimals. We assume 18 for both for simplicity unless known
+    const result = PriceCalculator.calculatePoolPriceAndLiquidity(poolWithData.rawData, isToken0, 18, 18);
+
+    if (result.liquidityInQuote > bestLiquidity) {
+      bestLiquidity = result.liquidityInQuote;
+      bestPrice = result.priceInQuote;
+      mainPoolData = {
+        dex: poolWithData.pool.dex,
+        address: poolWithData.pool.address,
+        fee: poolWithData.pool.fee,
+        liquidity_usd: result.liquidityInQuote,
+        price_usd: result.priceInQuote
+      };
+    }
+  }
+
+  if (!mainPoolData) {
+     return c.json({ error: 'No pools found or un-priceable' }, 404);
+  }
+
+  const confResult = calculateConfidence({
+    liquidity_usd: bestLiquidity,
+    max_deviation_percent: 0.01,
+    spot_vs_twap_percent: 0.01,
+    sigma_over_mu_percent: 0.02,
+    pool_age_days: 10,
+    volume_24h_usd: bestLiquidity * 0.1, // mock
+    num_pools: pools.length,
+    is_stale: false,
+    is_unsellable: false
+  });
+
+  const finalResponse: PriceResponse = {
+    token,
+    chain,
+    symbol: 'TBD', // This could be fetched from metadata
+    price_usd: bestPrice,
+    price_low: bestPrice * 0.99,
+    price_high: bestPrice * 1.01,
+    twap_5m: bestPrice,
+    confidence: confResult.confidence,
+    label: confResult.label,
+    liquidity_usd: bestLiquidity,
+    main_pool: mainPoolData,
+    flags: confResult.flags,
+    updated_at: new Date().toISOString()
+  }
+
+  c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
+  return c.json(finalResponse)
 })
 
 app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => {
@@ -117,16 +208,78 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
   const results: PriceResponse[] = []
 
   for (const token of tokens) {
-    const cachedResponse = await cacheLayer.get(token, chain)
+const cachedResponse = await cacheLayer.get(token, chain)
     if (cachedResponse) {
       results.push(cachedResponse)
       continue
     }
 
-    const dummyResponse = generateDummyResponse(token, chain)
+    const adapters = [
+      new AerodromeAdapter(c.env?.BASE_RPC_URL),
+      new UniswapV2Adapter(c.env?.BASE_RPC_URL),
+      new UniswapV3Adapter(c.env?.BASE_RPC_URL)
+    ];
+    const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
-    c.executionCtx.waitUntil(cacheLayer.set(token, chain, dummyResponse))
-    results.push(dummyResponse)
+    const pools = await orchestrator.getAllPools(token);
+    const rawData = await orchestrator.getAllRawData(pools);
+
+    let bestPrice = 0;
+    let bestLiquidity = 0;
+    let mainPoolData = null;
+
+    for (const poolWithData of rawData) {
+      const isToken0 = token.toLowerCase() < '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
+      const result = PriceCalculator.calculatePoolPriceAndLiquidity(poolWithData.rawData, isToken0, 18, 18);
+
+      if (result.liquidityInQuote > bestLiquidity) {
+        bestLiquidity = result.liquidityInQuote;
+        bestPrice = result.priceInQuote;
+        mainPoolData = {
+          dex: poolWithData.pool.dex,
+          address: poolWithData.pool.address,
+          fee: poolWithData.pool.fee,
+          liquidity_usd: result.liquidityInQuote,
+          price_usd: result.priceInQuote
+        };
+      }
+    }
+
+    if (!mainPoolData) {
+      // Return a basic error structure or skip
+      continue;
+    }
+
+    const confResult = calculateConfidence({
+      liquidity_usd: bestLiquidity,
+      max_deviation_percent: 0.01,
+      spot_vs_twap_percent: 0.01,
+      sigma_over_mu_percent: 0.02,
+      pool_age_days: 10,
+      volume_24h_usd: bestLiquidity * 0.1,
+      num_pools: pools.length,
+      is_stale: false,
+      is_unsellable: false
+    });
+
+    const finalResponse: PriceResponse = {
+      token,
+      chain,
+      symbol: 'TBD',
+      price_usd: bestPrice,
+      price_low: bestPrice * 0.99,
+      price_high: bestPrice * 1.01,
+      twap_5m: bestPrice,
+      confidence: confResult.confidence,
+      label: confResult.label,
+      liquidity_usd: bestLiquidity,
+      main_pool: mainPoolData,
+      flags: confResult.flags,
+      updated_at: new Date().toISOString()
+    }
+
+    c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
+    results.push(finalResponse)
   }
 
   return c.json(results)

@@ -4,6 +4,24 @@ import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 import { resetCacheStats } from '../src/cache'
 
+vi.mock('../src/orchestrator', () => {
+  return {
+    DEXOrchestrator: vi.fn().mockImplementation(() => {
+      return {
+        getAllPools: vi.fn().mockResolvedValue([{ address: '0xabc', dex: 'aerodrome', fee: 0.003 }]),
+        getAllRawData: vi.fn().mockResolvedValue([{
+          pool: { address: '0xabc', dex: 'aerodrome', fee: 0.003 },
+          rawData: {
+            reserve0: 1000000000000000000n,
+            reserve1: 1500000000000000000n, // price 1.5
+            updatedAt: 12345
+          }
+        }])
+      };
+    })
+  };
+});
+
 vi.mock('../src/api/metadata', () => ({
   getTokenMetadata: vi.fn().mockResolvedValue({
     address: '0x1234567890123456789012345678901234567890',
