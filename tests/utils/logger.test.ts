@@ -460,4 +460,17 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Test', { arrWithBool: [true, false] });
         expect(result).toBe('[INFO] Test {"arrWithBool":[true,false]}');
     });
+
+    // --- Added for Batch 3 Part 16 ---
+
+    it('handles metadata with mixed primitive arrays batch 3 part 16', () => {
+        const result = formatLogMessage('debug', 'Test', { mixedArr: [1, "two", false, null] });
+        expect(result).toBe('[DEBUG] Test {"mixedArr":[1,"two",false,null]}');
+    });
+
+    it('handles empty string metadata value batch 3 part 16', () => {
+        const result = formatLogMessage('info', 'Test', { emptyStr: "" });
+        expect(result).toBe('[INFO] Test {"emptyStr":""}');
+    });
+
 });
