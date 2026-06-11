@@ -304,7 +304,8 @@ describe('Fathom API Integration Test', () => {
 
     const body = await res.json() as any
     expect(body.error).toBeDefined()
-    expect(body.error).toContain('Maximum 10 tokens allowed')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toContain('Maximum 10 tokens allowed')
   })
 
   it('Should fail /v1/metadatas if x402 payment missing', async () => {
@@ -533,7 +534,8 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
-    expect(body.error).toBe('pool parameter is required')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toBe('pool parameter is required')
   })
 
   it('Should fail /v1/cache/clear/pool if KV not configured', async () => {
@@ -548,7 +550,8 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(500)
 
     const body = await res.json() as any
-    expect(body.error).toBe('Internal Server Error: KV not configured')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('KV not configured')
   })
 
   it('Should handle errors on /v1/cache/clear/pool gracefully', async () => {
@@ -568,7 +571,8 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(500)
 
     const body = await res.json() as any
-    expect(body.error).toBe('Failed to clear pool cache')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('Failed to clear pool cache')
     expect(consoleSpy).toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
@@ -595,7 +599,8 @@ describe('Fathom API Integration Test', () => {
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
-    expect(body.error).toBe('Either token or pool parameter is required')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toBe('Either token or pool parameter is required')
   })
 
   it('Should successfully clear all cache through /v1/cache/clear', async () => {
@@ -672,7 +677,8 @@ describe('Fathom API Integration Test', () => {
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
-    expect(body.error).toBe('Internal Server Error: KV not configured')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('KV not configured')
   })
 
   it('Should handle errors on /v1/cache/metrics gracefully', async () => {
@@ -687,7 +693,8 @@ describe('Fathom API Integration Test', () => {
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
-    expect(body.error).toBe('Failed to retrieve cache metrics')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('Failed to retrieve cache metrics')
     expect(consoleSpy).toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
@@ -742,7 +749,8 @@ describe('Fathom API Integration Test', () => {
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
-    expect(body.error).toBe('Failed to retrieve cache metrics')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('Failed to retrieve cache metrics')
     expect(mockList).toHaveBeenCalledTimes(2)
     expect(consoleSpy).toHaveBeenCalled()
     consoleSpy.mockRestore()
@@ -755,7 +763,8 @@ describe('Fathom API Integration Test', () => {
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
-    expect(body.error).toBe('Internal Server Error: KV not configured')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('KV not configured')
   })
 
   it('Should handle malformed KV list response without keys array on /v1/cache/metrics', async () => {
@@ -772,7 +781,8 @@ describe('Fathom API Integration Test', () => {
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
-    expect(body.error).toBe('Failed to retrieve cache metrics')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('Failed to retrieve cache metrics')
     expect(consoleSpy).toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
