@@ -926,4 +926,29 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'arr', { tags: ["a", "b", "c"] });
         expect(result).toBe('[INFO] arr {"tags":["a","b","c"]}');
     });
+
+    it('handles formatLogMessage with large numbers in metadata batch 24', () => {
+        const result = formatLogMessage('info', 'msg', { num: 9007199254740991 });
+        expect(result).toBe('[INFO] msg {"num":9007199254740991}');
+    });
+
+    it('handles formatLogMessage with negative numbers in metadata batch 24', () => {
+        const result = formatLogMessage('info', 'msg', { num: -42 });
+        expect(result).toBe('[INFO] msg {"num":-42}');
+    });
+
+    it('handles formatLogMessage with floating point numbers in metadata batch 24', () => {
+        const result = formatLogMessage('info', 'msg', { num: 3.14159 });
+        expect(result).toBe('[INFO] msg {"num":3.14159}');
+    });
+
+    it('handles formatLogMessage with boolean values in array metadata batch 24', () => {
+        const result = formatLogMessage('info', 'msg', { arr: [true, false] });
+        expect(result).toBe('[INFO] msg {"arr":[true,false]}');
+    });
+
+    it('handles formatLogMessage with mixed types in array metadata batch 24', () => {
+        const result = formatLogMessage('info', 'msg', { arr: [1, "two", false, null] });
+        expect(result).toBe('[INFO] msg {"arr":[1,"two",false,null]}');
+    });
 });
