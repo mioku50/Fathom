@@ -40,7 +40,7 @@ vi.mock('../../src/confidence', () => ({
 }));
 
 describe('Prices API Endpoint (/v1/prices)', () => {
-    let mockEnv;
+    let mockEnv: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
