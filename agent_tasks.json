@@ -42,6 +42,23 @@
   },
   "tasks": [
     {
+      "id": "new-task-1781219460553",
+      "title": "Add utility tests 1",
+      "description": "Add more utility tests for remaining utility functions",
+      "area": "tests",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils.test.ts",
+        "src/utils.ts",
+        "agent_tasks.json"
+      ],
+      "status": "todo",
+      "dependencies": [],
+      "acceptance": [
+        "Tests added and pass"
+      ]
+    },
+    {
       "id": "new-task-178121822010120",
       "title": "Add utility tests 0",
       "description": "Add more tests for utilities",
@@ -52,7 +69,7 @@
         "src/utils.ts",
         "agent_tasks.json"
       ],
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
       "acceptance": [
         "Tests added and pass"
@@ -2843,7 +2860,7 @@
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 171,
+  "total_tasks": 172,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
