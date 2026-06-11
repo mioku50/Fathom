@@ -42,6 +42,20 @@
   },
   "tasks": [
     {
+      "id": "add-metadata-cache-tests-1781200439849",
+      "title": "Add Metadata Cache Tests",
+      "description": "Add more unit tests for metadata cache logic.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/api/metadata.test.ts"
+      ],
+      "acceptance": [
+        "Tests pass"
+      ]
+    },
+    {
       "id": "add-edge-case-testing-pricereader-1781181769530",
       "title": "Add edge case testing for PriceReader",
       "description": "Add tests for edge cases such as token matching quote address, or zero prices.",
@@ -2718,7 +2732,7 @@
       "title": "Add Cache Invalidation Endpoints Tests",
       "description": "Add more tests for cache invalidation endpoints.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/api/cache.test.ts"
