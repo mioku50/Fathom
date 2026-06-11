@@ -28,7 +28,7 @@ describe('x402Middleware', () => {
 
     const req = new Request('http://localhost/', {
       headers: {
-        'X-PAYMENT': 'some_payment_token'
+        'X-PAYMENT': 'x402 tx=mock-hash'
       }
     })
     const res = await app.fetch(req)
