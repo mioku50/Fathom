@@ -48,7 +48,7 @@ app.use('*', async (c, next) => {
     validateEnv(c.env)
   } catch (error: any) {
     console.error('Environment validation failed:', error)
-    return c.json({ error: error.message || 'Server configuration error' }, 500)
+    return c.json({ error: 'internal_error', message: error.message || 'Server configuration error' }, 500)
   }
   await next()
 })
@@ -81,7 +81,7 @@ app.get('/v1/cache/stats', (c) => {
 
 app.get('/v1/cache/metrics', async (c) => {
   if (!c.env?.FATHOM_KV) {
-    return c.json({ error: 'Internal Server Error: KV not configured' }, 500)
+    return c.json({ error: 'internal_error', message: 'KV not configured' }, 500)
   }
 
   try {
@@ -102,7 +102,7 @@ app.get('/v1/cache/metrics', async (c) => {
     })
   } catch (e) {
     console.error('KV Cache metrics error:', e)
-    return c.json({ error: 'Failed to retrieve cache metrics' }, 500)
+    return c.json({ error: 'internal_error', message: 'Failed to retrieve cache metrics' }, 500)
   }
 })
 
@@ -159,7 +159,7 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
   }
 
   if (!mainPoolData) {
-     return c.json({ error: 'No pools found or un-priceable' }, 404);
+     return c.json({ error: 'not_found', message: 'No pools found or un-priceable' }, 404);
   }
 
   const confResult = calculateConfidence({
@@ -199,16 +199,16 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
   const chain = c.req.query('chain') || 'base'
 
   if (!tokensParam) {
-    return c.json({ error: 'tokens parameter is required' }, 400)
+    return c.json({ error: 'invalid_request', message: 'tokens parameter is required' }, 400)
   }
 
   const tokens = tokensParam.split(',').map(t => t.trim()).filter(Boolean)
   if (tokens.length === 0) {
-    return c.json({ error: 'tokens parameter cannot be empty' }, 400)
+    return c.json({ error: 'invalid_request', message: 'tokens parameter cannot be empty' }, 400)
   }
 
   if (tokens.length > 10) {
-    return c.json({ error: 'Maximum 10 tokens allowed per request' }, 400)
+    return c.json({ error: 'invalid_request', message: 'Maximum 10 tokens allowed per request' }, 400)
   }
 
   const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
@@ -302,7 +302,7 @@ app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
   const chain = c.req.query('chain') || 'base'
 
   if (!token && !pool) {
-    return c.json({ error: 'Either token or pool parameter is required' }, 400)
+    return c.json({ error: 'invalid_request', message: 'Either token or pool parameter is required' }, 400)
   }
 
   if (c.env?.FATHOM_KV) {
@@ -323,7 +323,7 @@ app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
       }
     } catch (e) {
       console.error('KV Cache delete error:', e)
-      return c.json({ error: 'Failed to invalidate cache' }, 500)
+      return c.json({ error: 'internal_error', message: 'Failed to invalidate cache' }, 500)
     }
   }
 
@@ -334,11 +334,11 @@ app.post('/v1/cache/clear/pool', x402Middleware, async (c) => {
   const pool = c.req.query('pool')
 
   if (!pool) {
-    return c.json({ error: 'pool parameter is required' }, 400)
+    return c.json({ error: 'invalid_request', message: 'pool parameter is required' }, 400)
   }
 
   if (!c.env?.FATHOM_KV) {
-    return c.json({ error: 'Internal Server Error: KV not configured' }, 500)
+    return c.json({ error: 'internal_error', message: 'KV not configured' }, 500)
   }
 
   try {
@@ -351,13 +351,13 @@ app.post('/v1/cache/clear/pool', x402Middleware, async (c) => {
     return c.json({ status: 'ok', message: 'Pool cache cleared successfully' })
   } catch (e) {
     console.error('KV Cache clear pool error:', e)
-    return c.json({ error: 'Failed to clear pool cache' }, 500)
+    return c.json({ error: 'internal_error', message: 'Failed to clear pool cache' }, 500)
   }
 })
 
 app.post('/v1/cache/clear', x402Middleware, async (c) => {
   if (!c.env?.FATHOM_KV) {
-    return c.json({ error: 'Internal Server Error: KV not configured' }, 500)
+    return c.json({ error: 'internal_error', message: 'KV not configured' }, 500)
   }
 
   try {
@@ -387,7 +387,7 @@ app.post('/v1/cache/clear', x402Middleware, async (c) => {
     return c.json({ status: 'ok', message: 'All cache cleared successfully' })
   } catch (e) {
     console.error('KV Cache clear all error:', e)
-    return c.json({ error: 'Failed to clear cache' }, 500)
+    return c.json({ error: 'internal_error', message: 'Failed to clear cache' }, 500)
   }
 })
 
@@ -396,7 +396,7 @@ app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) =
   const chain = c.req.query('chain') || 'base'
 
   if (chain !== 'base') {
-    return c.json({ error: 'Only base chain is currently supported for metadata' }, 400)
+    return c.json({ error: 'invalid_request', message: 'Only base chain is currently supported for metadata' }, 400)
   }
 
   // 24 hours TTL for metadata
@@ -429,7 +429,7 @@ app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) =
 
     return c.json(metadata)
   } catch (error) {
-    return c.json({ error: 'Failed to fetch token metadata' }, 500)
+    return c.json({ error: 'internal_error', message: 'Failed to fetch token metadata' }, 500)
   }
 })
 
@@ -439,20 +439,20 @@ app.get('/v1/metadatas', validateAddressesMiddleware, x402Middleware, async (c) 
   const chain = c.req.query('chain') || 'base'
 
   if (chain !== 'base') {
-    return c.json({ error: 'Only base chain is currently supported for metadata' }, 400)
+    return c.json({ error: 'invalid_request', message: 'Only base chain is currently supported for metadata' }, 400)
   }
 
   if (!tokensParam) {
-    return c.json({ error: 'tokens parameter is required' }, 400)
+    return c.json({ error: 'invalid_request', message: 'tokens parameter is required' }, 400)
   }
 
   const tokens = tokensParam.split(',').map(t => t.trim()).filter(Boolean) as Address[]
   if (tokens.length === 0) {
-    return c.json({ error: 'tokens parameter cannot be empty' }, 400)
+    return c.json({ error: 'invalid_request', message: 'tokens parameter cannot be empty' }, 400)
   }
 
   if (tokens.length > 10) {
-    return c.json({ error: 'Maximum 10 tokens allowed per request' }, 400)
+    return c.json({ error: 'invalid_request', message: 'Maximum 10 tokens allowed per request' }, 400)
   }
 
   const defaultTTL = 86400
@@ -503,7 +503,7 @@ app.get('/v1/metadatas', validateAddressesMiddleware, x402Middleware, async (c) 
         }
       }
     } catch (error) {
-      return c.json({ error: 'Failed to fetch batch token metadata' }, 500)
+      return c.json({ error: 'internal_error', message: 'Failed to fetch batch token metadata' }, 500)
     }
   }
 
