@@ -120,4 +120,73 @@ describe('Prices API Endpoint (/v1/prices)', () => {
         expect(response.main_pool.address).toBe('0x123');
         expect(response.updated_at).toBeDefined();
     });
+
+    it('Should limit to a maximum of 10 tokens', async () => {
+        const tokens = Array.from({ length: 11 }, (_, i) => `0x${i.toString().padStart(40, '0')}`).join(',');
+        const req = new Request(`http://localhost/v1/prices?tokens=${tokens}`, {
+          headers: { 'Authorization': 'Bearer mock-token' }
+        });
+        const res = await app.fetch(req, mockEnv, { waitUntil: vi.fn() } as any);
+
+        expect(res.status).toBe(400);
+        const data = await res.json() as any;
+        expect(data.error).toBe('invalid_request');
+        expect(data.message).toBe('Maximum 10 tokens allowed per request');
+    });
+
+    it('Should correctly split and handle multiple tokens, skipping invalid ones', async () => {
+        const validToken1 = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+        const validToken2 = '0x4200000000000000000000000000000000000006';
+
+        // This will trigger validateAddressesMiddleware
+        const req = new Request(`http://localhost/v1/prices?tokens=${validToken1},${validToken2},invalid-token`, {
+          headers: { 'Authorization': 'Bearer mock-token' }
+        });
+        const res = await app.fetch(req, mockEnv, { waitUntil: vi.fn() } as any);
+
+        // the middleware checks all tokens and returns 400 if ANY is invalid
+        expect(res.status).toBe(400);
+        const data = await res.json() as any;
+        expect(data.error).toBe('invalid_request');
+        expect(data.message).toMatch(/Invalid token address format/);
+    });
+
+    it('Should handle multiple valid tokens', async () => {
+        const validToken1 = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+        const validToken2 = '0x4200000000000000000000000000000000000006';
+
+        const req = new Request(`http://localhost/v1/prices?tokens=${validToken1},${validToken2}`, {
+          headers: { 'Authorization': 'Bearer mock-token' }
+        });
+        const res = await app.fetch(req, mockEnv, { waitUntil: vi.fn() } as any);
+
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(Array.isArray(data)).toBe(true);
+        expect(data.length).toBe(2);
+        expect(data[0].token).toBe(validToken1);
+        expect(data[1].token).toBe(validToken2);
+    });
+
+    it('Should not fail if main pool data is not found for a token', async () => {
+        // Change calculator mock to return no liquidity
+        // Instead of requireMock, override the mock just for this test
+        const { PriceCalculator } = await import('../../src/calculator');
+        (PriceCalculator.calculatePoolPriceAndLiquidity as any).mockReturnValueOnce({
+          priceInQuote: 0,
+          liquidityInQuote: 0
+        });
+
+        const validToken = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+        const req = new Request(`http://localhost/v1/prices?tokens=${validToken}`, {
+          headers: { 'Authorization': 'Bearer mock-token' }
+        });
+        const res = await app.fetch(req, mockEnv, { waitUntil: vi.fn() } as any);
+
+        // Since it continues when mainPoolData is not found, the results array will be empty
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(Array.isArray(data)).toBe(true);
+        expect(data.length).toBe(0);
+    });
 });
