@@ -519,4 +519,26 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[WARN] Test {"arr":[{"valid":1}]}');
     });
 
+
+    // --- Added for Batch 1 Part 18 ---
+    it('handles negative integers in metadata batch 1 part 18', () => {
+        const result = formatLogMessage('info', 'Negative', { val: -42 });
+        expect(result).toBe('[INFO] Negative {"val":-42}');
+    });
+
+    it('handles null level by converting it to string batch 1 part 18', () => {
+        const result = formatLogMessage(null as unknown as string, 'Null level test');
+        expect(result).toBe('[NULL] Null level test');
+    });
+
+    it('handles metadata with empty string keys batch 1 part 18', () => {
+        const result = formatLogMessage('debug', 'Test', { "": "empty key" });
+        expect(result).toBe('[DEBUG] Test {"":"empty key"}');
+    });
+
+    it('handles deeply nested arrays in metadata batch 1 part 18', () => {
+        const result = formatLogMessage('trace', 'Test', { data: [[[1]]] });
+        expect(result).toBe('[TRACE] Test {"data":[[[1]]]}');
+    });
+
 });
