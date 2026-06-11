@@ -27,6 +27,56 @@ vi.mock('../src/orchestrator', () => {
       };
     })
   };
+
+  it('Should handle KV get error gracefully for /v1/metadata by proceeding to fetch', async () => {
+    const mockGet = vi.fn().mockRejectedValue(new Error('KV read error'))
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const env = {
+      FATHOM_KV: {
+        get: mockGet,
+        put: mockPut
+      }
+    } as unknown as FathomEnv
+
+    const req = new Request('http://localhost/v1/metadata?token=0x1234567890123456789012345678901234567890&chain=base', {
+      method: 'GET',
+      headers: { 'Authorization': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.address).toBe('0x1234567890123456789012345678901234567890')
+    expect(mockGet).toHaveBeenCalled()
+    expect(mockPut).toHaveBeenCalled()
+  })
+
+  it('Should handle KV get error gracefully for /v1/metadatas by proceeding to fetch', async () => {
+    const mockGet = vi.fn().mockRejectedValue(new Error('KV read error'))
+    const mockPut = vi.fn().mockResolvedValue(undefined)
+    const env = {
+      FATHOM_KV: {
+        get: mockGet,
+        put: mockPut
+      }
+    } as unknown as FathomEnv
+
+    const req = new Request('http://localhost/v1/metadatas?tokens=0x1234567890123456789012345678901234567890&chain=base', {
+      method: 'GET',
+      headers: { 'Authorization': 'mock_payment' }
+    })
+
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.length).toBe(1)
+    expect(body[0].address).toBe('0x1234567890123456789012345678901234567890')
+    expect(mockGet).toHaveBeenCalled()
+    expect(mockPut).toHaveBeenCalled()
+  })
+
 });
 
 

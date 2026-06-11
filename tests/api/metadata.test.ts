@@ -153,4 +153,12 @@ describe('metadata module', () => {
 
     await expect(getBatchTokenMetadata(tokens as viem.Address[])).rejects.toThrow('Failed to fetch batch token metadata [network: base, rpc: default]');
   });
+
+
+  it('getBatchTokenMetadata returns empty array when given empty list', async () => {
+    const tokens: viem.Address[] = [];
+    const metadataBatch = await getBatchTokenMetadata(tokens);
+    expect(metadataBatch).toHaveLength(0);
+  });
+
 });
