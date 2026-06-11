@@ -42,6 +42,21 @@
   },
   "tasks": [
     {
+      "id": "add-security-contact-info-1781216822268-0",
+      "title": "Add security contact information",
+      "description": "Update docs/security_policies.md to include an explicit security contact email address and response timeline.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/security_policies.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/security_policies.md is updated with security contact info."
+      ]
+    },
+    {
       "id": "add-metadata-cache-tests-1781200439849",
       "title": "Add Metadata Cache Tests",
       "description": "Add more unit tests for metadata cache logic.",
@@ -2751,7 +2766,7 @@
       "title": "Add more security documentation",
       "description": "Continue adding documentation for security policies.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/security_policies.md",
@@ -2796,7 +2811,7 @@
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 166,
+  "total_tasks": 167,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
