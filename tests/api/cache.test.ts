@@ -3,7 +3,7 @@ import app from '../../src/index'
 import { KVCacheLayer } from '../../src/cache'
 
 describe('Cache Invalidation API', () => {
-  let mockKV;
+  let mockKV: any;
 
   beforeEach(() => {
     mockKV = {
@@ -17,7 +17,7 @@ describe('Cache Invalidation API', () => {
     global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
   });
 
-  const getEnv = (kv) => ({
+  const getEnv = (kv: any) => ({
     BASE_RPC_URL: 'http://localhost:8545',
     X402_NETWORK: 'base',
     X402_RECIPIENT: '0x123',
