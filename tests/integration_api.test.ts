@@ -60,7 +60,7 @@ describe('Fathom API Integration Test', () => {
     // 2. Make an end-to-end request handling validation and x402 payment
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     // 3. Inject waitUntil and app execution
@@ -92,7 +92,7 @@ describe('Fathom API Integration Test', () => {
     // Invalid token length
     const token = '0x123'
     const req = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -110,7 +110,7 @@ describe('Fathom API Integration Test', () => {
     // Multiple tokens where one is invalid
     const tokens = '0x1234567890123456789012345678901234567890,invalid-token'
     const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -132,7 +132,7 @@ describe('Fathom API Integration Test', () => {
     // Valid tokens with trailing/extra commas
     const tokens = '0x1234567890123456789012345678901234567890,,0x0987654321098765432109876543210987654321,'
     const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     // Mock KV for cache layer needed for a successful path
@@ -205,7 +205,7 @@ describe('Fathom API Integration Test', () => {
 
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -242,7 +242,7 @@ describe('Fathom API Integration Test', () => {
 
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -267,7 +267,7 @@ describe('Fathom API Integration Test', () => {
 
     const tokens = '0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/metadatas?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -296,7 +296,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const tokens = Array(11).fill('0x1234567890123456789012345678901234567890').join(',')
     const req = new Request(`http://localhost/v1/metadatas?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -414,7 +414,7 @@ describe('Fathom API Integration Test', () => {
 
     // 2. Trigger a cache miss by requesting price for a new token
     const reqMiss = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
     await app.fetch(reqMiss, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
@@ -431,7 +431,7 @@ describe('Fathom API Integration Test', () => {
     kvStore.set(`price:base:${token}`, JSON.stringify(priceResponse))
 
     const reqHit = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
     await app.fetch(reqHit, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
@@ -454,7 +454,7 @@ describe('Fathom API Integration Test', () => {
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/cache/invalidate?token=${token}&chain=base`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -476,7 +476,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/invalidate?pool=${pool}&chain=base`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -509,7 +509,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -527,7 +527,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/clear/pool', {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -543,7 +543,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -564,7 +564,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -592,7 +592,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/invalidate?chain=base', {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -622,7 +622,7 @@ describe('Fathom API Integration Test', () => {
 
     const req = new Request('http://localhost/v1/cache/clear', {
       method: 'POST',
-      headers: { 'X-PAYMENT': 'mock_payment_proof' }
+      headers: { 'X-PAYMENT': 'x402 tx=mock-hash' }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
