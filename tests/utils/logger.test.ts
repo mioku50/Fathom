@@ -473,4 +473,16 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[INFO] Test {"emptyStr":""}');
     });
 
+
+    // --- Added for Batch 0 Part 17 ---
+    it('handles metadata with nested mixed primitive arrays batch 0 part 17', () => {
+        const result = formatLogMessage('debug', 'Test', { nested: { mixedArr: [1, "two", false, null] } });
+        expect(result).toBe('[DEBUG] Test {"nested":{"mixedArr":[1,"two",false,null]}}');
+    });
+
+    it('handles metadata with zero batch 0 part 17', () => {
+        const result = formatLogMessage('info', 'Test', { zeroVal: 0 });
+        expect(result).toBe('[INFO] Test {"zeroVal":0}');
+    });
+
 });
