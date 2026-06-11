@@ -2410,21 +2410,6 @@
       ]
     },
     {
-      "id": "add-unit-tests-for-utils-batch-23-1781153084931-1",
-      "title": "Add More Utility Unit Tests Part 23",
-      "description": "Add additional utility tests for more coverage.",
-      "area": "testing",
-      "status": "done",
-      "risk": "low",
-      "allowed_paths": [
-        "tests/utils/**",
-        "agent_tasks.json"
-      ],
-      "acceptance": [
-        "Tests added for utility scripts."
-      ]
-    },
-    {
       "id": "add-unit-tests-for-utils-batch-24-1781153084931-2",
       "title": "Add More Utility Unit Tests Part 24",
       "description": "Add additional utility tests for more coverage.",
@@ -2444,7 +2429,7 @@
       "title": "Add More Utility Unit Tests Part 22",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -2455,34 +2440,57 @@
       ]
     },
     {
-      "id": "replenished-task-utils-tests-1781155158450-force",
-      "title": "Add More Utility Unit Tests Replenished Force",
-      "description": "Add additional utility tests for more coverage.",
-      "area": "testing",
+      "id": "replace-dummy-price-response-with-pricing-orchestrator",
+      "title": "Replace Dummy Price Response with Pricing Orchestrator",
+      "description": "Replace generateDummyResponse with the real DEXOrchestrator and PriceCalculator flow for /v1/price and /v1/prices endpoints.",
+      "area": "api",
       "status": "todo",
-      "risk": "low",
+      "risk": "medium",
       "allowed_paths": [
-        "tests/utils/**",
+        "src/index.ts",
+        "tests/index.test.ts",
+        "tests/integration_api.test.ts",
         "agent_tasks.json"
       ],
       "acceptance": [
-        "Tests added for utility scripts."
+        "/v1/price and /v1/prices must use real DEXOrchestrator / PriceCalculator flow.",
+        "Mocked tests must cover the new endpoints."
       ]
     },
     {
-      "id": "add-unit-tests-for-utils-batch-25-1781155718524-2",
-      "title": "Add More Utility Unit Tests Part 25",
-      "description": "Add additional utility tests for more coverage.",
-      "area": "testing",
+      "id": "harden-x402-payment-verification",
+      "title": "Harden x402 Payment Verification",
+      "description": "Enhance x402 middleware to safely verify payment configuration and mocked facilitator behavior.",
+      "area": "middleware",
       "status": "todo",
-      "risk": "low",
+      "risk": "high",
       "allowed_paths": [
-        "tests/utils/**",
+        "src/middleware/x402.ts",
+        "tests/middleware/x402.test.ts",
         "agent_tasks.json"
       ],
-      "dependencies": [],
       "acceptance": [
-        "Tests added for utility scripts."
+        "x402 middleware safely verifies payment config.",
+        "Tests cover mocked facilitator behavior."
+      ]
+    },
+    {
+      "id": "add-runtime-config-validation",
+      "title": "Add Runtime Config Validation",
+      "description": "Validate required runtime env vars safely: BASE_RPC_URL, X402_NETWORK, X402_RECIPIENT, X402_FACILITATOR_URL, CACHE_DEFAULT_TTL_SECONDS.",
+      "area": "configuration",
+      "status": "todo",
+      "risk": "medium",
+      "allowed_paths": [
+        "src/index.ts",
+        "src/utils/env.ts",
+        "tests/utils/env.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Required runtime env vars are strictly validated.",
+        "Missing/invalid config errors gracefully.",
+        "Tests verify env config checks."
       ]
     }
   ],
