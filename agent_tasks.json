@@ -2324,7 +2324,7 @@
       "title": "Add More Utility Unit Tests Part 19 - Batch 4",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -2380,7 +2380,7 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 143,
   "needs_replenishment": false
 }

@@ -545,4 +545,35 @@ describe('generateDummyResponse', () => {
         expect(response.label).toBe('reliable');
     });
 
+
+    // --- Added for Batch 19 Part 4 ---
+
+    it('generates a valid PriceResponse with array as chain (coercion) batch 4 part 19', () => {
+        const response = generateDummyResponse('token', [] as any);
+        expect(response.chain).toEqual([]);
+    });
+
+    it('generates a valid PriceResponse with max safe integer as chain (coercion) batch 4 part 19', () => {
+        const response = generateDummyResponse('token', Number.MAX_SAFE_INTEGER as any);
+        expect(response.chain).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    it('generates a valid PriceResponse with min safe integer as chain (coercion) batch 4 part 19', () => {
+        const response = generateDummyResponse('token', Number.MIN_SAFE_INTEGER as any);
+        expect(response.chain).toBe(Number.MIN_SAFE_INTEGER);
+    });
+
+
+    it('generates a valid PriceResponse with symbol as an array (coercion) batch 4 part 19', () => {
+        const response = generateDummyResponse('token', 'chain');
+        response.symbol = [] as any;
+        expect(response.symbol).toEqual([]);
+    });
+
+    it('generates a valid PriceResponse with price_usd as an empty object (coercion) batch 4 part 19', () => {
+        const response = generateDummyResponse('token', 'chain');
+        response.price_usd = {} as any;
+        expect(response.price_usd).toEqual({});
+    });
+
 });
