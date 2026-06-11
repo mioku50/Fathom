@@ -3,24 +3,25 @@ import app from '../src/index'
 import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 
-// Mock the generateDummyResponse function
-vi.mock('../src/utils', () => ({
-  generateDummyResponse: vi.fn().mockImplementation((token: string, chain: string) => ({
-    token,
-    chain,
-    symbol: 'DUMMY',
-    price_usd: 1.5,
-    price_low: 1.4,
-    price_high: 1.6,
-    twap_5m: 1.5,
-    confidence: 85,
-    label: 'healthy',
-    liquidity_usd: 100000,
-    main_pool: { dex: 'aerodrome', address: '0x123', fee: 0.003 },
-    flags: [],
-    updated_at: new Date().toISOString()
-  }))
-}))
+vi.mock('../src/orchestrator', () => {
+  return {
+    DEXOrchestrator: vi.fn().mockImplementation(() => {
+      return {
+        getAllPools: vi.fn().mockResolvedValue([{ address: '0xabc', dex: 'aerodrome', fee: 0.003 }]),
+        getAllRawData: vi.fn().mockResolvedValue([{
+          pool: { address: '0xabc', dex: 'aerodrome', fee: 0.003 },
+          rawData: {
+            reserve0: 1000000000000000000n,
+            reserve1: 1500000000000000000n, // price 1.5
+            updatedAt: 12345
+          }
+        }])
+      };
+    })
+  };
+});
+
+
 
 vi.mock('../src/api/metadata', () => ({
   getTokenMetadata: vi.fn().mockResolvedValue({
@@ -246,8 +247,8 @@ describe('Fathom API', () => {
     expect(body[0].token).toBe('0x0000000000000000000000000000000000000000')
     expect(body[1].token).toBe('0x1111111111111111111111111111111111111111')
 
-    expect(body[0].symbol).toBe('DUMMY')
-    expect(body[1].symbol).toBe('DUMMY')
+    expect(body[0].symbol).toBe('TBD')
+    expect(body[1].symbol).toBe('TBD')
   })
 
   it('Should bypass payment block for /v1/prices if Authorization header is present', async () => {
