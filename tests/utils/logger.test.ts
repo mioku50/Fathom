@@ -563,4 +563,30 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[TRACE] Nested Empty Array {"data":{"arr":[]}}');
     });
 
+
+    it('handles multiple null values in metadata batch 0 part 19', () => {
+        const result = formatLogMessage('warn', 'Multiple nulls', { a: null, b: null });
+        expect(result).toBe('[WARN] Multiple nulls {"a":null,"b":null}');
+    });
+
+    it('handles mixed primitive array in metadata batch 0 part 19', () => {
+        const result = formatLogMessage('info', 'Mixed array', { arr: [1, 'two', false, null] });
+        expect(result).toBe('[INFO] Mixed array {"arr":[1,"two",false,null]}');
+    });
+
+    it('handles string with spaces in metadata batch 0 part 19', () => {
+        const result = formatLogMessage('debug', 'String with spaces', { text: "hello world" });
+        expect(result).toBe('[DEBUG] String with spaces {"text":"hello world"}');
+    });
+
+    it('handles floating point array in metadata batch 0 part 19', () => {
+        const result = formatLogMessage('trace', 'Floats array', { arr: [1.1, 2.2, 3.3] });
+        expect(result).toBe('[TRACE] Floats array {"arr":[1.1,2.2,3.3]}');
+    });
+
+    it('handles empty string key in metadata batch 0 part 19', () => {
+        const result = formatLogMessage('error', 'Empty key', { "": "value" });
+        expect(result).toBe('[ERROR] Empty key {"":"value"}');
+    });
+
 });

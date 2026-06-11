@@ -491,4 +491,35 @@ describe('generateDummyResponse', () => {
         const response = generateDummyResponse('token', null as any);
         expect(response.chain).toBeNull();
     });
+
+    // --- Added for Batch 19 Part 0 ---
+
+    it('generates a valid PriceResponse when token is undefined (coercion)', () => {
+        const response = generateDummyResponse(undefined as any, 'base');
+        expect(response.token).toBeUndefined();
+    });
+
+    it('generates a valid PriceResponse when chain is undefined (coercion)', () => {
+        const response = generateDummyResponse('token', undefined as any);
+        expect(response.chain).toBeUndefined();
+    });
+
+    it('generates a valid PriceResponse when token contains non-ascii characters', () => {
+        const token = 'こんにちは';
+        const response = generateDummyResponse(token, 'base');
+        expect(response.token).toBe(token);
+    });
+
+    it('generates a valid PriceResponse when chain contains non-ascii characters', () => {
+        const chain = '世界';
+        const response = generateDummyResponse('token', chain);
+        expect(response.chain).toBe(chain);
+    });
+
+    it('generates a valid PriceResponse when both token and chain are empty strings', () => {
+        const response = generateDummyResponse('', '');
+        expect(response.token).toBe('');
+        expect(response.chain).toBe('');
+    });
+
 });
