@@ -12,6 +12,7 @@ vi.mock('viem', async () => {
 });
 
 describe('metadata module', () => {
+  global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
   it('getTokenMetadata successfully retrieves symbol, name, and decimals', async () => {
     const mockReadContract = vi.fn().mockImplementation(async ({ functionName }) => {
       if (functionName === 'symbol') return 'TST';
