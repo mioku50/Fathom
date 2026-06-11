@@ -849,4 +849,20 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[INFO] msg {"arr":[[1,2],[3,4]]}');
     });
 
+
+    it('handles formatLogMessage with metadata containing deeply nested objects batch 22', () => {
+        const result = formatLogMessage('info', 'msg', { a: { b: { c: { d: { e: 'f' } } } } });
+        expect(result).toBe('[INFO] msg {"a":{"b":{"c":{"d":{"e":"f"}}}}}');
+    });
+
+    it('handles formatLogMessage with boolean values in metadata batch 22', () => {
+        const result = formatLogMessage('info', 'msg', { isActive: true, hasErrors: false });
+        expect(result).toBe('[INFO] msg {"isActive":true,"hasErrors":false}');
+    });
+
+    it('handles formatLogMessage with numeric values in metadata batch 22', () => {
+        const result = formatLogMessage('info', 'msg', { count: 42, price: 3.14, zero: 0, negative: -10 });
+        expect(result).toBe('[INFO] msg {"count":42,"price":3.14,"zero":0,"negative":-10}');
+    });
+
 });
