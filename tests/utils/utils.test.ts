@@ -388,4 +388,33 @@ describe('generateDummyResponse', () => {
         response.main_pool.fee = '0.003' as any;
         expect(response.main_pool.fee).toBe('0.003');
     });
+
+    it('generates a valid PriceResponse with token and chain containing spaces', () => {
+        const response = generateDummyResponse(' my token ', ' my chain ');
+        expect(response.token).toBe(' my token ');
+        expect(response.chain).toBe(' my chain ');
+    });
+
+    it('generates a valid PriceResponse with empty token and chain', () => {
+        const response = generateDummyResponse('', '');
+        expect(response.token).toBe('');
+        expect(response.chain).toBe('');
+    });
+
+    it('generates a valid PriceResponse where token is a number string', () => {
+        const response = generateDummyResponse('123456', 'chain');
+        expect(response.token).toBe('123456');
+    });
+
+    it('generates a valid PriceResponse and allows setting price_usd to exactly 0', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.price_usd = 0;
+        expect(response.price_usd).toBe(0);
+    });
+
+    it('generates a valid PriceResponse and allows setting price_usd to a negative value', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.price_usd = -10.5;
+        expect(response.price_usd).toBe(-10.5);
+    });
 });
