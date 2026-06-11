@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import app from '../src/index'
+
+const VALID_ENV = {
+  BASE_RPC_URL: 'http://localhost:8545',
+  X402_NETWORK: 'base',
+  X402_RECIPIENT: '0x123',
+  X402_FACILITATOR_URL: 'http://facilitator',
+  CACHE_DEFAULT_TTL_SECONDS: '60'
+};
 import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 import { resetCacheStats } from '../src/cache'
@@ -56,7 +64,7 @@ describe('Fathom API Integration Test', () => {
     })
 
     // 3. Inject waitUntil and app execution
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
     // 4. Assert HTTP success
     expect(res.status).toBe(200)
@@ -89,7 +97,7 @@ describe('Fathom API Integration Test', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     expect(consoleSpy).toHaveBeenCalledWith(`[Validation Middleware] Invalid token address format: ${token}`)
@@ -107,7 +115,7 @@ describe('Fathom API Integration Test', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
@@ -133,7 +141,7 @@ describe('Fathom API Integration Test', () => {
     const mockKV = { get: mockGet, put: mockPut, delete: vi.fn(), list: vi.fn() } as unknown as KVNamespace
     env.FATHOM_KV = mockKV
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     // 402 or 200 depending on middleware order, but if it passes validation it won't be 400.
     // It will actually process successfully because we provided X-PAYMENT.
     expect(res.status).toBe(200)
@@ -150,7 +158,7 @@ describe('Fathom API Integration Test', () => {
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/price?token=${token}&chain=base`)
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
 
     const body = await res.json() as any
@@ -164,7 +172,7 @@ describe('Fathom API Integration Test', () => {
     const tokens = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`)
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
 
     const body = await res.json() as any
@@ -178,7 +186,7 @@ describe('Fathom API Integration Test', () => {
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`)
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
 
     const body = await res.json() as any
@@ -200,7 +208,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -237,7 +245,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -262,7 +270,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any[]
@@ -291,7 +299,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
@@ -304,7 +312,7 @@ describe('Fathom API Integration Test', () => {
     const tokens = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/metadatas?tokens=${tokens}&chain=base`)
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
   })
 
@@ -312,7 +320,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/health')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
     expect(res.status).toBe(200)
     const body = await res.json() as any
@@ -348,7 +356,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'cf-connecting-ip': '1.2.3.4' }
     })
 
-    const res1 = await app.fetch(req1, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res1 = await app.fetch(req1, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res1.status).toBe(200)
 
     // Second request - mockGet will return "60", so count becomes 61 > 60
@@ -356,7 +364,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'cf-connecting-ip': '1.2.3.4' }
     })
 
-    const res2 = await app.fetch(req2, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res2 = await app.fetch(req2, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res2.status).toBe(429)
 
     const body = await res2.json() as any
@@ -395,7 +403,7 @@ describe('Fathom API Integration Test', () => {
 
     // 1. Check initial stats (should be hits: 0, misses: 0)
     const reqInitial = new Request('http://localhost/v1/cache/stats')
-    const resInitial = await app.fetch(reqInitial, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const resInitial = await app.fetch(reqInitial, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(resInitial.status).toBe(200)
     let stats = await resInitial.json() as any
     expect(stats.hits).toBe(0)
@@ -407,7 +415,7 @@ describe('Fathom API Integration Test', () => {
     const reqMiss = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
-    await app.fetch(reqMiss, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    await app.fetch(reqMiss, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
     // 3. Trigger a cache hit
     // KVCacheLayer uses kv.get(key, 'json') which we mock to parse strings.
@@ -424,11 +432,11 @@ describe('Fathom API Integration Test', () => {
     const reqHit = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
-    await app.fetch(reqHit, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    await app.fetch(reqHit, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
     // 4. Check stats again
     const reqFinal = new Request('http://localhost/v1/cache/stats')
-    const resFinal = await app.fetch(reqFinal, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const resFinal = await app.fetch(reqFinal, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(resFinal.status).toBe(200)
     stats = await resFinal.json() as any
 
@@ -448,7 +456,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -470,7 +478,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -487,7 +495,7 @@ describe('Fathom API Integration Test', () => {
       method: 'POST'
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
   })
 
@@ -503,7 +511,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -521,7 +529,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
@@ -536,7 +544,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
 
     const body = await res.json() as any
@@ -556,7 +564,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
 
     const body = await res.json() as any
@@ -572,7 +580,7 @@ describe('Fathom API Integration Test', () => {
       method: 'POST'
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
   })
 
@@ -583,7 +591,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
 
     const body = await res.json() as any
@@ -612,7 +620,7 @@ describe('Fathom API Integration Test', () => {
       headers: { 'X-PAYMENT': 'mock_payment_proof' }
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -646,7 +654,7 @@ describe('Fathom API Integration Test', () => {
 
     const req = new Request('http://localhost/v1/cache/metrics')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -661,7 +669,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/metrics')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
     expect(body.error).toBe('Internal Server Error: KV not configured')
@@ -676,7 +684,7 @@ describe('Fathom API Integration Test', () => {
 
     const req = new Request('http://localhost/v1/cache/metrics')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
     expect(body.error).toBe('Failed to retrieve cache metrics')
@@ -691,7 +699,7 @@ describe('Fathom API Integration Test', () => {
       method: 'POST'
     })
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
   })
 
@@ -706,7 +714,7 @@ describe('Fathom API Integration Test', () => {
 
     const req = new Request('http://localhost/v1/cache/metrics')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -731,7 +739,7 @@ describe('Fathom API Integration Test', () => {
 
     const req = new Request('http://localhost/v1/cache/metrics')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
     expect(body.error).toBe('Failed to retrieve cache metrics')
@@ -744,7 +752,7 @@ describe('Fathom API Integration Test', () => {
     const env: any = undefined
     const req = new Request('http://localhost/v1/cache/metrics')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
     expect(body.error).toBe('Internal Server Error: KV not configured')
@@ -761,7 +769,7 @@ describe('Fathom API Integration Test', () => {
 
     const req = new Request('http://localhost/v1/cache/metrics')
 
-    const res = await app.fetch(req, env, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
     const body = await res.json() as any
     expect(body.error).toBe('Failed to retrieve cache metrics')

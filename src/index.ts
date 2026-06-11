@@ -8,6 +8,7 @@ import { rateLimitMiddleware } from './middleware/rate_limit'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
 
 import { DEXOrchestrator, type CacheLayer } from './orchestrator'
+import { validateEnv } from './utils/env'
 
 
 class OrchestratorCacheAdapter implements CacheLayer {
@@ -41,6 +42,16 @@ type ExtendedEnv = FathomEnv & {
 };
 
 const app = new Hono<{ Bindings: ExtendedEnv }>()
+
+app.use('*', async (c, next) => {
+  try {
+    validateEnv(c.env)
+  } catch (error: any) {
+    console.error('Environment validation failed:', error)
+    return c.json({ error: error.message || 'Server configuration error' }, 500)
+  }
+  await next()
+})
 
 app.use('/v1/health', rateLimitMiddleware(60, 60000))
 
