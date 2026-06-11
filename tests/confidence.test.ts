@@ -151,4 +151,75 @@ describe('Confidence Score Module', () => {
     expect(result.label).toBe('reliable');
     expect(result.flags.length).toBe(0);
   });
+
+  it('Should handle zero or negative liquidity_usd and volume_24h_usd', () => {
+    const input: ConfidenceInput = {
+      liquidity_usd: 0,
+      max_deviation_percent: 0.01,
+      spot_vs_twap_percent: 0.01,
+      sigma_over_mu_percent: 0.01,
+      pool_age_days: 30,
+      volume_24h_usd: 0,
+      num_pools: 2,
+      is_stale: false,
+      is_unsellable: false,
+    };
+    const result = calculateConfidence(input);
+    expect(result.confidence).toBeLessThanOrEqual(49);
+    expect(result.flags).toContain('thin_liquidity');
+  });
+
+  it('Should clamp max deviation, twap, and sigma metrics to zero score when exceeding max thresholds', () => {
+    const input: ConfidenceInput = {
+      liquidity_usd: 500000,
+      max_deviation_percent: 1.0,
+      spot_vs_twap_percent: 1.0,
+      sigma_over_mu_percent: 1.0,
+      pool_age_days: 0,
+      volume_24h_usd: 500000,
+      num_pools: 2,
+      is_stale: false,
+      is_unsellable: false,
+    };
+    const result = calculateConfidence(input);
+    expect(result.confidence).toBeLessThanOrEqual(39);
+    expect(result.flags).toContain('possible_manipulation');
+  });
+
+  it('Should handle multiple flags concurrently and apply lowest cap', () => {
+    const input: ConfidenceInput = {
+      liquidity_usd: 1500,
+      max_deviation_percent: 0.01,
+      spot_vs_twap_percent: 0.30,
+      sigma_over_mu_percent: 0.01,
+      pool_age_days: 30,
+      volume_24h_usd: 500000,
+      num_pools: 1,
+      is_stale: true,
+      is_unsellable: false,
+    };
+    const result = calculateConfidence(input);
+    expect(result.confidence).toBeLessThanOrEqual(29);
+    expect(result.flags).toContain('thin_liquidity');
+    expect(result.flags).toContain('possible_manipulation');
+    expect(result.flags).toContain('single_pool');
+    expect(result.flags).toContain('stale');
+  });
+
+  it('Should handle negative percentage metrics correctly', () => {
+    const input: ConfidenceInput = {
+      liquidity_usd: 500000,
+      max_deviation_percent: -0.05,
+      spot_vs_twap_percent: -0.05,
+      sigma_over_mu_percent: -0.05,
+      pool_age_days: 30,
+      volume_24h_usd: 500000,
+      num_pools: 2,
+      is_stale: false,
+      is_unsellable: false,
+    };
+    const result = calculateConfidence(input);
+    expect(result.confidence).toBeGreaterThanOrEqual(80);
+    expect(result.label).toBe('reliable');
+  });
 });
