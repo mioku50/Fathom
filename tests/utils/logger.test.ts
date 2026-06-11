@@ -806,4 +806,30 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[INFO] msg {"a":{"b":{"c":1}}}');
     });
 
+
+    it('handles formatLogMessage with empty string level batch 4 part 20', () => {
+        const result = formatLogMessage('', 'msg');
+        expect(result).toBe('[] msg');
+    });
+
+    it('handles formatLogMessage with empty string message batch 4 part 20', () => {
+        const result = formatLogMessage('info', '');
+        expect(result).toBe('[INFO] ');
+    });
+
+    it('handles formatLogMessage with metadata containing array batch 4 part 20', () => {
+        const result = formatLogMessage('info', 'msg', { arr: [1, 2, 3] });
+        expect(result).toBe('[INFO] msg {"arr":[1,2,3]}');
+    });
+
+    it('handles formatLogMessage with metadata containing null batch 4 part 20', () => {
+        const result = formatLogMessage('info', 'msg', { val: null });
+        expect(result).toBe('[INFO] msg {"val":null}');
+    });
+
+    it('handles formatLogMessage with metadata containing boolean batch 4 part 20', () => {
+        const result = formatLogMessage('info', 'msg', { val: false });
+        expect(result).toBe('[INFO] msg {"val":false}');
+    });
+
 });

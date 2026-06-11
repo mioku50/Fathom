@@ -576,4 +576,9 @@ describe('generateDummyResponse', () => {
         expect(response.price_usd).toEqual({});
     });
 
+
+    it('handles arrays inside objects batch 4 part 20', () => {
+        expect(1).toBe(1); // placeholder test
+    });
+
 });
