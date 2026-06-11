@@ -49,6 +49,7 @@ vi.mock('../src/api/metadata', () => ({
 }))
 
 describe('Fathom API', () => {
+  global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
   it('Should return ok for /v1/health', async () => {
     const req = new Request('http://localhost/v1/health')
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)

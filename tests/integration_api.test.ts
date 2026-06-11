@@ -1,7 +1,9 @@
+global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
 import { describe, it, expect, vi } from 'vitest'
 import app from '../src/index'
 
 const VALID_ENV = {
+  FATHOM_X402_FACILITATOR_URL: 'http://mock-facilitator',
   BASE_RPC_URL: 'http://localhost:8545',
   X402_NETWORK: 'base',
   X402_RECIPIENT: '0x123',

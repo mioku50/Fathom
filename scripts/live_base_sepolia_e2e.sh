@@ -70,7 +70,8 @@ if [ -n "$FATHOM_TEST_WALLET_PRIVATE_KEY" ]; then
     echo "Real x402 payment validation is enabled."
 
     # Use a small node script to generate the transaction and get the header
-    PAYMENT_HEADER=$(node scripts/live_e2e_x402_helper.js)
+    PAYMENT_HEADER_JSON=$(node scripts/live_e2e_x402_helper.js)
+    PAYMENT_HEADER=$(PAYMENT_HEADER_JSON="$PAYMENT_HEADER_JSON" node -e "console.log(JSON.parse(process.env.PAYMENT_HEADER_JSON).header)")
     if [ $? -ne 0 ]; then
         echo "❌ Failed to generate x402 payment proof. See errors above."
         exit 1
