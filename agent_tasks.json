@@ -2516,7 +2516,7 @@
       "title": "Add Runtime Config Validation",
       "description": "Validate required runtime env vars safely: BASE_RPC_URL, X402_NETWORK, X402_RECIPIENT, X402_FACILITATOR_URL, CACHE_DEFAULT_TTL_SECONDS.",
       "area": "configuration",
-      "status": "todo",
+      "status": "done",
       "risk": "medium",
       "allowed_paths": [
         "src/index.ts",
@@ -2562,9 +2562,26 @@
         "API endpoints return consistent error formats",
         "Tests are updated"
       ]
+    },
+    {
+      "id": "add-price-endpoint-tests-1781180051220",
+      "title": "Add Price Endpoint Tests",
+      "description": "Add basic integration tests for the /v1/prices endpoint, verifying proper status code and response shape.",
+      "area": "tests",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/api/prices.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Integration tests for /v1/prices verify valid token responses.",
+        "Missing tokens parameter returns 400 error.",
+        "Responses include standard price response structure."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 154,
+  "total_tasks": 155,
   "needs_replenishment": false
 }
