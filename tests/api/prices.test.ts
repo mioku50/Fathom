@@ -40,6 +40,7 @@ vi.mock('../../src/confidence', () => ({
 }));
 
 describe('Prices API Endpoint (/v1/prices)', () => {
+  global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     let mockEnv: any;
 
     beforeEach(() => {
