@@ -541,4 +541,26 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[TRACE] Test {"data":[[[1]]]}');
     });
 
+
+    // --- Added for Batch 1 Part 19 ---
+    it('handles negative floats in metadata batch 1 part 19', () => {
+        const result = formatLogMessage('info', 'Negative Float', { val: -42.5 });
+        expect(result).toBe('[INFO] Negative Float {"val":-42.5}');
+    });
+
+    it('handles arrays with undefined batch 1 part 19', () => {
+        const result = formatLogMessage('debug', 'Test Array', { arr: [1, undefined, 3] });
+        expect(result).toBe('[DEBUG] Test Array {"arr":[1,null,3]}');
+    });
+
+    it('handles metadata with nested empty objects batch 1 part 19', () => {
+        const result = formatLogMessage('info', 'Nested Empty', { nested: {} });
+        expect(result).toBe('[INFO] Nested Empty {"nested":{}}');
+    });
+
+    it('handles metadata with nested empty arrays batch 1 part 19', () => {
+        const result = formatLogMessage('trace', 'Nested Empty Array', { data: { arr: [] } });
+        expect(result).toBe('[TRACE] Nested Empty Array {"data":{"arr":[]}}');
+    });
+
 });
