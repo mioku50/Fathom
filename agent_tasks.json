@@ -46,7 +46,7 @@
       "title": "Add security contact information",
       "description": "Update docs/security_policies.md to include an explicit security contact email address and response timeline.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/security_policies.md",
@@ -2808,10 +2808,25 @@
       "acceptance": [
         "Tests pass"
       ]
+    },
+    {
+      "id": "add-deployment-hardening-docs-1781217498214-0",
+      "title": "Add deployment hardening documentation",
+      "description": "Create docs/deployment_hardening.md to provide guidelines on securing Fathom deployments, including least privilege access and network isolation.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/deployment_hardening.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/deployment_hardening.md is created with relevant guidelines."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 167,
+  "total_tasks": 168,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
