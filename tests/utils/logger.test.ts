@@ -447,4 +447,17 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Test', { arrWithSym: [1, sym, 3] });
         expect(result).toBe('[INFO] Test {"arrWithSym":[1,null,3]}');
     });
+
+
+    // --- Added for Batch 2 Part 16 ---
+
+    it('handles metadata with deeply nested string arrays batch 2 part 16', () => {
+        const result = formatLogMessage('debug', 'Test', { nestedStrings: [[['a', 'b']]] });
+        expect(result).toBe('[DEBUG] Test {"nestedStrings":[[["a","b"]]]}');
+    });
+
+    it('handles boolean values inside arrays batch 2 part 16', () => {
+        const result = formatLogMessage('info', 'Test', { arrWithBool: [true, false] });
+        expect(result).toBe('[INFO] Test {"arrWithBool":[true,false]}');
+    });
 });
