@@ -315,4 +315,47 @@ describe('generateDummyResponse', () => {
         response.price_usd = Infinity;
         expect(response.price_usd).toBe(Infinity);
     });
+
+    it('generates a valid PriceResponse with NaN price_usd (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.price_usd = NaN;
+        expect(response.price_usd).toBeNaN();
+    });
+
+    it('generates a valid PriceResponse with undefined flags (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.flags = undefined as any;
+        expect(response.flags).toBeUndefined();
+    });
+
+    it('generates a valid PriceResponse with string price_usd (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.price_usd = "1.0" as any;
+        expect(response.price_usd).toBe("1.0");
+    });
+
+    it('generates a valid PriceResponse with array for main_pool (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.main_pool = [] as any;
+        expect(response.main_pool).toEqual([]);
+    });
+
+    it('generates a valid PriceResponse with empty object flags (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.flags = {} as any;
+        expect(response.flags).toEqual({});
+    });
+
+    it('generates a valid PriceResponse with negative price_low (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.price_low = -100;
+        expect(response.price_low).toBe(-100);
+    });
+
+    it('generates a valid PriceResponse with extremely large timestamp (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        const bigDate = new Date(8.64e15).toISOString();
+        response.updated_at = bigDate;
+        expect(response.updated_at).toBe(bigDate);
+    });
 });
