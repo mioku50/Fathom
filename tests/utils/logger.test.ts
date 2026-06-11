@@ -832,4 +832,21 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[INFO] msg {"val":false}');
     });
 
+
+    it('handles formatLogMessage with metadata containing special characters batch 21', () => {
+        const result = formatLogMessage('info', 'msg', { str: '!@#$%^&*()_+-=[]{}|;:",./<>?' });
+        // Expected string handles the escaped quote correctly.
+        expect(result).toBe('[INFO] msg {"str":"!@#$%^&*()_+-=[]{}|;:\\",./<>?"}');
+    });
+
+    it('handles formatLogMessage with metadata containing large strings batch 21', () => {
+        const result = formatLogMessage('info', 'msg', { str: 'a'.repeat(100) });
+        expect(result).toBe('[INFO] msg {"str":"' + 'a'.repeat(100) + '"}');
+    });
+
+    it('handles formatLogMessage with metadata containing nested arrays batch 21', () => {
+        const result = formatLogMessage('info', 'msg', { arr: [[1, 2], [3, 4]] });
+        expect(result).toBe('[INFO] msg {"arr":[[1,2],[3,4]]}');
+    });
+
 });
