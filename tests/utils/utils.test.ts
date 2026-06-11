@@ -297,4 +297,22 @@ describe('generateDummyResponse', () => {
         response.price_usd = -1;
         expect(response.price_usd).toBe(-1);
     });
+
+    it('generates a valid PriceResponse with fractional liquidity_usd (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.liquidity_usd = 100.5;
+        expect(response.liquidity_usd).toBe(100.5);
+    });
+
+    it('generates a valid PriceResponse with large numeric confidence (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.confidence = 1000;
+        expect(response.confidence).toBe(1000);
+    });
+
+    it('generates a valid PriceResponse with Infinity price_usd (manual override)', () => {
+        const response = generateDummyResponse('tok', 'chain');
+        response.price_usd = Infinity;
+        expect(response.price_usd).toBe(Infinity);
+    });
 });
