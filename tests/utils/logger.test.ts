@@ -741,4 +741,40 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[TRACE] Very deep {"a":{"b":{"c":{"d":{"e":{"f":1}}}}}}');
     });
 
+
+    it('handles boolean values in metadata batch 7 part 19', () => {
+        const result = formatLogMessage('info', 'Booleans', { truthy: true, falsy: false });
+        expect(result).toBe('[INFO] Booleans {"truthy":true,"falsy":false}');
+    });
+
+    it('handles numeric keys in metadata batch 7 part 19', () => {
+        const result = formatLogMessage('info', 'Numbers', { 1: "one", 2: "two" });
+        expect(result).toBe('[INFO] Numbers {"1":"one","2":"two"}');
+    });
+
+    it('handles an empty message with metadata batch 7 part 19', () => {
+        const result = formatLogMessage('info', '', { meta: "data" });
+        expect(result).toBe('[INFO]  {"meta":"data"}');
+    });
+
+    it('handles null level batch 7 part 19', () => {
+        const result = formatLogMessage(null as any, 'Null level test');
+        expect(result).toBe('[NULL] Null level test');
+    });
+
+
+    it('handles formatLogMessage with undefined level throws Error', () => {
+        expect(() => formatLogMessage(undefined as any, 'msg')).toThrow(TypeError);
+    });
+
+    it('handles stringify with bigints in log', () => {
+        expect(() => formatLogMessage('info', 'msg', { bi: BigInt(10) })).toThrow(TypeError);
+    });
+
+    it('handles stringify with circular references in log', () => {
+         const obj: any = {};
+         obj.self = obj;
+         expect(() => formatLogMessage('info', 'msg', obj)).toThrow(TypeError);
+    });
+
 });
