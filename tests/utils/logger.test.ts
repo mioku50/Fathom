@@ -397,4 +397,15 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[DEBUG] Test {"val":null}');
     });
 
+
+    it('handles metadata with empty object batch 3 part 15', () => {
+        const result = formatLogMessage('debug', 'Test', {});
+        expect(result).toBe('[DEBUG] Test {}');
+    });
+
+    it('handles metadata with nested arrays batch 3 part 15', () => {
+        const result = formatLogMessage('info', 'Test', { arr: [1, 2, [3, 4]] });
+        expect(result).toBe('[INFO] Test {"arr":[1,2,[3,4]]}');
+    });
+
 });
