@@ -260,4 +260,33 @@ describe('PriceReader', () => {
     const token = '0x1111111111111111111111111111111111111111';
     await expect(priceReader.getBestPriceAndLiquidity(token)).rejects.toThrow('RPC error');
   });
+
+  it('should handle single pool with low liquidity', async () => {
+    const pools = [
+      { address: '0xPool1', dex: 'uniswapV2' }
+    ];
+
+    orchestratorMock.getAllPools.mockResolvedValue(pools);
+
+    const rawData = [
+      {
+        pool: pools[0],
+        rawData: {
+          reserve0: 1000n, // very low
+          reserve1: 2000n, // very low
+          updatedAt: 1234
+        }
+      }
+    ];
+
+    orchestratorMock.getAllRawData.mockResolvedValue(rawData);
+
+    const token = '0x1111111111111111111111111111111111111111';
+    const result = await priceReader.getBestPriceAndLiquidity(token);
+
+    expect(result.poolsCount).toBe(1);
+    expect(result.bestPrice).toBe(2);
+    expect(result.bestLiquidity).toBe(4e-15); // extremely small
+  });
+
 });
