@@ -25,10 +25,30 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       const response = await fetch(facilitatorUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ txHash })
+        body: JSON.stringify({ transactionHash: txHash, txHash })
       })
       if (!response.ok) {
-        return c.json({ error: { code: 'payment_required', message: 'Payment verification failed' } }, 402)
+        const status = response.status;
+        let responseBody = '';
+        let sanitizedErrorMsg = 'Payment verification failed';
+        let errorCode = 'payment_required';
+        try {
+          responseBody = await response.text();
+          const parsed = JSON.parse(responseBody);
+          if (parsed.error && parsed.error.message) {
+            sanitizedErrorMsg = parsed.error.message;
+          } else if (parsed.message) {
+            sanitizedErrorMsg = parsed.message;
+          }
+          if (parsed.error && parsed.error.code) {
+             errorCode = parsed.error.code;
+          }
+        } catch (e) {
+          responseBody = responseBody.slice(0, 200);
+        }
+        console.error(`X402 Verification Failed: Facilitator HTTP ${status}`);
+        console.error(`X402 Verification Failed: ${sanitizedErrorMsg}`);
+        return c.json({ error: { code: errorCode, message: `Payment verification failed: ${sanitizedErrorMsg} (HTTP ${status})` } }, 402)
       }
     } catch (error) {
       console.error('FETCH ERROR:', error);

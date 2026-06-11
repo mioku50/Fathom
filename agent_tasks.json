@@ -46,10 +46,15 @@
       "title": "Add Metadata Cache Tests",
       "description": "Add more unit tests for metadata cache logic.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
-        "tests/api/metadata.test.ts"
+        "src/middleware/x402.ts",
+        "scripts/live_base_sepolia_e2e.sh",
+        "package.json",
+        "package-lock.json",
+        "tsconfig.json",
+        "tests/middleware/x402.test.ts"
       ],
       "acceptance": [
         "Tests pass"
@@ -2773,9 +2778,25 @@
         "Tests added",
         "Tests pass"
       ]
+    },
+    {
+      "id": "re-add-metadata-cache-tests-1781214205179",
+      "title": "Add Metadata Cache Tests",
+      "description": "Add more unit tests for metadata cache logic.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/api/metadata.test.ts",
+        "tests/index.test.ts"
+      ],
+      "acceptance": [
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 165,
-  "needs_replenishment": false
+  "total_tasks": 166,
+  "needs_replenishment": false,
+  "claimed_tasks": 1
 }
