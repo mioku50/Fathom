@@ -777,4 +777,33 @@ describe('Logging Helpers', () => {
          expect(() => formatLogMessage('info', 'msg', obj)).toThrow(TypeError);
     });
 
+
+    // --- Added for Batch 19 Part 4 ---
+
+    it('handles formatLogMessage with Symbol level batch 4 part 19', () => {
+        const result = formatLogMessage(Symbol('level') as any, 'msg');
+        expect(result).toBe('[SYMBOL(LEVEL)] msg');
+    });
+
+    it('handles formatLogMessage with NaN level batch 4 part 19', () => {
+        const result = formatLogMessage(NaN as any, 'msg');
+        expect(result).toBe('[NAN] msg');
+    });
+
+    it('handles formatLogMessage with function metadata is stringified out batch 4 part 19', () => {
+        const result = formatLogMessage('info', 'msg', { fn: () => {} });
+        expect(result).toBe('[INFO] msg {}');
+    });
+
+
+    it('handles formatLogMessage with Symbol level as metadata batch 4 part 19', () => {
+        const result = formatLogMessage('info', 'msg', { sym: Symbol('sym') });
+        expect(result).toBe('[INFO] msg {}'); // Symbol is omitted in JSON.stringify
+    });
+
+    it('handles formatLogMessage with deeply nested metadata batch 4 part 19', () => {
+        const result = formatLogMessage('info', 'msg', { a: { b: { c: 1 } } });
+        expect(result).toBe('[INFO] msg {"a":{"b":{"c":1}}}');
+    });
+
 });
