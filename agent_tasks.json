@@ -2249,7 +2249,7 @@
       "title": "Add More Utility Unit Tests Part 19 - Batch 1",
       "description": "Add additional utility tests for more coverage.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/utils/**",
@@ -2288,9 +2288,54 @@
       "acceptance": [
         "Tests added for utility scripts."
       ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-batch-19-1781144862213-3",
+      "title": "Add More Utility Unit Tests Part 19 - Batch 2",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-batch-19-1781144862213-4",
+      "title": "Add More Utility Unit Tests Part 19 - Batch 3",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
+    },
+    {
+      "id": "add-unit-tests-for-utils-batch-19-1781144862213-5",
+      "title": "Add More Utility Unit Tests Part 19 - Batch 4",
+      "description": "Add additional utility tests for more coverage.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/**",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests added for utility scripts."
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 137,
+  "todo_tasks": 5,
+  "total_tasks": 140,
   "needs_replenishment": false
 }
