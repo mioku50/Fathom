@@ -19,5 +19,6 @@
  */
 export function formatLogMessage<T extends Record<string, any> = Record<string, any>>(level: string, message: string, metadata?: T): string {
   const metaString = metadata ? ` ${JSON.stringify(metadata)}` : '';
-  return `[${level.toUpperCase()}] ${message}${metaString}`;
+  if (level === undefined) throw new TypeError("Missing level");
+  return `[${String(level === null ? "NULL" : level).toUpperCase()}] ${message}${metaString}`;
 }

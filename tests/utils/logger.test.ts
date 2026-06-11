@@ -297,4 +297,39 @@ describe('Logging Helpers', () => {
         // @ts-ignore
         expect(() => formatLogMessage(undefined, 'Missing level')).toThrow(TypeError);
     });
+
+    it('handles empty message and undefined metadata', () => {
+        const result = formatLogMessage('info', '');
+        expect(result).toBe('[INFO] ');
+    });
+
+    it('handles null level explicitly passed', () => {
+        // @ts-ignore
+        const result = formatLogMessage(null, 'Null level test');
+        expect(result).toBe('[NULL] Null level test');
+    });
+
+    it('handles boolean log level explicitly passed', () => {
+        // @ts-ignore
+        const result = formatLogMessage(true, 'Boolean level test');
+        expect(result).toBe('[TRUE] Boolean level test');
+    });
+
+    it('handles numeric log level explicitly passed', () => {
+        // @ts-ignore
+        const result = formatLogMessage(123, 'Numeric level test');
+        expect(result).toBe('[123] Numeric level test');
+    });
+
+    it('handles undefined message explicitly passed', () => {
+        // @ts-ignore
+        const result = formatLogMessage('info', undefined);
+        expect(result).toBe('[INFO] undefined');
+    });
+
+    it('handles function message explicitly passed', () => {
+        // @ts-ignore
+        const result = formatLogMessage('info', function() {});
+        expect(result).toMatch(/\[INFO\] function/);
+    });
 });
