@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 MISSING_VARS=()
 if [ -z "$FATHOM_LIVE_URL" ]; then MISSING_VARS+=("FATHOM_LIVE_URL"); fi
@@ -38,17 +37,18 @@ if [ "$CACHE_STATUS" != "200" ]; then
 fi
 echo "✅ /v1/cache/metrics OK"
 
-# 3. /v1/metadata returns real ERC20 metadata for FATHOM_TEST_TOKEN
-echo "[3] Checking /v1/metadata for test token"
-META_RES=$(curl -s "$FATHOM_LIVE_URL/v1/metadata?token=$FATHOM_TEST_TOKEN")
-if ! echo "$META_RES" | grep -q "address"; then
-    echo "❌ /v1/metadata failed or missing address field: $META_RES"
+# Stage 1: Protected endpoints without payment/auth must return 402
+echo "[3] Checking protected endpoints without payment (Stage 1)"
+
+# /v1/metadata
+META_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FATHOM_LIVE_URL/v1/metadata?token=$FATHOM_TEST_TOKEN")
+if [ "$META_STATUS" != "402" ]; then
+    echo "❌ Expected 402 for /v1/metadata without payment, got $META_STATUS"
     exit 1
 fi
-echo "✅ /v1/metadata OK"
+echo "✅ /v1/metadata without payment returned 402 OK"
 
-# 4. /v1/price returns a real orchestrator result, not dummy data.
-echo "[4] Checking /v1/price (protected without payment returns 402)"
+# /v1/price
 PRICE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FATHOM_LIVE_URL/v1/price?token=$FATHOM_TEST_TOKEN")
 if [ "$PRICE_STATUS" != "402" ]; then
     echo "❌ Expected 402 for /v1/price without payment, got $PRICE_STATUS"
@@ -56,8 +56,7 @@ if [ "$PRICE_STATUS" != "402" ]; then
 fi
 echo "✅ /v1/price without payment returned 402 OK"
 
-# 5. Protected endpoints return 402 without payment
-echo "[5] Checking other protected endpoints"
+# /v1/prices
 PRICES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FATHOM_LIVE_URL/v1/prices?tokens=$FATHOM_TEST_TOKEN")
 if [ "$PRICES_STATUS" != "402" ]; then
     echo "❌ Expected 402 for /v1/prices without payment, got $PRICES_STATUS"
@@ -65,35 +64,48 @@ if [ "$PRICES_STATUS" != "402" ]; then
 fi
 echo "✅ /v1/prices without payment returned 402 OK"
 
-# 6. Real x402 payment validation (optional)
+# Stage 2: Protected endpoints with payment/auth
+echo "[4] Real x402 payment validation (Stage 2)"
 if [ -n "$FATHOM_TEST_WALLET_PRIVATE_KEY" ]; then
-    echo "[6] Real x402 payment validation is enabled."
+    echo "Real x402 payment validation is enabled."
 
     # Use a small node script to generate the transaction and get the header
     PAYMENT_HEADER=$(node scripts/live_e2e_x402_helper.js)
     if [ $? -ne 0 ]; then
-        echo "❌ Failed to generate x402 payment proof"
+        echo "❌ Failed to generate x402 payment proof. See errors above."
         exit 1
     fi
 
-    echo "Payment proof generated. Testing /v1/price..."
+    echo "Payment proof generated. Testing protected endpoints..."
+
+    # Check /v1/metadata
+    META_RES=$(curl -s -w "\n%{http_code}" -H "X-PAYMENT: $PAYMENT_HEADER" "$FATHOM_LIVE_URL/v1/metadata?token=$FATHOM_TEST_TOKEN")
+    META_BODY=$(echo "$META_RES" | sed '\$d')
+    META_STATUS=$(echo "$META_RES" | tail -n1)
+    if [ "$META_STATUS" != "200" ]; then
+        echo "❌ Expected 200 for /v1/metadata with payment, got $META_STATUS"
+        exit 1
+    fi
+    if ! echo "$META_BODY" | grep -q "address"; then
+        echo "❌ /v1/metadata did not return expected data"
+        exit 1
+    fi
+    echo "✅ /v1/metadata with payment OK"
+
+    # Check /v1/price
     PRICE_RES=$(curl -s -w "\n%{http_code}" -H "X-PAYMENT: $PAYMENT_HEADER" "$FATHOM_LIVE_URL/v1/price?token=$FATHOM_TEST_TOKEN")
-
-    PRICE_BODY=$(echo "$PRICE_RES" | sed '$d')
+    PRICE_BODY=$(echo "$PRICE_RES" | sed '\$d')
     PRICE_STATUS=$(echo "$PRICE_RES" | tail -n1)
-
     if [ "$PRICE_STATUS" != "200" ]; then
         echo "❌ Expected 200 for /v1/price with payment, got $PRICE_STATUS"
-        echo "Response: $PRICE_BODY"
         exit 1
     fi
-
     if ! echo "$PRICE_BODY" | grep -q "price_usd"; then
-        echo "❌ /v1/price did not return expected orchestrator data: $PRICE_BODY"
+        echo "❌ /v1/price did not return expected orchestrator data"
         exit 1
     fi
+    echo "✅ /v1/price with payment OK"
 
-    echo "✅ /v1/price with real x402 payment OK"
 else
     echo "⏭️ Skipping real x402 payment validation (FATHOM_TEST_WALLET_PRIVATE_KEY not set)."
 fi
