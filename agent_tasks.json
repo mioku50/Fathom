@@ -2660,7 +2660,7 @@
         "tests/priceReader.test.ts",
         "agent_tasks.json"
       ],
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
       "acceptance": [
         "Error handling tests are added for PriceReader",
@@ -2695,9 +2695,26 @@
       "acceptance": [
         "A new docs/security_review.md file is created."
       ]
+    },
+    {
+      "id": "test-orchestrator-error-handling-1781197450001",
+      "title": "Add tests for Orchestrator error handling 0",
+      "area": "tests",
+      "description": "Add more error handling tests for orchestrator components",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/orchestrator.test.ts",
+        "agent_tasks.json"
+      ],
+      "status": "todo",
+      "dependencies": [],
+      "acceptance": [
+        "Tests added",
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 161,
+  "total_tasks": 162,
   "needs_replenishment": false
 }
