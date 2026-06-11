@@ -46,7 +46,7 @@
       "title": "Add edge case testing for PriceReader",
       "description": "Add tests for edge cases such as token matching quote address, or zero prices.",
       "area": "tests",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/priceReader.ts",
@@ -2596,9 +2596,27 @@
         "Missing tokens parameter returns 400 error.",
         "Responses include standard price response structure."
       ]
+    },
+    {
+      "id": "add-price-reader-config-tests-1781182529110",
+      "title": "Add price reader config tests",
+      "area": "tests",
+      "description": "Add basic config/initialization tests for PriceReader in various environments.",
+      "risk": "low",
+      "allowed_paths": [
+        "src/priceReader.ts",
+        "tests/priceReader.test.ts",
+        "agent_tasks.json"
+      ],
+      "status": "todo",
+      "dependencies": [],
+      "acceptance": [
+        "Tests cover PriceReader initialization and simple config inputs",
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 156,
+  "total_tasks": 157,
   "needs_replenishment": false
 }
