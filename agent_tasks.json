@@ -42,6 +42,23 @@
   },
   "tasks": [
     {
+      "id": "add-edge-case-testing-pricereader-1781181769530",
+      "title": "Add edge case testing for PriceReader",
+      "description": "Add tests for edge cases such as token matching quote address, or zero prices.",
+      "area": "tests",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/priceReader.ts",
+        "tests/priceReader.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Edge cases are identified and tests are added",
+        "All tests pass"
+      ]
+    },
+    {
       "id": "add-utility-tests-confidence-1781164402648-0fmrnq",
       "title": "Add more utility tests",
       "description": "Create additional tests for utility functions.",
@@ -2535,7 +2552,7 @@
       "title": "Add price reader unit tests",
       "description": "Create tests for price reader components to increase code coverage.",
       "area": "tests",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/priceReader.ts",
@@ -2582,6 +2599,6 @@
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 155,
+  "total_tasks": 156,
   "needs_replenishment": false
 }
