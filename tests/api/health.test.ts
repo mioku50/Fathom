@@ -5,7 +5,7 @@ import type { FathomEnv } from '../../src/cache'
 describe('Health Check API (/v1/health)', () => {
   it('Should return ok and 200 status for /v1/health', async () => {
     const req = new Request('http://localhost/v1/health')
-    const res = await app.fetch(req, {}, { waitUntil: () => {} } as any)
+    const res = await app.fetch(req, { BASE_RPC_URL: 'http://localhost:8545', X402_NETWORK: 'base', X402_RECIPIENT: '0x123', X402_FACILITATOR_URL: 'http://facilitator', CACHE_DEFAULT_TTL_SECONDS: '60' }, { waitUntil: () => {} } as any)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -22,7 +22,7 @@ describe('Health Check API (/v1/health)', () => {
     const env = { FATHOM_KV: mockKV }
 
     const req = new Request('http://localhost/v1/health')
-    const res = await app.fetch(req, env, { waitUntil: () => {} } as any)
+    const res = await app.fetch(req, { BASE_RPC_URL: 'http://localhost:8545', X402_NETWORK: 'base', X402_RECIPIENT: '0x123', X402_FACILITATOR_URL: 'http://facilitator', CACHE_DEFAULT_TTL_SECONDS: '60', ...env }, { waitUntil: () => {} } as any)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -41,7 +41,7 @@ describe('Health Check API (/v1/health)', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const req = new Request('http://localhost/v1/health')
-    const res = await app.fetch(req, env, { waitUntil: () => {} } as any)
+    const res = await app.fetch(req, { BASE_RPC_URL: 'http://localhost:8545', X402_NETWORK: 'base', X402_RECIPIENT: '0x123', X402_FACILITATOR_URL: 'http://facilitator', CACHE_DEFAULT_TTL_SECONDS: '60', ...env }, { waitUntil: () => {} } as any)
     expect(res.status).toBe(200)
 
     const body = await res.json() as any
@@ -62,7 +62,7 @@ describe('Health Check API (/v1/health)', () => {
     const env = { FATHOM_KV: mockKV }
 
     const req = new Request('http://localhost/v1/health')
-    const res = await app.fetch(req, env, { waitUntil: () => {} } as any)
+    const res = await app.fetch(req, { BASE_RPC_URL: 'http://localhost:8545', X402_NETWORK: 'base', X402_RECIPIENT: '0x123', X402_FACILITATOR_URL: 'http://facilitator', CACHE_DEFAULT_TTL_SECONDS: '60', ...env }, { waitUntil: () => {} } as any)
 
     // Check that we got rate limited
     expect(res.status).toBe(429)
