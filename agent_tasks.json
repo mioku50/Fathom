@@ -2833,7 +2833,7 @@
       "title": "Add Metadata Cache Tests",
       "description": "Add more unit tests for metadata cache logic.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/api/metadata.test.ts",
@@ -2874,10 +2874,26 @@
       "acceptance": [
         "Tests added and pass"
       ]
+    },
+    {
+      "id": "add-utility-tests-1781220770934",
+      "title": "Add utility tests 3",
+      "description": "Add more utility tests for format.ts",
+      "area": "tests",
+      "risk": "low",
+      "status": "todo",
+      "allowed_paths": [
+        "tests/utils/format.test.ts",
+        "src/utils/format.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 173,
+  "total_tasks": 174,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
