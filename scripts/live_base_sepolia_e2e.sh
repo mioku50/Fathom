@@ -81,7 +81,7 @@ if [ -n "$FATHOM_TEST_WALLET_PRIVATE_KEY" ]; then
 
     # Check /v1/metadata
     META_RES=$(curl -s -w "\n%{http_code}" -H "X-PAYMENT: $PAYMENT_HEADER" "$FATHOM_LIVE_URL/v1/metadata?token=$FATHOM_TEST_TOKEN")
-    META_BODY=$(echo "$META_RES" | sed '\$d')
+    META_BODY=$(echo "$META_RES" | sed '$d')
     META_STATUS=$(echo "$META_RES" | tail -n1)
     if [ "$META_STATUS" != "200" ]; then
         echo "❌ Expected 200 for /v1/metadata with payment, got $META_STATUS"
@@ -95,7 +95,7 @@ if [ -n "$FATHOM_TEST_WALLET_PRIVATE_KEY" ]; then
 
     # Check /v1/price
     PRICE_RES=$(curl -s -w "\n%{http_code}" -H "X-PAYMENT: $PAYMENT_HEADER" "$FATHOM_LIVE_URL/v1/price?token=$FATHOM_TEST_TOKEN")
-    PRICE_BODY=$(echo "$PRICE_RES" | sed '\$d')
+    PRICE_BODY=$(echo "$PRICE_RES" | sed '$d')
     PRICE_STATUS=$(echo "$PRICE_RES" | tail -n1)
     if [ "$PRICE_STATUS" != "200" ]; then
         echo "❌ Expected 200 for /v1/price with payment, got $PRICE_STATUS"
