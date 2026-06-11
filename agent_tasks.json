@@ -2686,7 +2686,7 @@
       "title": "Add security review documentation",
       "description": "Create documentation for regular security reviews.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/security_review.md",
@@ -2726,9 +2726,24 @@
       "acceptance": [
         "Tests pass"
       ]
+    },
+    {
+      "id": "add-more-security-docs-1781198631740-0",
+      "title": "Add more security documentation",
+      "description": "Continue adding documentation for security policies.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/security_policies.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "A new docs/security_policies.md file is created."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 164,
+  "total_tasks": 165,
   "needs_replenishment": false
 }
