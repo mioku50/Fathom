@@ -209,7 +209,8 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
     const body = await res.json() as any
-    expect(body.error).toBe('tokens parameter is required')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toBe('tokens parameter is required')
   })
 
   it('Should return 400 for /v1/prices if more than 10 tokens are requested', async () => {
@@ -220,7 +221,8 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
     const body = await res.json() as any
-    expect(body.error).toBe('Maximum 10 tokens allowed per request')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toBe('Maximum 10 tokens allowed per request')
   })
 
   it('Should return 400 for /v1/prices if a token address is invalid', async () => {
@@ -411,7 +413,8 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
     const body = await res.json() as any
-    expect(body.error).toBe('Either token or pool parameter is required')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toBe('Either token or pool parameter is required')
   })
 
   it('Should call KV delete and return ok for /v1/cache/invalidate', async () => {
@@ -525,7 +528,8 @@ describe('Fathom API', () => {
     expect(res.status).toBe(500)
 
     const body = await res.json() as any
-    expect(body.error).toBe('Failed to invalidate cache')
+    expect(body.error).toBe('internal_error')
+    expect(body.message).toBe('Failed to invalidate cache')
   })
 
 
@@ -623,7 +627,8 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
     const body = await res.json() as any
-    expect(body.error).toBe('tokens parameter is required')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toBe('tokens parameter is required')
   })
 
   it('Should return 400 for /v1/metadatas if tokens exceed 10', async () => {
@@ -635,7 +640,8 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(400)
     const body = await res.json() as any
-    expect(body.error).toBe('Maximum 10 tokens allowed per request')
+    expect(body.error).toBe('invalid_request')
+    expect(body.message).toBe('Maximum 10 tokens allowed per request')
   })
 
   it('Should successfully return 200 for /v1/health', async () => {

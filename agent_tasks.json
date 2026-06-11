@@ -2569,7 +2569,7 @@
       "title": "Improve Error Handling",
       "description": "Add better error handling and logging to API routes.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/index.ts",
@@ -2614,9 +2614,23 @@
         "Tests cover PriceReader initialization and simple config inputs",
         "Tests pass"
       ]
+    },
+    {
+      "id": "add-utility-tests-1781178636420",
+      "title": "Add Utility Tests",
+      "description": "Add missing utility tests for formatting functions.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils/format.test.ts"
+      ],
+      "acceptance": [
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 157,
+  "total_tasks": 158,
   "needs_replenishment": false
 }
