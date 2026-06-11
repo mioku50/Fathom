@@ -2672,7 +2672,7 @@
       "title": "Add Price Endpoint Tests",
       "description": "Add more tests for price endpoint.",
       "area": "testing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "tests/api.test.ts"
@@ -2712,9 +2712,23 @@
         "Tests added",
         "Tests pass"
       ]
+    },
+    {
+      "id": "add-cache-invalidation-tests-1781198197864",
+      "title": "Add Cache Invalidation Endpoints Tests",
+      "description": "Add more tests for cache invalidation endpoints.",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/api/cache.test.ts"
+      ],
+      "acceptance": [
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 162,
+  "total_tasks": 164,
   "needs_replenishment": false
 }
