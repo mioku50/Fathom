@@ -184,4 +184,60 @@ describe('DEXOrchestrator', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('should handle case where all adapters fail in getAllPools', async () => {
+    const orchestrator = new DEXOrchestrator([
+      new MockFailingAdapter(),
+      new MockFailingAdapter()
+    ]);
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const pools = await orchestrator.getAllPools('0xTOKEN');
+    expect(pools.length).toBe(0);
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should handle case where all pools fail in getAllRawData', async () => {
+    const orchestrator = new DEXOrchestrator([
+      new MockFailingAdapter()
+    ]);
+
+    const pools: PoolInfo[] = [
+      { address: '0xF1', dex: 'failing_adapter', fee: 0.003 },
+      { address: '0xF2', dex: 'failing_adapter', fee: 0.003 }
+    ];
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const allData = await orchestrator.getAllRawData(pools);
+    expect(allData.length).toBe(0);
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should handle empty adapters array gracefully in getAllPools', async () => {
+    const orchestrator = new DEXOrchestrator([]);
+
+    const pools = await orchestrator.getAllPools('0xTOKEN');
+    expect(pools.length).toBe(0);
+  });
+
+  it('should handle empty adapters array gracefully in getAllRawData', async () => {
+    const orchestrator = new DEXOrchestrator([]);
+
+    const pools: PoolInfo[] = [
+      { address: '0xA1', dex: 'aerodrome', fee: 0.003 }
+    ];
+
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const allData = await orchestrator.getAllRawData(pools);
+    expect(allData.length).toBe(0);
+
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
 });
