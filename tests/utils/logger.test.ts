@@ -432,4 +432,19 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[DEBUG] Test {}');
     });
 
+
+
+    // --- Added for Batch 1 Part 16 ---
+
+    it('handles metadata with deeply nested boolean arrays batch 1 part 16', () => {
+        const result = formatLogMessage('debug', 'Test', { nestedBools: [[[true, false]]] });
+        expect(result).toBe('[DEBUG] Test {"nestedBools":[[[true,false]]]}');
+    });
+
+    it('handles symbol values inside arrays batch 1 part 16', () => {
+        const sym = Symbol('test');
+        // Symbols in arrays become null in JSON.stringify
+        const result = formatLogMessage('info', 'Test', { arrWithSym: [1, sym, 3] });
+        expect(result).toBe('[INFO] Test {"arrWithSym":[1,null,3]}');
+    });
 });
