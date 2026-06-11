@@ -581,4 +581,27 @@ describe('generateDummyResponse', () => {
         expect(1).toBe(1); // placeholder test
     });
 
+
+    it('generateDummyResponse creates a response with expected numeric values batch 24', () => {
+        const response = generateDummyResponse("TOKEN", "CHAIN");
+        expect(response.price_usd).toBe(1.0);
+        expect(response.price_low).toBe(0.95);
+        expect(response.price_high).toBe(1.05);
+        expect(response.twap_5m).toBe(1.01);
+        expect(response.confidence).toBe(85);
+        expect(response.liquidity_usd).toBe(100000);
+        expect(response.main_pool.fee).toBe(0.003);
+    });
+
+    it('generateDummyResponse creates a response with empty flags array batch 24', () => {
+        const response = generateDummyResponse("TOKEN", "CHAIN");
+        expect(Array.isArray(response.flags)).toBe(true);
+        expect(response.flags.length).toBe(0);
+    });
+
+    it('generateDummyResponse creates a response with correct symbol and label batch 24', () => {
+        const response = generateDummyResponse("TOKEN", "CHAIN");
+        expect(response.symbol).toBe("DUMMY");
+        expect(response.label).toBe("reliable");
+    });
 });
