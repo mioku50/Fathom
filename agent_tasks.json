@@ -2639,7 +2639,7 @@
       "title": "Add deployment hardening documentation",
       "description": "Create a markdown file detailing deployment security best practices and environment variable protection.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/deployment_hardening.md",
@@ -2680,9 +2680,24 @@
       "acceptance": [
         "Tests pass"
       ]
+    },
+    {
+      "id": "add-security-review-docs-1781196381704",
+      "title": "Add security review documentation",
+      "description": "Create documentation for regular security reviews.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/security_review.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "A new docs/security_review.md file is created."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 160,
+  "total_tasks": 161,
   "needs_replenishment": false
 }
