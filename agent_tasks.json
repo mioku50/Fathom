@@ -52,7 +52,7 @@
         "src/utils.ts",
         "agent_tasks.json"
       ],
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
       "acceptance": [
         "Tests added and pass"
@@ -2857,10 +2857,27 @@
       "acceptance": [
         "docs/deployment_hardening.md is created with relevant guidelines."
       ]
+    },
+    {
+      "id": "new-task-1781219906229",
+      "title": "Add utility tests 2",
+      "description": "Add more utility tests for remaining utility functions",
+      "area": "tests",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils.test.ts",
+        "src/utils.ts",
+        "agent_tasks.json"
+      ],
+      "status": "todo",
+      "dependencies": [],
+      "acceptance": [
+        "Tests added and pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 172,
+  "total_tasks": 173,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
