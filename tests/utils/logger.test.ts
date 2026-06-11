@@ -484,5 +484,21 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'Test', { zeroVal: 0 });
         expect(result).toBe('[INFO] Test {"zeroVal":0}');
     });
+    // --- Added for Batch 1 Part 17 ---
+    it('handles negative numbers in metadata batch 1 part 17', () => {
+        const result = formatLogMessage('info', 'Test', { count: -5 });
+        expect(result).toBe('[INFO] Test {"count":-5}');
+    });
+
+    it('handles multiple nested objects batch 1 part 17', () => {
+        const result = formatLogMessage('debug', 'Test', { a: { b: { c: 1 } } });
+        expect(result).toBe('[DEBUG] Test {"a":{"b":{"c":1}}}');
+    });
+
+    it('handles very long string messages batch 1 part 17', () => {
+        const longStr = 'a'.repeat(1000);
+        const result = formatLogMessage('warn', longStr);
+        expect(result).toBe(`[WARN] ${longStr}`);
+    });
 
 });
