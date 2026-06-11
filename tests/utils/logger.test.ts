@@ -501,4 +501,22 @@ describe('Logging Helpers', () => {
         expect(result).toBe(`[WARN] ${longStr}`);
     });
 
+
+    // --- Added for Batch 2 Part 17 ---
+    it('handles floating point numbers in metadata batch 2 part 17', () => {
+        const result = formatLogMessage('info', 'Test', { pi: 3.14159 });
+        expect(result).toBe('[INFO] Test {"pi":3.14159}');
+    });
+
+    it('handles boolean false as top level metadata batch 2 part 17', () => {
+        const result = formatLogMessage('debug', 'Test', { flag: false });
+        expect(result).toBe('[DEBUG] Test {"flag":false}');
+    });
+
+    it('handles undefined values in objects within arrays batch 2 part 17', () => {
+        const result = formatLogMessage('warn', 'Test', { arr: [{ valid: 1, invalid: undefined }] });
+        // undefined is omitted from object but keeps object structure
+        expect(result).toBe('[WARN] Test {"arr":[{"valid":1}]}');
+    });
+
 });
