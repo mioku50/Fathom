@@ -42,11 +42,28 @@
   },
   "tasks": [
     {
+      "id": "add-utility-tests-confidence-1781164402648-0fmrnq",
+      "title": "Add more utility tests",
+      "description": "Create additional tests for utility functions.",
+      "area": "tests",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/utils.ts",
+        "tests/utils.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests are written",
+        "Tests pass"
+      ]
+    },
+    {
       "id": "add-utility-tests-confidence-1781163140088",
       "title": "Add tests for confidence calculator",
       "description": "Create additional unit tests for src/confidence.ts to ensure all edge cases are covered.",
       "area": "tests",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/confidence.ts",
@@ -2512,6 +2529,6 @@
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 151,
+  "total_tasks": 152,
   "needs_replenishment": false
 }
