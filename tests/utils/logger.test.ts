@@ -610,4 +610,135 @@ describe('Logging Helpers', () => {
         expect(result).toBe('[TRACE]  {"empty":true}');
     });
 
+
+    it('handles negative numbers in metadata batch 2 part 19', () => {
+        const result = formatLogMessage('info', 'Negative', { val: -42 });
+        expect(result).toBe('[INFO] Negative {"val":-42}');
+    });
+
+    it('handles boolean true in metadata batch 2 part 19', () => {
+        const result = formatLogMessage('debug', 'Boolean', { isTrue: true });
+        expect(result).toBe('[DEBUG] Boolean {"isTrue":true}');
+    });
+
+    it('handles boolean false in metadata batch 2 part 19', () => {
+        const result = formatLogMessage('debug', 'Boolean', { isFalse: false });
+        expect(result).toBe('[DEBUG] Boolean {"isFalse":false}');
+    });
+
+    it('handles arrays of strings in metadata batch 2 part 19', () => {
+        const result = formatLogMessage('trace', 'String array', { arr: ['a', 'b', 'c'] });
+        expect(result).toBe('[TRACE] String array {"arr":["a","b","c"]}');
+    });
+
+    it('handles multiple metadata properties batch 2 part 19', () => {
+        const result = formatLogMessage('info', 'Multi', { a: 1, b: 2, c: 3 });
+        expect(result).toBe('[INFO] Multi {"a":1,"b":2,"c":3}');
+    });
+
+
+    it('handles arrays of numbers in metadata batch 3 part 19', () => {
+        const result = formatLogMessage('trace', 'Num array', { arr: [1, 2, 3] });
+        expect(result).toBe('[TRACE] Num array {"arr":[1,2,3]}');
+    });
+
+    it('handles mixed arrays in metadata batch 3 part 19', () => {
+        const result = formatLogMessage('info', 'Mixed array', { arr: [1, 'two', true] });
+        expect(result).toBe('[INFO] Mixed array {"arr":[1,"two",true]}');
+    });
+
+    it('handles objects within arrays in metadata batch 3 part 19', () => {
+        const result = formatLogMessage('warn', 'Obj array', { arr: [{ a: 1 }, { b: 2 }] });
+        expect(result).toBe('[WARN] Obj array {"arr":[{"a":1},{"b":2}]}');
+    });
+
+    it('handles null values within arrays batch 3 part 19', () => {
+        const result = formatLogMessage('debug', 'Null array', { arr: [null, null] });
+        expect(result).toBe('[DEBUG] Null array {"arr":[null,null]}');
+    });
+
+    it('handles undefined values within arrays batch 3 part 19', () => {
+        const result = formatLogMessage('trace', 'Undefined array', { arr: [undefined, undefined] });
+        expect(result).toBe('[TRACE] Undefined array {"arr":[null,null]}');
+    });
+
+
+    it('handles nested empty objects in metadata batch 4 part 19', () => {
+        const result = formatLogMessage('info', 'Nested empty', { a: {} });
+        expect(result).toBe('[INFO] Nested empty {"a":{}}');
+    });
+
+    it('handles nested empty arrays in metadata batch 4 part 19', () => {
+        const result = formatLogMessage('debug', 'Nested empty array', { a: [] });
+        expect(result).toBe('[DEBUG] Nested empty array {"a":[]}');
+    });
+
+    it('handles boolean values in deep objects batch 4 part 19', () => {
+        const result = formatLogMessage('warn', 'Deep bool', { a: { b: { c: true } } });
+        expect(result).toBe('[WARN] Deep bool {"a":{"b":{"c":true}}}');
+    });
+
+    it('handles arrays in deep objects batch 4 part 19', () => {
+        const result = formatLogMessage('trace', 'Deep array', { a: { b: { c: [1, 2] } } });
+        expect(result).toBe('[TRACE] Deep array {"a":{"b":{"c":[1,2]}}}');
+    });
+
+    it('handles string numbers in metadata batch 4 part 19', () => {
+        const result = formatLogMessage('info', 'String number', { val: "42" });
+        expect(result).toBe('[INFO] String number {"val":"42"}');
+    });
+
+
+    it('handles numeric keys in metadata batch 5 part 19', () => {
+        const result = formatLogMessage('info', 'Numeric key', { 1: "one" });
+        expect(result).toBe('[INFO] Numeric key {"1":"one"}');
+    });
+
+    it('handles multiple numeric keys in metadata batch 5 part 19', () => {
+        const result = formatLogMessage('debug', 'Numeric keys', { 1: "one", 2: "two" });
+        expect(result).toBe('[DEBUG] Numeric keys {"1":"one","2":"two"}');
+    });
+
+    it('handles negative numeric keys in metadata batch 5 part 19', () => {
+        const result = formatLogMessage('warn', 'Negative key', { "-1": "minus one" });
+        expect(result).toBe('[WARN] Negative key {"-1":"minus one"}');
+    });
+
+    it('handles object with only empty string key batch 5 part 19', () => {
+        const result = formatLogMessage('trace', 'Only empty key', { "": "" });
+        expect(result).toBe('[TRACE] Only empty key {"":""}');
+    });
+
+    it('handles properties with spaces in keys batch 5 part 19', () => {
+        const result = formatLogMessage('info', 'Space key', { "a b": "c" });
+        expect(result).toBe('[INFO] Space key {"a b":"c"}');
+    });
+
+
+    it('handles boolean false values in arrays batch 6 part 19', () => {
+        const result = formatLogMessage('info', 'Bool array', { arr: [false, false] });
+        expect(result).toBe('[INFO] Bool array {"arr":[false,false]}');
+    });
+
+    it('handles multiple types in an array batch 6 part 19', () => {
+        const result = formatLogMessage('debug', 'Mixed array', { arr: [null, undefined, 1, 'str', false] });
+        expect(result).toBe('[DEBUG] Mixed array {"arr":[null,null,1,"str",false]}');
+    });
+
+    it('handles special characters in keys batch 6 part 19', () => {
+        const result = formatLogMessage('warn', 'Special keys', { "@#$": "%^&" });
+        expect(result).toBe('[WARN] Special keys {"@#$":"%^&"}');
+    });
+
+    it('handles extremely long messages batch 6 part 19', () => {
+        const longMsg = 'A'.repeat(1000);
+        const result = formatLogMessage('error', longMsg);
+        expect(result).toBe(`[ERROR] ${longMsg}`);
+    });
+
+    it('handles extremely deep nested objects batch 6 part 19', () => {
+        const result = formatLogMessage('trace', 'Very deep', { a: { b: { c: { d: { e: { f: 1 } } } } } });
+        expect(result).toBe('[TRACE] Very deep {"a":{"b":{"c":{"d":{"e":{"f":1}}}}}}');
+    });
+
 });
