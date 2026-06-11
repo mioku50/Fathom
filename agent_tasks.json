@@ -42,6 +42,23 @@
   },
   "tasks": [
     {
+      "id": "add-utility-tests-confidence-1781163140088",
+      "title": "Add tests for confidence calculator",
+      "description": "Create additional unit tests for src/confidence.ts to ensure all edge cases are covered.",
+      "area": "tests",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/confidence.ts",
+        "tests/confidence.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Unit tests cover all conditions and edge cases in calculateConfidence",
+        "All tests pass successfully"
+      ]
+    },
+    {
       "id": "document-live-base-sepolia-smoke-tests-b9464a6f",
       "title": "Document Live Base Sepolia Smoke Tests",
       "description": "Add docs and/or a script for safe live smoke tests against: https://fathom-api.mioku-fathom.workers.dev",
@@ -2444,7 +2461,7 @@
       "title": "Replace Dummy Price Response with Pricing Orchestrator",
       "description": "Replace generateDummyResponse with the real DEXOrchestrator and PriceCalculator flow for /v1/price and /v1/prices endpoints.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "medium",
       "allowed_paths": [
         "src/index.ts",
@@ -2495,6 +2512,6 @@
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 150,
+  "total_tasks": 151,
   "needs_replenishment": false
 }
