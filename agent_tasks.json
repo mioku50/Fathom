@@ -42,6 +42,34 @@
   },
   "tasks": [
     {
+      "id": "implement-official-x402-flow-1781250510947",
+      "title": "Implement official x402 flow",
+      "description": "Replace custom txHash x402 payment approach with official @coinbase/x402 package. Ensure correct 402 responses and sanitized diagnostics.",
+      "area": "api",
+      "status": "done",
+      "risk": "medium",
+      "allowed_paths": [
+        "package.json",
+        "package-lock.json",
+        "scripts/live_e2e_x402_helper.js",
+        "src/cache.ts",
+        "src/middleware/x402.ts",
+        "tests/api/cache.test.ts",
+        "tests/api/prices.test.ts",
+        "tests/integration_api.test.ts",
+        "tests/middleware/x402.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "invalid/malformed payment returns 402;",
+        "facilitator rejection returns 402 with sanitized diagnostics;",
+        "valid real Base Sepolia x402 payment payload returns 200 for /v1/metadata;",
+        "valid real Base Sepolia x402 payment payload returns 200 for /v1/price;",
+        "npx vitest run passes;",
+        "npm run typecheck --if-present passes."
+      ]
+    },
+    {
       "id": "add-cache-tests-1781223189167",
       "title": "Add cache tests",
       "description": "Add unit tests for cache utility",
@@ -3076,7 +3104,7 @@
       "title": "Refactor Format Utilities",
       "description": "Extract more formatting functions to src/utils.ts.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/utils.ts",
@@ -3117,10 +3145,25 @@
       "acceptance": [
         "PriceCalculator module has unit tests covering main calculations"
       ]
+    },
+    {
+      "id": "refactor-format-utils-cleanup-1781251492709",
+      "title": "Clean up formatting utils",
+      "description": "Further cleanup and organization of formatting utils.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/utils.ts"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "Code is clean"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 188,
+  "total_tasks": 190,
   "needs_replenishment": false,
-  "claimed_tasks": 5
+  "claimed_tasks": 7
 }

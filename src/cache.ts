@@ -4,6 +4,7 @@ export interface FathomEnv {
   FATHOM_KV?: KVNamespace
   CACHE_DEFAULT_TTL_SECONDS?: string
   FATHOM_X402_FACILITATOR_URL?: string
+  FATHOM_X402_RECIPIENT?: string
 }
 
 let hits = 0
