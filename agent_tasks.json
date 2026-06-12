@@ -3119,7 +3119,7 @@
       "title": "Add Orchestrator Docs",
       "description": "Create docs/orchestrator.md detailing how the pricing orchestrator works.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/orchestrator.md",
@@ -3160,10 +3160,28 @@
       "acceptance": [
         "Code is clean"
       ]
+    },
+    {
+      "id": "add-utility-tests-1781252473221",
+      "title": "Add Utility Tests",
+      "description": "Add basic unit tests for src/utils.ts to improve coverage.",
+      "area": "tests",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/utils.ts",
+        "tests/utils.test.ts",
+        "agent_tasks.json"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "tests/utils.test.ts is created",
+        "tests cover basic utility functions"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 190,
+  "total_tasks": 191,
   "needs_replenishment": false,
-  "claimed_tasks": 7
+  "claimed_tasks": 8
 }
