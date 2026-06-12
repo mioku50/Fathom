@@ -2976,7 +2976,7 @@
       "description": "Add logic to schema validation to handle specific edge cases for pool data types and write specific tests",
       "area": "schema",
       "risk": "low",
-      "status": "todo",
+      "status": "done",
       "allowed_paths": [
         "src/schema.ts",
         "tests/schema.test.ts",
@@ -3054,10 +3054,26 @@
       "acceptance": [
         "docs/dex_adapters.md is created covering adapter interfaces"
       ]
+    },
+    {
+      "id": "improve-price-reader-docs-1781225002821",
+      "title": "Improve price reader docs",
+      "description": "Add comprehensive docs for the price reader module in the src/priceReader.ts file",
+      "area": "docs",
+      "risk": "low",
+      "status": "todo",
+      "allowed_paths": [
+        "src/priceReader.ts",
+        "agent_tasks.json"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "Price reader module has comprehensive documentation comments"
+      ]
     }
   ],
-  "todo_tasks": 5,
-  "total_tasks": 184,
+  "todo_tasks": 2,
+  "total_tasks": 185,
   "needs_replenishment": false,
   "claimed_tasks": 0
 }

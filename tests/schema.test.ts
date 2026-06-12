@@ -22,6 +22,17 @@ describe('schema validation', () => {
       expect(isPoolData(validPool)).toBe(true);
     });
 
+    it('should reject empty strings for dex and address', () => {
+      expect(isPoolData({ dex: '', address: '0x123' })).toBe(false);
+      expect(isPoolData({ dex: 'uniswap_v3', address: '   ' })).toBe(false);
+    });
+
+    it('should reject invalid numeric values for liquidity_usd, price_usd, and fee', () => {
+      expect(isPoolData({ dex: 'uniswap_v3', address: '0x123', liquidity_usd: -100 })).toBe(false);
+      expect(isPoolData({ dex: 'uniswap_v3', address: '0x123', price_usd: NaN })).toBe(false);
+      expect(isPoolData({ dex: 'uniswap_v3', address: '0x123', fee: Infinity })).toBe(false);
+    });
+
     it('should reject invalid PoolData', () => {
       expect(isPoolData(null)).toBe(false);
       expect(isPoolData({})).toBe(false);

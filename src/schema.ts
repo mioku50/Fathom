@@ -25,11 +25,11 @@ export type PriceResponse = {
 
 export function isPoolData(data: any): data is PoolData {
   if (!data || typeof data !== 'object') return false;
-  if (typeof data.dex !== 'string') return false;
-  if (typeof data.address !== 'string') return false;
-  if (data.liquidity_usd !== undefined && typeof data.liquidity_usd !== 'number') return false;
-  if (data.price_usd !== undefined && typeof data.price_usd !== 'number') return false;
-  if (data.fee !== undefined && typeof data.fee !== 'number') return false;
+  if (typeof data.dex !== 'string' || data.dex.trim() === '') return false;
+  if (typeof data.address !== 'string' || data.address.trim() === '') return false;
+  if (data.liquidity_usd !== undefined && (typeof data.liquidity_usd !== 'number' || data.liquidity_usd < 0 || !Number.isFinite(data.liquidity_usd))) return false;
+  if (data.price_usd !== undefined && (typeof data.price_usd !== 'number' || data.price_usd < 0 || !Number.isFinite(data.price_usd))) return false;
+  if (data.fee !== undefined && (typeof data.fee !== 'number' || data.fee < 0 || !Number.isFinite(data.fee))) return false;
   return true;
 }
 
