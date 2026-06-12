@@ -14,13 +14,26 @@ describe('Cache Invalidation API', () => {
     }
 
     // We need to mock global fetch because x402Middleware fetches the facilitator
-    global.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ success: true, transaction: '0x123', network: 'base-sepolia', amount: '10000', payer: '0xabc', errorReason: null, errorMessage: null, extensions: {} }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+    global.fetch = vi.fn().mockImplementation((url: any, options: any) => {
+      const urlStr = url.toString()
+      if (urlStr.includes('supported') || urlStr.includes('kinds')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          success: true,
+          kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:84532', asset: 'usdc' }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (urlStr.includes('verify')) {
+        return Promise.resolve(new Response(JSON.stringify({ isValid: true, payer: '0xabc' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify({ success: true, transaction: '0x123', network: 'eip155:84532' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    });
   });
 
   const getEnv = (kv: any) => ({
     BASE_RPC_URL: 'http://localhost:8545',
     X402_NETWORK: 'base',
     X402_RECIPIENT: '0x123',
+    FATHOM_X402_RECIPIENT: '0x123',
     FATHOM_X402_FACILITATOR_URL: 'http://facilitator',
     X402_FACILITATOR_URL: 'http://facilitator', // This is what src/utils/env.ts expects
     CACHE_DEFAULT_TTL_SECONDS: '60',
@@ -32,7 +45,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -45,7 +58,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate?token=0xabc', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -57,7 +70,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -71,7 +84,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate?token=0xabc', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -84,7 +97,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -97,7 +110,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(undefined), { waitUntil: () => {} } as any)
@@ -108,7 +121,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -122,7 +135,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -135,7 +148,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(undefined), { waitUntil: () => {} } as any)
@@ -155,7 +168,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -171,7 +184,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
+          'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)

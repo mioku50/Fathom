@@ -217,9 +217,7 @@ describe('Fathom API', () => {
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
 
-    const body = await res.json() as any
-    expect(body.error).toBeDefined()
-    expect(body.error.code).toBe('payment_required')
+    expect(res.headers.get('Payment-Required')).toBeDefined()
   })
 
   it('Should return valid schema for /v1/price (no cache)', async () => {

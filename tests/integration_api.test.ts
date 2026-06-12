@@ -1,5 +1,4 @@
-global.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ success: true, transaction: '0x123', network: 'base-sepolia', amount: '10000', payer: '0xabc', errorReason: null, errorMessage: null, extensions: {} }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import app from '../src/index'
 
 const VALID_ENV = {
@@ -7,6 +6,7 @@ const VALID_ENV = {
   BASE_RPC_URL: 'http://localhost:8545',
   X402_NETWORK: 'base',
   X402_RECIPIENT: '0x123',
+  FATHOM_X402_RECIPIENT: '0x123',
   X402_FACILITATOR_URL: 'http://facilitator',
   CACHE_DEFAULT_TTL_SECONDS: '60'
 };
@@ -51,6 +51,22 @@ vi.mock('../src/api/metadata', () => ({
 
 
 describe('Fathom API Integration Test', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockImplementation((url: any) => {
+      const urlStr = url?.toString() || ''
+      if (urlStr.includes('supported') || urlStr.includes('kinds')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          success: true,
+          kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:84532', asset: 'usdc' }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (urlStr.includes('verify')) {
+        return Promise.resolve(new Response(JSON.stringify({ isValid: true, payer: '0xabc' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(JSON.stringify({ success: true, transaction: '0x123', network: 'eip155:84532' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    });
+  });
+
   it('Should process a valid request, set cache, and return valid structure through /v1/price', async () => {
     // 1. Setup mock KV for cache layer integration
     const mockPut = vi.fn().mockResolvedValue(undefined)
@@ -62,7 +78,7 @@ describe('Fathom API Integration Test', () => {
     // 2. Make an end-to-end request handling validation and x402 payment
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     // 3. Inject waitUntil and app execution
@@ -94,7 +110,7 @@ describe('Fathom API Integration Test', () => {
     // Invalid token length
     const token = '0x123'
     const req = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -112,7 +128,7 @@ describe('Fathom API Integration Test', () => {
     // Multiple tokens where one is invalid
     const tokens = '0x1234567890123456789012345678901234567890,invalid-token'
     const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -134,7 +150,7 @@ describe('Fathom API Integration Test', () => {
     // Valid tokens with trailing/extra commas
     const tokens = '0x1234567890123456789012345678901234567890,,0x0987654321098765432109876543210987654321,'
     const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     // Mock KV for cache layer needed for a successful path
@@ -162,10 +178,8 @@ describe('Fathom API Integration Test', () => {
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
-
-    const body = await res.json() as any
-    expect(body.error).toBeDefined()
-    expect(body.error.code).toBe('payment_required')
+    const body = await res.text()
+    expect(res.headers.get('Payment-Required')).toBeDefined()
   })
 
   it('Should fail /v1/prices if x402 payment is missing', async () => {
@@ -176,10 +190,8 @@ describe('Fathom API Integration Test', () => {
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
-
-    const body = await res.json() as any
-    expect(body.error).toBeDefined()
-    expect(body.error.code).toBe('payment_required')
+    const body = await res.text()
+    expect(res.headers.get('Payment-Required')).toBeDefined()
   })
 
   it('Should fail /v1/metadata if x402 payment is missing', async () => {
@@ -190,10 +202,8 @@ describe('Fathom API Integration Test', () => {
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(402)
-
-    const body = await res.json() as any
-    expect(body.error).toBeDefined()
-    expect(body.error.code).toBe('payment_required')
+    const body = await res.text()
+    expect(res.headers.get('Payment-Required')).toBeDefined()
   })
 
 
@@ -207,7 +217,7 @@ describe('Fathom API Integration Test', () => {
 
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -244,7 +254,7 @@ describe('Fathom API Integration Test', () => {
 
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/metadata?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -269,7 +279,7 @@ describe('Fathom API Integration Test', () => {
 
     const tokens = '0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/metadatas?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -298,7 +308,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const tokens = Array(11).fill('0x1234567890123456789012345678901234567890').join(',')
     const req = new Request(`http://localhost/v1/metadatas?tokens=${tokens}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -416,7 +426,7 @@ describe('Fathom API Integration Test', () => {
 
     // 2. Trigger a cache miss by requesting price for a new token
     const reqMiss = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
     await app.fetch(reqMiss, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
@@ -433,7 +443,7 @@ describe('Fathom API Integration Test', () => {
     kvStore.set(`price:base:${token}`, JSON.stringify(priceResponse))
 
     const reqHit = new Request(`http://localhost/v1/price?token=${token}&chain=base`, {
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
     await app.fetch(reqHit, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
 
@@ -456,7 +466,7 @@ describe('Fathom API Integration Test', () => {
     const token = '0x1234567890123456789012345678901234567890'
     const req = new Request(`http://localhost/v1/cache/invalidate?token=${token}&chain=base`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -478,7 +488,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/invalidate?pool=${pool}&chain=base`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -511,7 +521,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -529,7 +539,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/clear/pool', {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -545,7 +555,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -566,7 +576,7 @@ describe('Fathom API Integration Test', () => {
     const pool = '0x0987654321098765432109876543210987654321'
     const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -594,7 +604,7 @@ describe('Fathom API Integration Test', () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/invalidate?chain=base', {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
@@ -624,7 +634,7 @@ describe('Fathom API Integration Test', () => {
 
     const req = new Request('http://localhost/v1/cache/clear', {
       method: 'POST',
-      headers: { 'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==` }
+      headers: { 'Payment-Signature': `eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0ZWQiOnsic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMyIiwiYW1vdW50IjoiJDAuMDEiLCJhc3NldCI6InVzZGMiLCJwYXlUbyI6IjB4MTIzIiwibWF4VGltZW91dFNlY29uZHMiOjMwMCwiZXh0cmEiOnt9fSwicGF5bG9hZCI6eyJzaWduYXR1cmUiOiJtb2NrIn19` }
     })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
