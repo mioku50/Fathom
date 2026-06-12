@@ -1,0 +1,55 @@
+SHELL=/bin/bash
+ANTIGRAVITY_LS_ADDRESS=localhost:35727
+NVM_INC=/home/mioku/.nvm/versions/node/v22.22.2/include/node
+no_proxy=*
+WSL2_GUI_APPS_ENABLED=1
+WSL_DISTRO_NAME=Ubuntu
+NODE_OPTIONS=--dns-result-order=ipv4first
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+FATHOM_X402_RECIPIENT=0x8e525BfCe1eF40Aa8075ef64E45421b5855C8909
+FATHOM_TEST_POOL=
+NAME=DESKTOP-E1SOSSV
+PWD=/home/mioku/Fathom
+LOGNAME=mioku
+FATHOM_X402_FACILITATOR_URL=https://x402.org/facilitator
+HOME=/home/mioku
+LANG=C.UTF-8
+WSL_INTEROP=/run/WSL/201010_interop
+LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:
+WAYLAND_DISPLAY=wayland-0
+FATHOM_TEST_TOKEN=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+https_proxy=http://IJM0349479:NTVZ1258@140.233.209.90:6237
+ANTIGRAVITY_CSRF_TOKEN=
+BASE_RPC_URL=https://sepolia.base.org
+NVM_DIR=/home/mioku/.nvm
+ANTIGRAVITY_CONVERSATION_ID=4f09f05b-d820-4d05-b2c1-bca28082eded
+LESSCLOSE=/usr/bin/lesspipe %s %s
+TERM=dumb
+LESSOPEN=| /usr/bin/lesspipe %s
+FATHOM_LIVE_URL=http://localhost:8787
+USER=mioku
+GIT_PAGER=cat
+NO_PROXY=*
+ANTIGRAVITY_SOURCE_METADATA={"tool":{"conversationId":"4f09f05b-d820-4d05-b2c1-bca28082eded","stepIndex":2593,"toolCall":{"id":"9olvnbmn","name":"run_command","argumentsJson":"{\"CommandLine\":\"cat \\u003c\\u003c 'EOF' \\u003e test_local.sh\\nset -a\\nsource .env.live\\nexport FATHOM_LIVE_URL=http://localhost:8787\\nexport NO_PROXY=\\\"*\\\"\\nexport no_proxy=\\\"*\\\"\\nset +a\\nbash -x scripts/live_base_sepolia_e2e.sh\\nEOF\\nbash test_local.sh\",\"Cwd\":\"/home/mioku/Fathom\",\"WaitMsBeforeAsync\":5000,\"toolAction\":\"Running E2E script in a separate task\",\"toolSummary\":\"Run E2E separated\"}","thinkingSignature":"EoALCv0KAQw51scAo2NT2x1rmJXM/m6wKDtrx8eC3CH2+R3vzlPT3+Y0ZsLOLE5+hT2K9N1hGxhjggTCDsbuswccowONJxNxxJWMmjjXYzkYYNjIL8tzWTpjj4ITnaLU3jZ8SzEXJcw8AvItPcYv1XptTGM56FISi5IeolIgphi3jrTtCGg/jkx8lAkXWWquwuwZgopO13wraI8WaI6s50H7FjfTX1gwEKKplyH84gwaipHDOdRzAzajdp5AeiYN+HANOzd9VXW7jQw39U3kWRWr+VpQ2Jjjz8TYKQCDS8T4aHxTq8PO0RA9teVoSM16qBG8fAnUhKupkOiJRs/p/Lw/0hLdGNpkC5ENcVCPSiRZFx9WjbFBr3oXSq93AixqWdj14W1ltDB8MAwglTiULQfVhBPKGlZY6H1VQHj5vIqqaBerO4EToTqmczes+KkCwWRyAqNaWJrqyEe756u2KOHF4sLa1w071sESYaFJVhvYMg8LxJ8f2rdJU5UjVzHDmxfXV6w2vieD7pflks4LCALLDI37Q8I0ozYEPoybHhGJG/nIKfyKR+wouWh9YL4kfQzex2bKD3QkT97fYDPk0neNL9NB+EUv1OG+kC5TMq/A48T8w8mnOZ6rT1RuNgum8085IPlkYKwrpzPx/UaCCUmAT7nGz+YKxUkXeoB/+ENPWChZcL3rOHkq+Ompjq4iTzYAzRUJngXD1qmrPOkTJ0V6qZ10s1oQyt9oULTRp2SQ963VCY2s4DVcJsPQEap4zZPt6PPVOJbrqB6YYFjSzM6ROLKzKtmRmBBOnFCequBuWL/MSxg6SBRsDpq54CQ7zPbXYWT59xa/r15MFZFbZpO39OIVPIz30PxBhhMZf8l7vP3Q4MzLRiZmIA1V++utkipcWERpxhS6ilyjWk6kmFpokJW+MutzIVbT42Nst52MKXU8zjXI2O0nq8pNyjh1w2TRdQto5F1eK6VqAKJPK7eEpCFdNv+b16xX4F3n6gmmzxuO9C9F6IhQVRxtg1QOs68F28sADAFJrWZMc3pRc8YsoS5MIaWyKFkIYm9b62cYJh+O2Z688I4YFeIo8hgPfKttrZ4i7eE5WkEyYzWmpArJaDQMT7ChJmmt/Y2yi7/eDomwP0Qwf+Tmi6B4DDg4vnOv6nyDG39PqqCrSeJp+/UIbN13H+Xj0zJ/7+405KKXpTZ8wBSXUyFfc6VMvDbica2lljRPpCMltNlfUYSxZJVs09JIXjoZcymTKmSg7MtjkjlmSe+0gH875E/X7TbRFQng4rhYLN5piHS0oYF5es5jD1H7DXTHWcWeyEhuTMlq8ftQ+NUW1AwH3KdjUPw7C0K0CzXhwroyeOXArmLV6x4SLOJw7Y1Lb1+aSVxdHJE7A26WqNm43PIsVsZqXWMXbUFTW04d5LWpHvpqVUrUFe9MMo8bULU8anYsr9NNeC/4B2WxqEuyw1e9QAkwbM0NBDavzG6TNwR27fpAc4LS9qFrYNXD9mOnH1O3NcilKzL/wNIvzJWFSxpzUY4AFaaZDgB328yvN1Jwg3HHgKMaLuDoPFvbdpqGbgK+UuTl/OJyalMYpLynhkbQs959jAjUeEzXZSUBI//q0+cTCdwNymViKua1PoOr255QUq89rUMM97OUfV0jkY7bAkPKly0fF5dl/HASPWBIP3XhNZepgSa7uDGJIyX/4tpMIR+QBTibGG/hh7RHAZ7+9ZW0s3S/0g50WZBEncNHT3hciUukIau2eY2JpmQ3vxlPNtX9DKdA/Sdrd9hsa0bCVDFpQCprdZN/4XV/gtaYz4cXwzhnXphH7Yl6LS1tWCxvPYfY0KB4OL8EG3engwTzkI5nPRESriqfqXj7vV6VWHAd9A3UuaoY+Q==","originalName":"run_command"}}}
+DISPLAY=:0
+SHLVL=3
+NVM_CD_FLAGS=
+PAGER=cat
+HTTPS_PROXY=http://IJM0349479:NTVZ1258@140.233.209.90:6237
+HTTP_PROXY=http://IJM0349479:NTVZ1258@140.233.209.90:6237
+http_proxy=http://IJM0349479:NTVZ1258@140.233.209.90:6237
+ANTIGRAVITY_AGENT=1
+ANTIGRAVITY_TRAJECTORY_ID=e44dff42-41b6-4c86-944a-4489bd08e699
+X402_NETWORK=base-sepolia
+XDG_RUNTIME_DIR=/run/user/1000/
+WSLENV=
+ANTIGRAVITY_PROJECT_ID=57a49b00-1a5e-49db-82b3-b8aaf3f3172e
+XDG_DATA_DIRS=/usr/local/share:/usr/share:/var/lib/snapd/desktop
+PATH=/home/mioku/.gemini/antigravity-cli/bin:/home/mioku/.local/bin:/home/mioku/.local/bin:/home/mioku/.local/bin:/home/mioku/.npm-global/bin:/home/mioku/.local/bin:/home/mioku/.local/bin:/home/mioku/.nvm/versions/node/v22.22.2/bin:/home/mioku/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Windows/system32:/mnt/c/Windows:/mnt/c/Windows/System32/Wbem:/mnt/c/Windows/System32/WindowsPowerShell/v1.0/:/mnt/c/Windows/System32/OpenSSH/:/mnt/c/Program Files/Zero Install:/mnt/c/Program Files/Git/cmd:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Users/Sergio/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/Sergio/AppData/Local/Programs/Microsoft VS Code/bin:/mnt/c/Users/Sergio/AppData/Local/Programs/cursor/resources/app/bin:/mnt/c/Users/Sergio/AppData/Local/Programs/Windsurf/bin:/mnt/c/Users/Sergio/AppData/Roaming/npm:/mnt/c/Users/Sergio/AppData/Local/nvm:/mnt/c/nvm4w/nodejs:/mnt/c/Users/Sergio/AppData/Local/Python/bin:/mnt/c/Users/Sergio/AppData/Local/Programs/IBM Bob/bin:/mnt/c/Users/Sergio/AppData/Local/Programs/Antigravity/bin:/mnt/c/Users/Sergio/AppData/Local/Programs/Antigravity IDE/bin:/snap/bin:/home/mioku/.foundry/bin
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+NVM_BIN=/home/mioku/.nvm/versions/node/v22.22.2/bin
+HOSTTYPE=x86_64
+PULSE_SERVER=unix:/mnt/wslg/PulseServer
+OLDPWD=/home/mioku
+FATHOM_TEST_WALLET_PRIVATE_KEY=0x4c9bfe115a2917b14b03301ea3f86d306125a581126cafe842d4bb719b0f7b06
+_=/usr/bin/env

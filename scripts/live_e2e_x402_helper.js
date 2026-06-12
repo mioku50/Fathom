@@ -39,7 +39,9 @@ async function main() {
   const fetchWithPayment = wrapFetchWithPayment(myFetch, paymentClient);
 
   const requestUrl = `${URL}/v1/${ENDPOINT}?token=${TOKEN}`;
-  const res = await fetchWithPayment(requestUrl);
+  console.error("DEBUG: Sending request...");
+  const res = await fetchWithPayment(requestUrl, { headers: { 'Connection': 'close' } });
+  console.error(`DEBUG: Received response: ${res.status}`);
   
   const text = await res.text();
   if (!res.ok) {
@@ -48,6 +50,7 @@ async function main() {
   }
   
   console.log(text);
+  process.exit(0);
 }
 
 main().catch(e => {

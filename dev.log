@@ -1,0 +1,36 @@
+
+> fathom@1.0.0 dev
+> wrangler dev
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+
+ ⛅️ wrangler 4.99.0 (update available 4.100.0)
+──────────────────────────────────────────────
+Using secrets defined in .dev.vars
+Your Worker has access to the following bindings:
+Binding                                                                    Resource                  Mode
+env.FATHOM_KV (f5c96d6161dd439f82fa9e6d4b7989ca)                           KV Namespace              local
+env.X402_NETWORK ("(hidden)")                                              Environment Variable      local
+env.X402_PRICE_USDC ("0.01")                                               Environment Variable      local
+env.CACHE_DEFAULT_TTL_SECONDS ("60")                                       Environment Variable      local
+env.FATHOM_X402_FACILITATOR_URL ("(hidden)")                               Environment Variable      local
+env.FATHOM_X402_RECIPIENT ("(hidden)")                                     Environment Variable      local
+env.FATHOM_LIVE_URL ("(hidden)")                                           Environment Variable      local
+env.BASE_RPC_URL ("(hidden)")                                              Environment Variable      local
+env.BASE_SEPOLIA_RPC_URL ("(hidden)")                                      Environment Variable      local
+env.FATHOM_TEST_TOKEN ("(hidden)")                                         Environment Variable      local
+env.FATHOM_TEST_POOL ("(hidden)")                                          Environment Variable      local
+env.FATHOM_TEST_WALLET_PRIVATE_KEY ("(hidden)")                            Environment Variable      local
+env.X402_RECIPIENT ("(hidden)")                                            Environment Variable      local
+env.X402_FACILITATOR_URL ("(hidden)")                                      Environment Variable      local
+
+⎔ Starting local server...
+[wrangler:info] Ready on http://localhost:8787
+[wrangler:info] GET /v1/health 200 OK (46ms)
+[wrangler:info] GET /v1/cache/metrics 200 OK (4ms)
+[wrangler:info] GET /v1/metadata 402 Payment Required (499ms)
+[wrangler:info] GET /v1/price 402 Payment Required (265ms)
+[wrangler:info] GET /v1/prices 402 Payment Required (261ms)
+[wrangler:info] GET /v1/metadata 402 Payment Required (265ms)

@@ -1,0 +1,3 @@
+DEBUG: Sending request...
+DEBUG: Received response: 404
+HTTP 404: {"error":"not_found","message":"No pools found or un-priceable"}

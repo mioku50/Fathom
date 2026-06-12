@@ -29,7 +29,7 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   try {
     const middleware = paymentMiddlewareFromConfig(
       routes,
-      undefined,
+      [new HTTPFacilitatorClient(facilitatorUrl)],
       [{ network: 'eip155:84532', server: new ExactEvmScheme() }]
     )
 
