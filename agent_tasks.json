@@ -3061,7 +3061,7 @@
       "description": "Add comprehensive docs for the price reader module in the src/priceReader.ts file",
       "area": "docs",
       "risk": "low",
-      "status": "todo",
+      "status": "done",
       "allowed_paths": [
         "src/priceReader.ts",
         "agent_tasks.json"
@@ -3100,10 +3100,27 @@
       "acceptance": [
         "docs/orchestrator.md is created covering orchestrator logic"
       ]
+    },
+    {
+      "id": "add-price-calculator-tests-1781231702424",
+      "title": "Add Price Calculator tests",
+      "description": "Implement comprehensive unit tests for the PriceCalculator module to ensure accurate liquidity and price calculations",
+      "area": "tests",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/calculator.ts",
+        "tests/calculator.test.ts",
+        "agent_tasks.json"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "PriceCalculator module has unit tests covering main calculations"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 187,
+  "total_tasks": 188,
   "needs_replenishment": false,
-  "claimed_tasks": 4
+  "claimed_tasks": 5
 }
