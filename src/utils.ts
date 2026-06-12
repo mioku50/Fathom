@@ -1,5 +1,13 @@
-import type { PriceResponse } from './schema';
+import type { PriceResponse, PoolData } from './schema';
 
+/**
+ * Generates a dummy price response for a given token and chain.
+ * Used as a placeholder when actual price data cannot be retrieved.
+ *
+ * @param token - The symbol or address of the token.
+ * @param chain - The chain ID or name where the token resides.
+ * @returns A mocked `PriceResponse` object.
+ */
 export function generateDummyResponse(token: string, chain: string): PriceResponse {
   return {
     token,
@@ -23,17 +31,34 @@ export function generateDummyResponse(token: string, chain: string): PriceRespon
 }
 
 
+/**
+ * Parses a comma-separated string of tokens into an array of trimmed strings.
+ *
+ * @param tokensParam - A comma-separated list of tokens.
+ * @returns An array of token strings.
+ */
 export function parseTokensParam(tokensParam: string): string[] {
   if (!tokensParam) return [];
   return tokensParam.split(',').map(t => t.trim()).filter(Boolean);
 }
 
+/**
+ * Formats data from various sources into a standardized `PriceResponse`.
+ *
+ * @param token - The token symbol or address.
+ * @param chain - The blockchain network.
+ * @param bestPrice - The resolved best price in USD.
+ * @param bestLiquidity - The total or best liquidity in USD.
+ * @param mainPoolData - Information about the primary pool used for pricing.
+ * @param confResult - Confidence score and flags for the price.
+ * @returns A structured `PriceResponse` object.
+ */
 export function formatPriceResponse(
   token: string,
   chain: string,
   bestPrice: number,
   bestLiquidity: number,
-  mainPoolData: any,
+  mainPoolData: PoolData,
   confResult: { confidence: number; label: string; flags: string[] }
 ): PriceResponse {
   return {
