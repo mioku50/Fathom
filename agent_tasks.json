@@ -3045,7 +3045,7 @@
       "title": "Add DEX Adapter Docs",
       "description": "Create docs/dex_adapters.md detailing how new DEX adapters can be implemented and integrated.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/dex_adapters.md",
@@ -3085,10 +3085,25 @@
       "acceptance": [
         "Additional formatting functions extracted."
       ]
+    },
+    {
+      "id": "add-orchestrator-docs-1781230729496",
+      "title": "Add Orchestrator Docs",
+      "description": "Create docs/orchestrator.md detailing how the pricing orchestrator works.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/orchestrator.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/orchestrator.md is created covering orchestrator logic"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 186,
+  "total_tasks": 187,
   "needs_replenishment": false,
-  "claimed_tasks": 3
+  "claimed_tasks": 4
 }
