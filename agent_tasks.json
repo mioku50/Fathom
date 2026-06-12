@@ -3151,7 +3151,7 @@
       "title": "Clean up formatting utils",
       "description": "Further cleanup and organization of formatting utils.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/utils.ts"
@@ -3196,10 +3196,26 @@
         "PriceCalculator module has improved math logic and readability",
         "Tests pass"
       ]
+    },
+    {
+      "id": "add-utils-tests-1781254658530-0",
+      "title": "Add utility tests",
+      "description": "Write comprehensive unit tests for formatting utilities in src/utils.ts",
+      "area": "testing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "tests/utils.test.ts"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "All utility functions have 100% test coverage",
+        "Tests pass successfully"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 192,
+  "total_tasks": 193,
   "needs_replenishment": false,
-  "claimed_tasks": 9
+  "claimed_tasks": 10
 }
