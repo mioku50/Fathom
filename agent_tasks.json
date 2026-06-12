@@ -3134,7 +3134,7 @@
       "title": "Add Price Calculator tests",
       "description": "Implement comprehensive unit tests for the PriceCalculator module to ensure accurate liquidity and price calculations",
       "area": "tests",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/calculator.ts",
@@ -3178,10 +3178,28 @@
         "tests/utils.test.ts is created",
         "tests cover basic utility functions"
       ]
+    },
+    {
+      "id": "refactor-price-calculator-1781231702425",
+      "title": "Refactor Price Calculator",
+      "description": "Refactor the PriceCalculator module to use cleaner math logic and improve readability.",
+      "area": "src",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/calculator.ts",
+        "tests/calculator.test.ts",
+        "agent_tasks.json"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "PriceCalculator module has improved math logic and readability",
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 191,
+  "total_tasks": 192,
   "needs_replenishment": false,
-  "claimed_tasks": 8
+  "claimed_tasks": 9
 }
