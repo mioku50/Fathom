@@ -18,7 +18,19 @@
  * @returns A structured log string formatted as "[LEVEL] message {"meta":"data"}".
  */
 export function formatLogMessage<T extends Record<string, any> = Record<string, any>>(level: string, message: string, metadata?: T): string {
-  const metaString = metadata ? ` ${JSON.stringify(metadata)}` : '';
   if (level === undefined) throw new TypeError("Missing level");
-  return `[${String(level === null ? "NULL" : level).toUpperCase()}] ${message}${metaString}`;
+
+  let levelStr: string;
+  if (level === null) {
+      levelStr = "NULL";
+  } else if (typeof level === 'string') {
+      levelStr = level.toUpperCase();
+  } else {
+      levelStr = String(level).toUpperCase();
+  }
+
+  if (metadata === undefined || metadata === null) {
+    return `[${levelStr}] ${message}`;
+  }
+  return `[${levelStr}] ${message} ${JSON.stringify(metadata)}`;
 }
