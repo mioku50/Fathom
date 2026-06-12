@@ -18,12 +18,16 @@ describe('PriceReader', () => {
     orchestratorMock.getAllPools.mockResolvedValue([]);
     orchestratorMock.getAllRawData.mockResolvedValue([]);
 
-    const result = await priceReader.getBestPriceAndLiquidity('0x123');
+    const result = await priceReader.getBestPriceAndLiquidity('0x1111111111111111111111111111111111111111');
 
     expect(result.bestPrice).toBe(0);
     expect(result.bestLiquidity).toBe(0);
     expect(result.poolsCount).toBe(0);
     expect(result.mainPoolData).toBeNull();
+  });
+
+  it('should throw an error for invalid token address', async () => {
+    await expect(priceReader.getBestPriceAndLiquidity('0x123')).rejects.toThrow('Invalid token address: 0x123');
   });
 
   it('should calculate best price and liquidity from pools', async () => {
@@ -197,15 +201,8 @@ describe('PriceReader', () => {
   });
 
   it('should handle getBestPriceAndLiquidity with empty inputs gracefully', async () => {
-    // Edge case initialization test
-    orchestratorMock.getAllPools.mockResolvedValue([]);
-    orchestratorMock.getAllRawData.mockResolvedValue([]);
-
-    // An empty token string
-    const result = await priceReader.getBestPriceAndLiquidity('');
-    expect(result.poolsCount).toBe(0);
-    expect(result.bestPrice).toBe(0);
-    expect(result.bestLiquidity).toBe(0);
+    // An empty token string should throw an error
+    await expect(priceReader.getBestPriceAndLiquidity('')).rejects.toThrow('Invalid token address: ');
   });
 
   it('should handle rawData array with some null or invalid entries', async () => {

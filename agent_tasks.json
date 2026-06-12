@@ -3010,7 +3010,7 @@
       "title": "Improve Price Reader Validation",
       "description": "Add more robust input validation to src/priceReader.ts to ensure token addresses are well-formed before querying DEX adapters.",
       "area": "pricing",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/priceReader.ts",
@@ -3072,8 +3072,8 @@
       ]
     }
   ],
-  "todo_tasks": 4,
+  "todo_tasks": 3,
   "total_tasks": 185,
   "needs_replenishment": false,
-  "claimed_tasks": 1
+  "claimed_tasks": 2
 }
