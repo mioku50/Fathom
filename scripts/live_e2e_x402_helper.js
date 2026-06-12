@@ -60,7 +60,14 @@ async function main() {
     await client.waitForTransactionReceipt({ hash });
 
     // Output JSON with payment header
-    console.log(JSON.stringify({ header: "x402 tx=" + hash }));
+    const { encodePaymentSignatureHeader } = require('@x402/core/http');
+    const header = encodePaymentSignatureHeader({
+      x402Version: '2.0',
+      payload: {
+         signature: hash
+      }
+    });
+    console.log(JSON.stringify({ header }));
   } catch (error) {
     console.error("Payment generation failed", error.message);
     process.exit(1);

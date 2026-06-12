@@ -40,7 +40,7 @@ vi.mock('../../src/confidence', () => ({
 }));
 
 describe('Prices API Endpoint (/v1/prices)', () => {
-  global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+  global.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ success: true, transaction: '0x123', network: 'base-sepolia', amount: '10000', payer: '0xabc', errorReason: null, errorMessage: null, extensions: {} }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
     let mockEnv: any;
 
     beforeEach(() => {
