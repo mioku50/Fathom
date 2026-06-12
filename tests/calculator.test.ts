@@ -152,3 +152,38 @@ describe('PriceCalculator', () => {
     });
   });
 });
+
+describe('PriceCalculator Additional Cases', () => {
+  it('should handle zero decimals correctly in V2', () => {
+    const result = PriceCalculator.calculateV2(100n, 200n, 0, 0);
+    expect(result.priceInQuote).toBe(2);
+    expect(result.liquidityInQuote).toBe(400);
+  });
+
+  it('should handle zero decimals correctly in V3', () => {
+    // 1:1 ratio
+    const sqrtPriceX96 = 79228162514264337593543950336n;
+    const liquidity = 10n;
+    const result = PriceCalculator.calculateV3(sqrtPriceX96, liquidity, true, 0, 0);
+    expect(result.priceInQuote).toBeCloseTo(1);
+    expect(result.liquidityInQuote).toBeGreaterThan(0);
+  });
+
+  it('should handle calculatePoolPriceAndLiquidity with missing liquidity but defined sqrtPriceX96', () => {
+    const rawData: RawPoolData = {
+      sqrtPriceX96: 79228162514264337593543950336n,
+      updatedAt: 0
+    };
+    const result = PriceCalculator.calculatePoolPriceAndLiquidity(rawData, true, 18, 18);
+    expect(result).toEqual({ priceInQuote: 0, liquidityInQuote: 0 });
+  });
+
+  it('should handle calculatePoolPriceAndLiquidity with missing reserve0 but defined reserve1', () => {
+    const rawData: RawPoolData = {
+      reserve1: 100n,
+      updatedAt: 0
+    };
+    const result = PriceCalculator.calculatePoolPriceAndLiquidity(rawData, true, 18, 18);
+    expect(result).toEqual({ priceInQuote: 0, liquidityInQuote: 0 });
+  });
+});
