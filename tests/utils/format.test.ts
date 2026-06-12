@@ -9,6 +9,13 @@ describe('format utility functions', () => {
         it('handles zero correctly', () => {
             expect(formatCurrency(0)).toBe('$0.00');
         });
+        it('formats negative numbers correctly', () => {
+            expect(formatCurrency(-1234.56)).toBe('-$1,234.56');
+        });
+        it('formats large numbers correctly', () => {
+            expect(formatCurrency(1000000)).toBe('$1,000,000.00');
+        });
+
     });
 
     describe('formatAddress', () => {
@@ -21,5 +28,15 @@ describe('format utility functions', () => {
         it('handles empty string', () => {
             expect(formatAddress('')).toBe('');
         });
+        it('handles null or undefined safely', () => {
+            // @ts-expect-error - testing invalid input
+            expect(formatAddress(null)).toBe(null);
+            // @ts-expect-error - testing invalid input
+            expect(formatAddress(undefined)).toBe(undefined);
+        });
+        it('handles address with exact length of 10', () => {
+            expect(formatAddress('0123456789')).toBe('012345...6789');
+        });
+
     });
 });
