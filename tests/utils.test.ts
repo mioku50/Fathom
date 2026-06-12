@@ -72,3 +72,35 @@ describe('generateDummyResponse', () => {
     expect(response.main_pool.address).toMatch(/^0x[a-fA-F0-9]+$/);
   });
 });
+
+
+import { parseTokensParam, formatPriceResponse } from '../src/utils';
+
+describe('parseTokensParam', () => {
+  it('should parse valid tokens', () => {
+    const tokens = parseTokensParam('token1, token2, token3');
+    expect(tokens).toEqual(['token1', 'token2', 'token3']);
+  });
+  it('should handle empty or missing tokens', () => {
+    const tokens = parseTokensParam('');
+    expect(tokens).toEqual([]);
+  });
+});
+
+describe('formatPriceResponse', () => {
+  it('should return formatted response', () => {
+    const response = formatPriceResponse(
+      'AERO',
+      'base',
+      1.0,
+      100000,
+      { dex: 'aerodrome', address: '0x123', fee: 0.003 },
+      { confidence: 85, label: 'reliable', flags: [] }
+    );
+    expect(response.token).toBe('AERO');
+    expect(response.chain).toBe('base');
+    expect(response.price_usd).toBe(1.0);
+    expect(response.liquidity_usd).toBe(100000);
+    expect(response.confidence).toBe(85);
+  });
+});

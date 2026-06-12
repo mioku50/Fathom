@@ -9,6 +9,7 @@ import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './a
 
 import { DEXOrchestrator, type CacheLayer } from './orchestrator'
 import { validateEnv } from './utils/env'
+import { parseTokensParam, formatPriceResponse } from './utils'
 
 
 class OrchestratorCacheAdapter implements CacheLayer {
@@ -174,21 +175,14 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
     is_unsellable: false
   });
 
-  const finalResponse: PriceResponse = {
+  const finalResponse: PriceResponse = formatPriceResponse(
     token,
     chain,
-    symbol: 'TBD', // This could be fetched from metadata
-    price_usd: bestPrice,
-    price_low: bestPrice * 0.99,
-    price_high: bestPrice * 1.01,
-    twap_5m: bestPrice,
-    confidence: confResult.confidence,
-    label: confResult.label,
-    liquidity_usd: bestLiquidity,
-    main_pool: mainPoolData,
-    flags: confResult.flags,
-    updated_at: new Date().toISOString()
-  }
+    bestPrice,
+    bestLiquidity,
+    mainPoolData,
+    confResult
+  )
 
   c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
   return c.json(finalResponse)
@@ -202,7 +196,7 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
     return c.json({ error: 'invalid_request', message: 'tokens parameter is required' }, 400)
   }
 
-  const tokens = tokensParam.split(',').map(t => t.trim()).filter(Boolean)
+  const tokens = parseTokensParam(tokensParam)
   if (tokens.length === 0) {
     return c.json({ error: 'invalid_request', message: 'tokens parameter cannot be empty' }, 400)
   }
@@ -273,21 +267,14 @@ const cachedResponse = await cacheLayer.get(token, chain)
       is_unsellable: false
     });
 
-    const finalResponse: PriceResponse = {
+    const finalResponse: PriceResponse = formatPriceResponse(
       token,
       chain,
-      symbol: 'TBD',
-      price_usd: bestPrice,
-      price_low: bestPrice * 0.99,
-      price_high: bestPrice * 1.01,
-      twap_5m: bestPrice,
-      confidence: confResult.confidence,
-      label: confResult.label,
-      liquidity_usd: bestLiquidity,
-      main_pool: mainPoolData,
-      flags: confResult.flags,
-      updated_at: new Date().toISOString()
-    }
+      bestPrice,
+      bestLiquidity,
+      mainPoolData,
+      confResult
+    )
 
     c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
     results.push(finalResponse)
@@ -446,7 +433,7 @@ app.get('/v1/metadatas', validateAddressesMiddleware, x402Middleware, async (c) 
     return c.json({ error: 'invalid_request', message: 'tokens parameter is required' }, 400)
   }
 
-  const tokens = tokensParam.split(',').map(t => t.trim()).filter(Boolean) as Address[]
+  const tokens = parseTokensParam(tokensParam) as Address[]
   if (tokens.length === 0) {
     return c.json({ error: 'invalid_request', message: 'tokens parameter cannot be empty' }, 400)
   }
