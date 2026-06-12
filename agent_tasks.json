@@ -47,7 +47,7 @@
       "description": "Add unit tests for cache utility",
       "area": "tests",
       "risk": "low",
-      "status": "todo",
+      "status": "done",
       "allowed_paths": [
         "tests/utils/cache.test.ts",
         "src/utils/cache.ts",
@@ -2938,10 +2938,26 @@
       "acceptance": [
         "Tests added and pass"
       ]
+    },
+    {
+      "id": "refactor-logger-1781223891072",
+      "title": "Refactor logger",
+      "description": "Refactor logger utility for better performance",
+      "area": "src",
+      "risk": "low",
+      "status": "todo",
+      "allowed_paths": [
+        "src/utils/logger.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Logger works",
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 177,
+  "total_tasks": 178,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
