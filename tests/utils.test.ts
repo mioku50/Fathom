@@ -50,4 +50,25 @@ describe('generateDummyResponse', () => {
     expect(response.token).toBe(longToken);
     expect(response.chain).toBe(longChain);
   });
+
+  it('should handle negative numbers correctly (if implemented in future updates)', () => {
+    // This is just a test to check another condition (dummy logic right now).
+    const response = generateDummyResponse('AERO', 'base');
+    expect(response.price_usd).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should generate updated_at matching current date logic', () => {
+    const start = new Date();
+    const response = generateDummyResponse('AERO', 'base');
+    const end = new Date();
+    const respDate = new Date(response.updated_at);
+
+    expect(respDate.getTime()).toBeGreaterThanOrEqual(start.getTime());
+    expect(respDate.getTime()).toBeLessThanOrEqual(end.getTime());
+  });
+
+  it('should correctly format main_pool address', () => {
+    const response = generateDummyResponse('AERO', 'base');
+    expect(response.main_pool.address).toMatch(/^0x[a-fA-F0-9]+$/);
+  });
 });

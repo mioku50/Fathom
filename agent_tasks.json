@@ -2869,7 +2869,7 @@
         "src/utils.ts",
         "agent_tasks.json"
       ],
-      "status": "todo",
+      "status": "done",
       "dependencies": [],
       "acceptance": [
         "Tests added and pass"
@@ -2905,10 +2905,27 @@
       "acceptance": [
         "docs/api_architecture.md is created with relevant information."
       ]
+    },
+    {
+      "id": "add-schema-tests-1781222421459",
+      "title": "Add schema validation logic",
+      "description": "Add small schema validation tests",
+      "area": "tests",
+      "risk": "low",
+      "status": "todo",
+      "allowed_paths": [
+        "tests/schema.test.ts",
+        "src/schema.ts",
+        "agent_tasks.json"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "Tests added and pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 175,
+  "total_tasks": 176,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
