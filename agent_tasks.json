@@ -2912,7 +2912,7 @@
       "title": "Add API architecture overview docs",
       "description": "Create docs/api_architecture.md to provide a high-level overview of Fathom's API design.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/api_architecture.md",
@@ -2954,10 +2954,25 @@
         "Logger works",
         "Tests pass"
       ]
+    },
+    {
+      "id": "expand-cache-docs-1781224540531",
+      "title": "Expand cache documentation",
+      "description": "Create docs/cache_strategy.md detailing the cache strategy, TTLs and failovers.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/cache_strategy.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/cache_strategy.md is created covering TTLs and KV cache strategy."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 178,
+  "total_tasks": 179,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
