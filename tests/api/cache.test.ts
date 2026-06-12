@@ -14,7 +14,7 @@ describe('Cache Invalidation API', () => {
     }
 
     // We need to mock global fetch because x402Middleware fetches the facilitator
-    global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ success: true, transaction: '0x123', network: 'base-sepolia', amount: '10000', payer: '0xabc', errorReason: null, errorMessage: null, extensions: {} }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
   });
 
   const getEnv = (kv: any) => ({
@@ -32,7 +32,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -45,7 +45,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate?token=0xabc', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -57,7 +57,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -71,7 +71,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/invalidate?token=0xabc', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -84,7 +84,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -97,7 +97,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(undefined), { waitUntil: () => {} } as any)
@@ -108,7 +108,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -122,7 +122,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear/pool?pool=0xdef', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -135,7 +135,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(undefined), { waitUntil: () => {} } as any)
@@ -155,7 +155,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
@@ -171,7 +171,7 @@ describe('Cache Invalidation API', () => {
       const req = new Request('http://localhost/v1/cache/clear', {
         method: 'POST',
         headers: {
-          'X-PAYMENT': 'x402 tx=mock-hash'
+          'X-PAYMENT': `eyJ4NDAyVmVyc2lvbiI6IjIuMCIsInBheWxvYWQiOnsic2lnbmF0dXJlIjoibW9jayJ9fQ==`
         }
       })
       const res = await app.fetch(req, getEnv(mockKV), { waitUntil: () => {} } as any)
