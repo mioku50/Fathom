@@ -2945,7 +2945,7 @@
       "description": "Refactor logger utility for better performance",
       "area": "src",
       "risk": "low",
-      "status": "todo",
+      "status": "done",
       "allowed_paths": [
         "src/utils/logger.ts",
         "agent_tasks.json"
@@ -2987,10 +2987,27 @@
         "Edge cases for pool data validation added",
         "Tests added and pass"
       ]
+    },
+    {
+      "id": "add-logger-edge-case-tests-1781225841445",
+      "title": "Add logger edge case tests",
+      "description": "Add more edge case tests for the logger utility formatLogMessage function.",
+      "area": "tests",
+      "risk": "low",
+      "status": "todo",
+      "allowed_paths": [
+        "tests/utils/logger.test.ts",
+        "src/utils/logger.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests cover newly found edge cases",
+        "Tests pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 180,
+  "total_tasks": 181,
   "needs_replenishment": false,
-  "claimed_tasks": 1
+  "claimed_tasks": 0
 }
