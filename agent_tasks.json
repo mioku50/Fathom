@@ -42,6 +42,22 @@
   },
   "tasks": [
     {
+      "id": "add-cache-tests-1781223189167",
+      "title": "Add cache tests",
+      "description": "Add unit tests for cache utility",
+      "area": "tests",
+      "risk": "low",
+      "status": "todo",
+      "allowed_paths": [
+        "tests/utils/cache.test.ts",
+        "src/utils/cache.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Tests pass"
+      ]
+    },
+    {
       "id": "new-task-1781219460553",
       "title": "Add utility tests 1",
       "description": "Add more utility tests for remaining utility functions",
@@ -2881,7 +2897,7 @@
       "description": "Add more utility tests for format.ts",
       "area": "tests",
       "risk": "low",
-      "status": "todo",
+      "status": "done",
       "allowed_paths": [
         "tests/utils/format.test.ts",
         "src/utils/format.ts",
@@ -2925,7 +2941,7 @@
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 176,
+  "total_tasks": 177,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
