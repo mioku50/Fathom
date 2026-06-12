@@ -1,3 +1,4 @@
+import { isAddress } from 'viem';
 import { DEXOrchestrator } from './orchestrator';
 import { PriceCalculator } from './calculator';
 
@@ -18,6 +19,10 @@ export class PriceReader {
   constructor(private orchestrator: DEXOrchestrator) {}
 
   async getBestPriceAndLiquidity(token: string): Promise<PriceResult> {
+    if (!token || !isAddress(token)) {
+      throw new Error(`Invalid token address: ${token}`);
+    }
+
     const pools = await this.orchestrator.getAllPools(token);
     const rawData = await this.orchestrator.getAllRawData(pools);
 
