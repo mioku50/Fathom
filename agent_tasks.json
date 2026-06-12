@@ -3027,7 +3027,7 @@
       "title": "Refactor Utilities",
       "description": "Extract common formatting functions from src/index.ts into src/utils.ts to improve readability and testability.",
       "area": "api",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "src/index.ts",
@@ -3070,10 +3070,25 @@
       "acceptance": [
         "Price reader module has comprehensive documentation comments"
       ]
+    },
+    {
+      "id": "refactor-format-utils-1781226876100",
+      "title": "Refactor Format Utilities",
+      "description": "Extract more formatting functions to src/utils.ts.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/utils.ts",
+        "tests/utils.test.ts"
+      ],
+      "acceptance": [
+        "Additional formatting functions extracted."
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 185,
+  "total_tasks": 186,
   "needs_replenishment": false,
-  "claimed_tasks": 2
+  "claimed_tasks": 3
 }
