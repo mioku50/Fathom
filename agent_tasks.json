@@ -2994,7 +2994,7 @@
       "description": "Add more edge case tests for the logger utility formatLogMessage function.",
       "area": "tests",
       "risk": "low",
-      "status": "todo",
+      "status": "done",
       "allowed_paths": [
         "tests/utils/logger.test.ts",
         "src/utils/logger.ts",
@@ -3072,8 +3072,8 @@
       ]
     }
   ],
-  "todo_tasks": 2,
+  "todo_tasks": 4,
   "total_tasks": 185,
   "needs_replenishment": false,
-  "claimed_tasks": 0
+  "claimed_tasks": 1
 }
