@@ -1,0 +1,86 @@
+import { describe, it, expect } from 'vitest';
+import { isPoolData, isPriceResponse, PoolData, PriceResponse } from '../src/schema';
+
+describe('schema validation', () => {
+  describe('isPoolData', () => {
+    it('should validate correct PoolData', () => {
+      const validPool: PoolData = {
+        dex: 'uniswap_v3',
+        address: '0x123',
+        liquidity_usd: 1000,
+        price_usd: 1.5,
+        fee: 3000
+      };
+      expect(isPoolData(validPool)).toBe(true);
+    });
+
+    it('should allow optional fields to be omitted', () => {
+      const validPool: PoolData = {
+        dex: 'aerodrome',
+        address: '0x456'
+      };
+      expect(isPoolData(validPool)).toBe(true);
+    });
+
+    it('should reject invalid PoolData', () => {
+      expect(isPoolData(null)).toBe(false);
+      expect(isPoolData({})).toBe(false);
+      expect(isPoolData({ dex: 'uniswap_v3' })).toBe(false);
+      expect(isPoolData({ dex: 123, address: '0x123' })).toBe(false);
+    });
+  });
+
+  describe('isPriceResponse', () => {
+    it('should validate correct PriceResponse', () => {
+      const validResponse: PriceResponse = {
+        token: '0xabc',
+        chain: 'base',
+        symbol: 'MOCK',
+        price_usd: 1.5,
+        price_low: 1.4,
+        price_high: 1.6,
+        twap_5m: 1.48,
+        confidence: 0.9,
+        label: 'high_confidence',
+        liquidity_usd: 10000,
+        main_pool: {
+          dex: 'uniswap_v3',
+          address: '0x123'
+        },
+        flags: ['mock'],
+        updated_at: new Date().toISOString()
+      };
+      expect(isPriceResponse(validResponse)).toBe(true);
+    });
+
+    it('should reject invalid PriceResponse', () => {
+      expect(isPriceResponse(null)).toBe(false);
+      expect(isPriceResponse({})).toBe(false);
+
+      const missingFields = {
+        token: '0xabc',
+        chain: 'base'
+      };
+      expect(isPriceResponse(missingFields)).toBe(false);
+
+      const invalidMainPool = {
+        token: '0xabc',
+        chain: 'base',
+        symbol: 'MOCK',
+        price_usd: 1.5,
+        price_low: 1.4,
+        price_high: 1.6,
+        twap_5m: 1.48,
+        confidence: 0.9,
+        label: 'high_confidence',
+        liquidity_usd: 10000,
+        main_pool: {
+          dex: 'uniswap_v3' // missing address
+        },
+        flags: ['mock'],
+        updated_at: new Date().toISOString()
+      };
+      expect(isPriceResponse(invalidMainPool)).toBe(false);
+    });
+  });
+});
