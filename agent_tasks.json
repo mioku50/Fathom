@@ -2960,7 +2960,7 @@
       "title": "Expand cache documentation",
       "description": "Create docs/cache_strategy.md detailing the cache strategy, TTLs and failovers.",
       "area": "docs",
-      "status": "todo",
+      "status": "done",
       "risk": "low",
       "allowed_paths": [
         "docs/cache_strategy.md",
@@ -3004,10 +3004,60 @@
         "Tests cover newly found edge cases",
         "Tests pass"
       ]
+    },
+    {
+      "id": "improve-price-reader-1781226876077",
+      "title": "Improve Price Reader Validation",
+      "description": "Add more robust input validation to src/priceReader.ts to ensure token addresses are well-formed before querying DEX adapters.",
+      "area": "pricing",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/priceReader.ts",
+        "tests/priceReader.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Input validation logic is added to priceReader.ts",
+        "Unit tests are added or updated to cover validation"
+      ]
+    },
+    {
+      "id": "refactor-utils-1781226876078",
+      "title": "Refactor Utilities",
+      "description": "Extract common formatting functions from src/index.ts into src/utils.ts to improve readability and testability.",
+      "area": "api",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "src/index.ts",
+        "src/utils.ts",
+        "tests/utils.test.ts",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "Common functions are moved to utils.ts",
+        "Unit tests are added for utils.ts"
+      ]
+    },
+    {
+      "id": "add-dex-docs-1781226876079",
+      "title": "Add DEX Adapter Docs",
+      "description": "Create docs/dex_adapters.md detailing how new DEX adapters can be implemented and integrated.",
+      "area": "docs",
+      "status": "todo",
+      "risk": "low",
+      "allowed_paths": [
+        "docs/dex_adapters.md",
+        "agent_tasks.json"
+      ],
+      "acceptance": [
+        "docs/dex_adapters.md is created covering adapter interfaces"
+      ]
     }
   ],
-  "todo_tasks": 3,
-  "total_tasks": 181,
+  "todo_tasks": 5,
+  "total_tasks": 184,
   "needs_replenishment": false,
   "claimed_tasks": 0
 }
