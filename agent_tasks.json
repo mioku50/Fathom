@@ -2928,7 +2928,7 @@
       "description": "Add small schema validation tests",
       "area": "tests",
       "risk": "low",
-      "status": "todo",
+      "status": "done",
       "allowed_paths": [
         "tests/schema.test.ts",
         "src/schema.ts",
@@ -2969,10 +2969,28 @@
       "acceptance": [
         "docs/cache_strategy.md is created covering TTLs and KV cache strategy."
       ]
+    },
+    {
+      "id": "improve-pool-data-validation-1781225002820",
+      "title": "Improve pool data validation logic",
+      "description": "Add logic to schema validation to handle specific edge cases for pool data types and write specific tests",
+      "area": "schema",
+      "risk": "low",
+      "status": "todo",
+      "allowed_paths": [
+        "src/schema.ts",
+        "tests/schema.test.ts",
+        "agent_tasks.json"
+      ],
+      "dependencies": [],
+      "acceptance": [
+        "Edge cases for pool data validation added",
+        "Tests added and pass"
+      ]
     }
   ],
   "todo_tasks": 3,
-  "total_tasks": 179,
+  "total_tasks": 180,
   "needs_replenishment": false,
   "claimed_tasks": 1
 }
