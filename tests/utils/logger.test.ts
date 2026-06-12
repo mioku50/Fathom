@@ -951,4 +951,31 @@ describe('Logging Helpers', () => {
         const result = formatLogMessage('info', 'msg', { arr: [1, "two", false, null] });
         expect(result).toBe('[INFO] msg {"arr":[1,"two",false,null]}');
     });
+
+    it('handles metadata with getter that throws batch 25', () => {
+        const obj = {
+            get bad() { throw new Error('getter error'); }
+        };
+        expect(() => formatLogMessage('info', 'msg', obj)).toThrow('getter error');
+    });
+
+    it('handles level as object with custom toString batch 25', () => {
+        const customLevel = { toString: () => 'custom_level' };
+        // @ts-ignore
+        const result = formatLogMessage(customLevel, 'msg');
+        expect(result).toBe('[CUSTOM_LEVEL] msg');
+    });
+
+    it('handles message as null batch 25', () => {
+        // @ts-ignore
+        const result = formatLogMessage('info', null);
+        expect(result).toBe('[INFO] null');
+    });
+
+    it('handles message as object with custom toString batch 25', () => {
+        const customMsg = { toString: () => 'custom_message' };
+        // @ts-ignore
+        const result = formatLogMessage('info', customMsg);
+        expect(result).toBe('[INFO] custom_message');
+    });
 });
