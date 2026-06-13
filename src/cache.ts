@@ -5,6 +5,7 @@ export interface FathomEnv {
   CACHE_DEFAULT_TTL_SECONDS?: string
   FATHOM_X402_FACILITATOR_URL?: string
   FATHOM_X402_RECIPIENT?: string
+  ADMIN_AUTH_TOKEN?: string
 }
 
 let hits = 0

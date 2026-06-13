@@ -9,7 +9,11 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   const authHeader = c.req.header('Authorization')
   
   if (authHeader) {
-    return next()
+    const adminToken = c.env?.ADMIN_AUTH_TOKEN
+    if (adminToken && authHeader === `Bearer ${adminToken}`) {
+      return next()
+    }
+    return c.json({ error: 'unauthorized', message: 'Invalid authorization token' }, 401)
   }
 
   const facilitatorUrl = c.env?.FATHOM_X402_FACILITATOR_URL || 'https://api.fathom.network/facilitator'
@@ -29,7 +33,7 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   try {
     const middleware = paymentMiddlewareFromConfig(
       routes,
-      [new HTTPFacilitatorClient(facilitatorUrl)],
+      [new HTTPFacilitatorClient({ url: facilitatorUrl })],
       [{ network: 'eip155:84532', server: new ExactEvmScheme() }]
     )
 

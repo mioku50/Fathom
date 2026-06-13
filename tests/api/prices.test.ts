@@ -46,7 +46,7 @@ describe('Prices API Endpoint (/v1/prices)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        mockEnv = {
+        mockEnv = { ADMIN_AUTH_TOKEN: 'mock-token',
             FATHOM_KV: {
                 get: vi.fn().mockResolvedValue(null),
                 put: vi.fn().mockResolvedValue(undefined),
