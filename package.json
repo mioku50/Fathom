@@ -23,6 +23,7 @@
     "@cloudflare/workers-types": "^4.20230419.0",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.6.1",
+    "dotenv": "^17.4.2",
     "typescript": "^5.0.0",
     "vitest": "^1.6.1",
     "wrangler": "^4.99.0"

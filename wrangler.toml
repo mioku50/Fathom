@@ -15,7 +15,7 @@ mode = "smart"
 X402_NETWORK = "eip155:8453"
 X402_PRICE_USDC = "0.001"
 CACHE_DEFAULT_TTL_SECONDS = "60"
-FATHOM_X402_FACILITATOR_URL = "https://x402.org/facilitator"
+FATHOM_X402_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402"
 FATHOM_X402_RECIPIENT = "0x8e525BfCe1eF40Aa8075ef64E45421b5855C8909"
 
 [[kv_namespaces]]

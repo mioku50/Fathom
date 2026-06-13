@@ -87,10 +87,10 @@ export function parseX402Config(env?: FathomEnv): X402Config {
       throw new Error('Missing CDP_API_KEY_SECRET in config for mainnet facilitator')
     }
 
-    const authHeadersMap = createCdpAuthHeaders(cdpKeyId, cdpKeySecret)
+    const authHeadersFn = createCdpAuthHeaders(cdpKeyId, cdpKeySecret)
     
-    // Convert the map returned by createCdpAuthHeaders to the format expected by HTTPFacilitatorClient
-    createAuthHeaders = async () => (authHeadersMap as unknown) as { verify: Record<string, string>; settle: Record<string, string>; supported: Record<string, string>; bazaar?: Record<string, string> }
+    // Assign the function directly as the client expects a function that returns a promise
+    createAuthHeaders = authHeadersFn as unknown as (() => Promise<{ verify: Record<string, string>; settle: Record<string, string>; supported: Record<string, string>; bazaar?: Record<string, string> }>)
   } else {
     // For staging/base-sepolia
     if (isCdpFacilitator) {

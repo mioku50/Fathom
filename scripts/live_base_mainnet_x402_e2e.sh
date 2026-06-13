@@ -6,14 +6,6 @@ if [ "$CONFIRM_MAINNET_X402_PAYMENT" != "YES" ]; then
     exit 1
 fi
 
-export FATHOM_LIVE_URL="https://fathom-api.mioku-fathom.workers.dev"
-export X402_NETWORK="base"
-export X402_PRICE_USDC="0.01"
-export FATHOM_X402_RECIPIENT="0x940181a94A35A4569E4529A3CDfB74e38FD98631"
-export FATHOM_X402_FACILITATOR_URL="https://api.fathom.network/facilitator"
-export FATHOM_TEST_TOKEN="0x940181a94A35A4569E4529A3CDfB74e38FD98631" # AERO
-export PRICE_CHAIN_ID="8453"
-
 MISSING_VARS=()
 if [ -z "$BASE_RPC_URL" ]; then MISSING_VARS+=("BASE_RPC_URL"); fi
 if [ -z "$FATHOM_TEST_WALLET_PRIVATE_KEY" ]; then MISSING_VARS+=("FATHOM_TEST_WALLET_PRIVATE_KEY"); fi
