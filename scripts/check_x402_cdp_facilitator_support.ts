@@ -1,11 +1,15 @@
 import { createCdpAuthHeaders } from '@coinbase/x402';
 import { HTTPFacilitatorClient } from '@x402/core/server';
-import { config } from 'dotenv';
-config();
 
 async function main() {
   const cdpKeyId = process.env.CDP_API_KEY_ID;
   const cdpKeySecret = process.env.CDP_API_KEY_SECRET;
+
+  console.log("Diagnostics:");
+  console.log(`- CDP mode detected: ${process.env.FATHOM_X402_FACILITATOR_URL === 'https://api.cdp.coinbase.com/platform/v2/x402' ? 'yes' : 'no'}`);
+  console.log(`- CDP_API_KEY_ID present: ${cdpKeyId ? 'yes' : 'no'}`);
+  console.log(`- CDP_API_KEY_SECRET present: ${cdpKeySecret ? 'yes' : 'no'}`);
+  console.log("");
 
   if (!cdpKeyId || !cdpKeySecret) {
     console.error("❌ CDP_API_KEY_ID or CDP_API_KEY_SECRET missing in environment");
@@ -14,11 +18,11 @@ async function main() {
 
   console.log("Checking CDP Facilitator support...");
   
-  const authHeadersMap = createCdpAuthHeaders(cdpKeyId, cdpKeySecret);
+  const authHeadersFn = createCdpAuthHeaders(cdpKeyId, cdpKeySecret);
   
   const client = new HTTPFacilitatorClient({
     url: 'https://api.cdp.coinbase.com/platform/v2/x402',
-    createAuthHeaders: async () => authHeadersMap
+    createAuthHeaders: authHeadersFn as any
   });
 
   try {
@@ -26,9 +30,9 @@ async function main() {
     console.log("✅ Successfully fetched supported routes from CDP Facilitator:");
     console.log(JSON.stringify(supported, null, 2));
 
-    const exactEvmSupported = supported.accepts.some((accept: any) => 
-      accept.scheme === 'exact' && 
-      (accept.network === 'eip155:8453' || accept.network === 'base')
+    const exactEvmSupported = supported.kinds.some((kind: any) => 
+      kind.scheme === 'exact' && 
+      (kind.network === 'eip155:8453' || kind.network === 'base')
     );
 
     if (exactEvmSupported) {
