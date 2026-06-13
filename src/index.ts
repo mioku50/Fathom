@@ -48,6 +48,59 @@ type ExtendedEnv = FathomEnv & {
 
 const app = new Hono<{ Bindings: ExtendedEnv }>()
 
+app.get('/', (c) => {
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fathom - x402-powered pricing API for Base long-tail tokens</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; background: #000; color: #fff; }
+        h1 { color: #0052FF; margin-bottom: 0.5rem; }
+        .tagline { font-size: 1.2rem; color: #888; margin-bottom: 2rem; }
+        .status { background: #111; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid #333; }
+        .status h3 { margin-top: 0; }
+        .status-item { display: flex; align-items: center; margin: 0.8rem 0; }
+        .status-indicator { width: 10px; height: 10px; background: #00ff00; border-radius: 50%; margin-right: 12px; box-shadow: 0 0 8px #00ff00; }
+        .endpoints { background: #111; padding: 1.5rem; border-radius: 8px; border: 1px solid #333; }
+        .endpoints h3 { margin-top: 0; }
+        ul { list-style: none; padding: 0; }
+        li { margin: 1rem 0; }
+        code { background: #222; padding: 0.3rem 0.6rem; border-radius: 4px; font-family: monospace; color: #0052FF; }
+        a { color: #0052FF; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .example { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #333; font-size: 0.95rem; color: #aaa; }
+        .example code { color: #fff; background: #333; }
+    </style>
+</head>
+<body>
+    <h1>Fathom</h1>
+    <div class="tagline">x402-powered pricing API for Base long-tail tokens</div>
+    
+    <div class="status">
+        <h3>Production Status</h3>
+        <div class="status-item"><div class="status-indicator"></div>x402 Base mainnet payments: validated</div>
+        <div class="status-item"><div class="status-indicator"></div>Base mainnet read-only price path: validated</div>
+    </div>
+
+    <div class="endpoints">
+        <h3>Public Docs / Endpoints</h3>
+        <ul>
+            <li><code>GET /v1/price?token=0x...</code></li>
+            <li><code>GET /v1/prices?tokens=0x...</code></li>
+            <li><code>GET /v1/metadata?token=0x...</code></li>
+            <li><code>GET /v1/health</code></li>
+        </ul>
+        <div class="example">
+            <strong>Canonical example token (AERO):</strong><br/>
+            <code style="display:inline-block; margin-top: 0.5rem;">0x940181a94A35A4569E4529A3CDfB74e38FD98631</code>
+        </div>
+    </div>
+</body>
+</html>`)
+})
+
 app.use('*', async (c, next) => {
   try {
     validateEnv(c.env)
