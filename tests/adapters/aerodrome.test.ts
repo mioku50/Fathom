@@ -23,7 +23,7 @@ describe('AerodromeAdapter', () => {
       readContract: mockReadContract
     });
 
-    adapter = new AerodromeAdapter();
+    adapter = new AerodromeAdapter('http://localhost:8545');
   });
 
   describe('getPools', () => {

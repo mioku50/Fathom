@@ -6,8 +6,9 @@ describe('validateEnv', () => {
         const env = {
             BASE_RPC_URL: 'http://localhost:8545',
             X402_NETWORK: 'base',
-            X402_RECIPIENT: '0x123',
-            X402_FACILITATOR_URL: 'http://facilitator',
+            FATHOM_X402_RECIPIENT: '0x123',
+            X402_PRICE_USDC: '0.01',
+            FATHOM_X402_FACILITATOR_URL: 'http://facilitator',
             CACHE_DEFAULT_TTL_SECONDS: '60'
         };
         expect(() => validateEnv(env)).not.toThrow();
@@ -21,8 +22,9 @@ describe('validateEnv', () => {
         const env = {
             BASE_RPC_URL: 'http://localhost:8545',
             X402_NETWORK: 'base',
-            X402_RECIPIENT: '0x123',
-            X402_FACILITATOR_URL: 'http://facilitator',
+            FATHOM_X402_RECIPIENT: '0x123',
+            X402_PRICE_USDC: '0.01',
+            FATHOM_X402_FACILITATOR_URL: 'http://facilitator',
         };
         expect(() => validateEnv(env)).toThrow(/CACHE_DEFAULT_TTL_SECONDS/);
     });
@@ -31,8 +33,9 @@ describe('validateEnv', () => {
          const env = {
             BASE_RPC_URL: '',
             X402_NETWORK: 'base',
-            X402_RECIPIENT: '0x123',
-            X402_FACILITATOR_URL: 'http://facilitator',
+            FATHOM_X402_RECIPIENT: '0x123',
+            X402_PRICE_USDC: '0.01',
+            FATHOM_X402_FACILITATOR_URL: 'http://facilitator',
             CACHE_DEFAULT_TTL_SECONDS: '60'
         };
         expect(() => validateEnv(env)).toThrow(/BASE_RPC_URL/);
@@ -43,6 +46,6 @@ describe('validateEnv', () => {
             BASE_RPC_URL: 'http://localhost:8545',
             X402_NETWORK: 'base',
         };
-        expect(() => validateEnv(env)).toThrow(/X402_RECIPIENT, X402_FACILITATOR_URL, CACHE_DEFAULT_TTL_SECONDS/);
+        expect(() => validateEnv(env)).toThrow(/FATHOM_X402_RECIPIENT, FATHOM_X402_FACILITATOR_URL, CACHE_DEFAULT_TTL_SECONDS/);
     });
 });

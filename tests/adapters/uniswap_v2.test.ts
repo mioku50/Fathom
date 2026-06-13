@@ -22,7 +22,7 @@ describe('UniswapV2Adapter', () => {
       readContract: mockReadContract,
     });
 
-    adapter = new UniswapV2Adapter();
+    adapter = new UniswapV2Adapter('http://localhost:8545');
   });
 
   describe('getPools', () => {
@@ -99,7 +99,7 @@ describe('UniswapV2Adapter', () => {
     it('should throw an error on failure', async () => {
       mockReadContract.mockRejectedValue(new Error('Contract call failed'));
 
-      await expect(adapter.getRawData('0xPoolAddress')).rejects.toThrow('Failed to fetch raw data for pool 0xPoolAddress: Error: Contract call failed');
+      await expect(adapter.getRawData('0xPoolAddress')).rejects.toThrow('Failed to fetch raw data for pool 0xPoolAddress: Contract call failed');
     });
 
     it('should explicitly handle rate limit errors on getRawData', async () => {

@@ -136,9 +136,9 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
   }
 
   const adapters = [
-    new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
-    new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
-    new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK)
+    new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
+    new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
+    new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
   ];
   const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
@@ -240,9 +240,9 @@ const cachedResponse = await cacheLayer.get(token, chain)
     }
 
     const adapters = [
-      new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
-      new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
-      new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK)
+      new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
+      new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
+      new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
     ];
     const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 

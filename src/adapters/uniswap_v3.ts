@@ -1,10 +1,10 @@
-import { createPublicClient, http, Address } from 'viem';
-import { base } from 'viem/chains';
+import { Address } from 'viem';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../dex_adapter';
+import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
 
 export class UniswapV3Adapter implements DEXAdapter {
   readonly id = 'uniswap_v3';
-  private client;
+  private client: PriceRpcClient;
   // Common quote tokens for Base (WETH, USDC)
   private quoteTokens: Address[] = [
     '0x4200000000000000000000000000000000000006', // WETH
@@ -19,14 +19,11 @@ export class UniswapV3Adapter implements DEXAdapter {
 
   private pinBlock?: bigint;
 
-  constructor(rpcUrl?: string, pinBlock?: string) {
+  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string) {
     if (pinBlock && pinBlock !== 'latest') {
       this.pinBlock = BigInt(pinBlock);
     }
-    this.client = createPublicClient({
-      chain: base,
-      transport: http(rpcUrl, { retryCount: 3, retryDelay: 1000 })
-    });
+    this.client = new PriceRpcClient(rpcUrl, fallbackUrlsStr);
   }
 
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
@@ -68,11 +65,11 @@ export class UniswapV3Adapter implements DEXAdapter {
             });
           }
         } catch (error: any) {
-          if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) {
+          if (isRpcFailure(error)) {
             throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}`);
           }
           // Ignore errors for non-existent pools
-          console.error(`Error checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}:`, error);
+          console.error(`Error checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}:`, error.message);
         }
       }
     }
@@ -130,10 +127,10 @@ export class UniswapV3Adapter implements DEXAdapter {
         updatedAt: Math.floor(Date.now() / 1000) // slot0 doesn't have a timestamp, use current time
       };
     } catch (error: any) {
-      if (error.message && (error.message.includes('429') || error.message.toLowerCase().includes('rate limit'))) {
+      if (isRpcFailure(error)) {
         throw new Error(`RPC rate limit exceeded while fetching raw data for pool ${poolAddress}`);
       }
-      throw new Error(`Failed to fetch raw data for pool ${poolAddress}: ${error}`);
+      throw new Error(`Failed to fetch raw data for pool ${poolAddress}: ${error.message}`);
     }
   }
 }

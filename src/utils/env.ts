@@ -2,8 +2,9 @@ export function validateEnv(env: any) {
   const requiredVars = [
     'BASE_RPC_URL',
     'X402_NETWORK',
-    'X402_RECIPIENT',
-    'X402_FACILITATOR_URL',
+    'X402_PRICE_USDC',
+    'FATHOM_X402_RECIPIENT',
+    'FATHOM_X402_FACILITATOR_URL',
     'CACHE_DEFAULT_TTL_SECONDS'
   ];
 

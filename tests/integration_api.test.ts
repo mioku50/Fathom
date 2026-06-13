@@ -3,11 +3,10 @@ import app from '../src/index'
 
 const VALID_ENV = {
   FATHOM_X402_FACILITATOR_URL: 'http://mock-facilitator',
+  X402_NETWORK: 'base-sepolia',
+  X402_PRICE_USDC: '0.01',
   BASE_RPC_URL: 'http://localhost:8545',
-  X402_NETWORK: 'base',
-  X402_RECIPIENT: '0x123',
   FATHOM_X402_RECIPIENT: '0x123',
-  X402_FACILITATOR_URL: 'http://facilitator',
   CACHE_DEFAULT_TTL_SECONDS: '60',
   ADMIN_AUTH_TOKEN: 'mock-token',
   PRICE_RPC_URL: 'http://localhost:8545',

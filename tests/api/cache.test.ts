@@ -19,10 +19,14 @@ describe('Cache Invalidation API', () => {
   const getEnv = (kv: any) => ({
     BASE_RPC_URL: 'http://localhost:8545',
     X402_NETWORK: 'base',
-    X402_RECIPIENT: '0x123',
     FATHOM_X402_RECIPIENT: '0x123',
+            X402_PRICE_USDC: '0.01',
+    FATHOM_X402_RECIPIENT: '0x123',
+            X402_PRICE_USDC: '0.01',
     FATHOM_X402_FACILITATOR_URL: 'http://facilitator',
-    X402_FACILITATOR_URL: 'http://facilitator', // This is what src/utils/env.ts expects
+  X402_NETWORK: 'base-sepolia',
+  X402_PRICE_USDC: '0.01',
+    FATHOM_X402_FACILITATOR_URL: 'http://facilitator', // This is what src/utils/env.ts expects
     CACHE_DEFAULT_TTL_SECONDS: '60',
     ADMIN_AUTH_TOKEN: 'admin-secret',
     FATHOM_KV: kv

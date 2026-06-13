@@ -2,11 +2,11 @@ import { describe, it, expect, vi } from 'vitest'
 import app from '../src/index'
 
 const VALID_ENV = {
-  BASE_RPC_URL: 'http://localhost:8545',
-  X402_NETWORK: 'base',
-  X402_RECIPIENT: '0x123',
-  X402_FACILITATOR_URL: 'https://api.fathom.network/facilitator',
   FATHOM_X402_FACILITATOR_URL: 'https://api.fathom.network/facilitator',
+  X402_NETWORK: 'base-sepolia',
+  X402_PRICE_USDC: '0.01',
+  BASE_RPC_URL: 'http://localhost:8545',
+  FATHOM_X402_RECIPIENT: '0x123',
   CACHE_DEFAULT_TTL_SECONDS: '60',
   ADMIN_AUTH_TOKEN: 'mock-token',
   PRICE_RPC_URL: 'http://localhost:8545',

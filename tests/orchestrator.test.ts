@@ -152,7 +152,7 @@ describe('DEXOrchestrator', () => {
   });
 
   it('should handle RPC rate limit errors from viem client gracefully', async () => {
-    const uniswapAdapter = new UniswapV3Adapter();
+    const uniswapAdapter = new UniswapV3Adapter('http://localhost:8545');
     (uniswapAdapter as any).client = {
       readContract: vi.fn().mockRejectedValue(new Error('HTTP request failed with status 429: Rate limit exceeded'))
     };

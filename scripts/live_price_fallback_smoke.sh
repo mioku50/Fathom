@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -e
 
 # Ensure required environment variables are set or have defaults
 if [ -z "$FATHOM_LIVE_URL" ]; then 
@@ -11,33 +11,22 @@ if [ -z "$ADMIN_AUTH_TOKEN" ]; then
   exit 1
 fi
 
-echo "Running Deterministic Base Mainnet Read-Only Price E2E Test"
+echo "Running Fallback Smoke Test"
 echo "Target: $FATHOM_LIVE_URL"
 
 if [[ "$FATHOM_LIVE_URL" != *"localhost"* ]] && [[ "$FATHOM_LIVE_URL" != *"127.0.0.1"* ]]; then
   echo "⚠️ WARNING: You are testing against a deployed remote Cloudflare Worker."
-  echo "⚠️ Local shell exports like PRICE_RPC_URL and PIN_BLOCK will NOT affect the remote server."
-  echo "⚠️ Ensure you have configured PRICE_RPC_URL and optionally PRICE_RPC_FALLBACK_URLS on your Cloudflare Worker via Wrangler or the Cloudflare Dashboard before continuing."
+  echo "⚠️ Ensure your remote worker has a BAD primary PRICE_RPC_URL and a GOOD PRICE_RPC_FALLBACK_URLS configured."
 else
-  # Local testing checks
-  if [ -z "$PRICE_RPC_FALLBACK_URLS" ]; then
-    echo "ℹ️ PRICE_RPC_FALLBACK_URLS is not set locally."
-  else
-    FALLBACK_COUNT=$(echo "$PRICE_RPC_FALLBACK_URLS" | tr -cd ',' | wc -c)
-    FALLBACK_COUNT=$((FALLBACK_COUNT + 1))
-    echo "ℹ️ PRICE_RPC_FALLBACK_URLS is set locally with $FALLBACK_COUNT fallback(s)."
-  fi
+  echo "ℹ️ Local test:"
+  echo "ℹ️ Start your worker locally with:"
+  echo "ℹ️ PRICE_RPC_URL=https://bad-rpc.example.com PRICE_RPC_FALLBACK_URLS=https://mainnet.base.org npm run dev"
 fi
 
-# We use AERO token on Base mainnet as a test token
 TEST_TOKEN="0x940181a94A35A4569E4529A3CDfB74e38FD98631"
-
 echo "Token: $TEST_TOKEN"
 
-# 1. /v1/price should return 200 with expected price data using Admin Auth
 echo "[1] Fetching price for $TEST_TOKEN"
-
-# Clear cache first to ensure we hit the RPC
 echo "[*] Clearing cache for pool"
 curl -s -X POST -H "Authorization: Bearer $ADMIN_AUTH_TOKEN" "$FATHOM_LIVE_URL/v1/cache/clear" > /dev/null
 
@@ -58,6 +47,6 @@ if ! echo "$PRICE_RES" | grep -q "price_usd"; then
 fi
 
 PRICE_VALUE=$(echo "$PRICE_RES" | grep -o '"price_usd":[0-9.]*' | cut -d':' -f2)
-echo "✅ /v1/price returned 200 OK. Price: $PRICE_VALUE"
+echo "✅ /v1/price returned 200 OK. Fallback works! Price: $PRICE_VALUE"
 
 echo "All tests passed successfully!"

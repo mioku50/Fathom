@@ -4,28 +4,29 @@ import { paymentMiddlewareFromConfig } from '@x402/hono'
 import { HTTPFacilitatorClient } from '@x402/core/server'
 import { ExactEvmScheme } from '@x402/evm/exact/server'
 import type { RoutesConfig } from '@x402/core/server'
+import { parseX402Config } from '../utils/x402_config'
 
 export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
-  
-  if (authHeader) {
-    const adminToken = c.env?.ADMIN_AUTH_TOKEN
-    if (adminToken && authHeader === `Bearer ${adminToken}`) {
-      return next()
-    }
-    return c.json({ error: 'unauthorized', message: 'Invalid authorization token' }, 401)
+  if (authHeader && c.env?.ADMIN_AUTH_TOKEN && authHeader === `Bearer ${c.env.ADMIN_AUTH_TOKEN}`) {
+    return next()
   }
 
-  const facilitatorUrl = c.env?.FATHOM_X402_FACILITATOR_URL || 'https://api.fathom.network/facilitator'
-  const payTo = c.env?.FATHOM_X402_RECIPIENT || '0x0000000000000000000000000000000000000000'
+  let x402Config;
+  try {
+    x402Config = parseX402Config(c.env)
+  } catch (err: any) {
+    console.error("X402_CONFIG_ERROR", err.message)
+    return c.json({ error: 'config_error', message: 'Internal server config error' }, 500)
+  }
 
   const routes: RoutesConfig = {
       "*": {
           accepts: [{
               scheme: "exact",
-              network: "eip155:84532",
-              price: "$0.01",
-              payTo: payTo as `0x${string}`
+              network: x402Config.network,
+              price: x402Config.price,
+              payTo: x402Config.payTo
           }]
       }
   }
@@ -33,8 +34,8 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   try {
     const middleware = paymentMiddlewareFromConfig(
       routes,
-      [new HTTPFacilitatorClient({ url: facilitatorUrl })],
-      [{ network: 'eip155:84532', server: new ExactEvmScheme() }]
+      [new HTTPFacilitatorClient({ url: x402Config.facilitatorUrl })],
+      [{ network: x402Config.network, server: new ExactEvmScheme() }]
     )
 
     return await middleware(c, next)

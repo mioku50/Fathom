@@ -55,8 +55,9 @@ describe('Prices API Endpoint (/v1/prices)', () => {
             CACHE_DEFAULT_TTL_SECONDS: '60',
             BASE_RPC_URL: 'http://localhost:8545',
             X402_NETWORK: 'base',
-            X402_RECIPIENT: '0x123',
-            X402_FACILITATOR_URL: 'http://facilitator',
+            FATHOM_X402_RECIPIENT: '0x123',
+            X402_PRICE_USDC: '0.01',
+            FATHOM_X402_FACILITATOR_URL: 'http://facilitator',
             PRICE_RPC_URL: 'http://localhost:8545',
             PRICE_CHAIN_ID: '8453'
         };

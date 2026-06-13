@@ -5,8 +5,11 @@ export interface FathomEnv {
   CACHE_DEFAULT_TTL_SECONDS?: string
   FATHOM_X402_FACILITATOR_URL?: string
   FATHOM_X402_RECIPIENT?: string
+  X402_NETWORK?: string
+  X402_PRICE_USDC?: string
   ADMIN_AUTH_TOKEN?: string
   PRICE_RPC_URL?: string
+  PRICE_RPC_FALLBACK_URLS?: string
   PRICE_CHAIN_ID?: string
   PIN_BLOCK?: string
 }

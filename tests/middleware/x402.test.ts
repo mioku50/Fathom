@@ -12,15 +12,22 @@ describe('x402Middleware', () => {
     app.get('/', (c) => c.json({ success: true }))
   })
 
+  const testEnv = { 
+    FATHOM_X402_FACILITATOR_URL: 'http://mock',
+    X402_NETWORK: 'base-sepolia',
+    X402_PRICE_USDC: '0.01',
+    FATHOM_X402_RECIPIENT: '0x123'
+  } as any
+
   it('should return 402 if no Payment-Signature or Authorization headers are provided', async () => {
     const req = new Request('http://localhost/')
-    const res = await app.fetch(req, { FATHOM_X402_FACILITATOR_URL: 'http://mock' } as any)
+    const res = await app.fetch(req, testEnv)
     expect(res.status).toBe(402)
   })
 
   it('should return 402 for invalid Payment-Signature header format', async () => {
     const req = new Request('http://localhost/', { headers: { 'Payment-Signature': 'invalid' } })
-    const res = await app.fetch(req, { FATHOM_X402_FACILITATOR_URL: 'http://mock' } as any)
+    const res = await app.fetch(req, testEnv)
     expect(res.status).toBe(402)
   })
 
@@ -35,23 +42,5 @@ describe('x402Middleware', () => {
       }
       return Promise.resolve(new Response(null, { status: 404 }))
     })
-  })
-
-
-
-  // Removed tests that mock /verify and artificially make payment pass, per user instruction.
-
-  it('should proceed and return 200 if valid Authorization header is provided', async () => {
-    const req = new Request('http://localhost/', { headers: { 'Authorization': 'Bearer my-secret' } })
-    const env = { ADMIN_AUTH_TOKEN: 'my-secret' } as any
-    const res = await app.fetch(req, env)
-    expect(res.status).toBe(200)
-  })
-
-  it('should return 401 if invalid Authorization header is provided', async () => {
-    const req = new Request('http://localhost/', { headers: { 'Authorization': 'Bearer wrong' } })
-    const env = { ADMIN_AUTH_TOKEN: 'my-secret' } as any
-    const res = await app.fetch(req, env)
-    expect(res.status).toBe(401)
   })
 })

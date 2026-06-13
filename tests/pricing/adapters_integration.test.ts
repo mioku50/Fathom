@@ -194,7 +194,7 @@ describe('Real Adapters Error Handling', () => {
   });
 
   it('UniswapV2Adapter should handle 429 errors and generic errors correctly', async () => {
-    const adapter = new UniswapV2Adapter();
+    const adapter = new UniswapV2Adapter('http://localhost:8545');
     const mockClient = { readContract: vi.fn() };
     (adapter as any).client = mockClient;
 
@@ -222,7 +222,7 @@ describe('Real Adapters Error Handling', () => {
   });
 
   it('UniswapV3Adapter should handle 429 errors and generic errors correctly', async () => {
-    const adapter = new UniswapV3Adapter();
+    const adapter = new UniswapV3Adapter('http://localhost:8545');
     const mockClient = { readContract: vi.fn() };
     (adapter as any).client = mockClient;
 
@@ -250,7 +250,7 @@ describe('Real Adapters Error Handling', () => {
   });
 
   it('AerodromeAdapter should handle generic errors correctly', async () => {
-    const adapter = new AerodromeAdapter();
+    const adapter = new AerodromeAdapter('http://localhost:8545');
     const mockClient = { readContract: vi.fn() };
     (adapter as any).client = mockClient;
 

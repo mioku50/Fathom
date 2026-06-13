@@ -23,7 +23,7 @@ describe('UniswapV3Adapter', () => {
       readContract: mockReadContract
     });
 
-    adapter = new UniswapV3Adapter();
+    adapter = new UniswapV3Adapter('http://localhost:8545');
   });
 
   describe('getPools', () => {

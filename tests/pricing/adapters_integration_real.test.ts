@@ -8,9 +8,9 @@ import { DEXOrchestrator } from '../../src/orchestrator';
 describe('Real Adapters in Orchestrator', () => {
   it('should correctly register and identify all adapters', () => {
     const adapters: DEXAdapter[] = [
-      new UniswapV2Adapter(),
-      new UniswapV3Adapter(),
-      new AerodromeAdapter()
+      new UniswapV2Adapter('http://localhost:8545'),
+      new UniswapV3Adapter('http://localhost:8545'),
+      new AerodromeAdapter('http://localhost:8545')
     ];
 
     const orchestrator = new DEXOrchestrator(adapters);
@@ -22,9 +22,9 @@ describe('Real Adapters in Orchestrator', () => {
   });
 
   it('should pass typechecks and interface compliance for real adapters', () => {
-    const v2Adapter: DEXAdapter = new UniswapV2Adapter();
-    const v3Adapter: DEXAdapter = new UniswapV3Adapter();
-    const aerodromeAdapter: DEXAdapter = new AerodromeAdapter();
+    const v2Adapter: DEXAdapter = new UniswapV2Adapter('http://localhost:8545');
+    const v3Adapter: DEXAdapter = new UniswapV3Adapter('http://localhost:8545');
+    const aerodromeAdapter: DEXAdapter = new AerodromeAdapter('http://localhost:8545');
 
     expect(v2Adapter).toHaveProperty('getPools');
     expect(v2Adapter).toHaveProperty('getRawData');
@@ -37,8 +37,8 @@ describe('Real Adapters in Orchestrator', () => {
   });
 
   it('orchestrator should handle RPC rate limits gracefully across real adapters during getAllPools', async () => {
-    const v2Adapter = new UniswapV2Adapter();
-    const v3Adapter = new UniswapV3Adapter();
+    const v2Adapter = new UniswapV2Adapter('http://localhost:8545');
+    const v3Adapter = new UniswapV3Adapter('http://localhost:8545');
 
     // Mock the internal viem clients
     const mockV2Client = { readContract: vi.fn() };
@@ -70,8 +70,8 @@ describe('Real Adapters in Orchestrator', () => {
   });
 
   it('orchestrator should handle RPC rate limits gracefully across real adapters during getAllRawData', async () => {
-    const v2Adapter = new UniswapV2Adapter();
-    const v3Adapter = new UniswapV3Adapter();
+    const v2Adapter = new UniswapV2Adapter('http://localhost:8545');
+    const v3Adapter = new UniswapV3Adapter('http://localhost:8545');
 
     // Mock the internal viem clients
     const mockV2Client = { readContract: vi.fn() };
