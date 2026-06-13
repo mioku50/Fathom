@@ -11,24 +11,19 @@ if [ -z "$ADMIN_AUTH_TOKEN" ]; then
   exit 1
 fi
 
-if [ -z "$PRICE_RPC_URL" ]; then 
-  PRICE_RPC_URL="https://mainnet.base.org"
-  echo "PRICE_RPC_URL not set. Defaulting to $PRICE_RPC_URL"
-fi
+echo "Running Deterministic Base Mainnet Read-Only Price E2E Test"
+echo "Target: $FATHOM_LIVE_URL"
 
-if [ -z "$PIN_BLOCK" ]; then 
-  PIN_BLOCK="latest"
-  echo "PIN_BLOCK not set. Defaulting to $PIN_BLOCK"
+if [[ "$FATHOM_LIVE_URL" != *"localhost"* ]] && [[ "$FATHOM_LIVE_URL" != *"127.0.0.1"* ]]; then
+  echo "⚠️ WARNING: You are testing against a deployed remote Cloudflare Worker."
+  echo "⚠️ Local shell exports like PRICE_RPC_URL and PIN_BLOCK will NOT affect the remote server."
+  echo "⚠️ Ensure you have configured PRICE_RPC_URL on your Cloudflare Worker via Wrangler or the Cloudflare Dashboard before continuing."
 fi
 
 # We use AERO token on Base mainnet as a test token
 TEST_TOKEN="0x940181a94A35A4569E4529A3CDfB74e38FD98631"
 
-echo "Running Deterministic Base Mainnet Read-Only Price E2E Test"
-echo "Target: $FATHOM_LIVE_URL"
 echo "Token: $TEST_TOKEN"
-echo "RPC: $PRICE_RPC_URL"
-echo "Block: $PIN_BLOCK"
 
 # 1. /v1/price should return 200 with expected price data using Admin Auth
 echo "[1] Fetching price for $TEST_TOKEN"

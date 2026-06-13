@@ -127,11 +127,19 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
     return c.json(cachedResponse)
   }
 
-    const adapters = [
-      new AerodromeAdapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
-      new UniswapV2Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
-      new UniswapV3Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK)
-    ];
+  if (!c.env?.PRICE_RPC_URL) {
+    return c.json({ error: 'server_error', message: 'PRICE_RPC_URL is not configured on the server' }, 500)
+  }
+
+  if (c.env?.PRICE_CHAIN_ID !== '8453') {
+    return c.json({ error: 'server_error', message: 'PRICE_CHAIN_ID must be configured as 8453 for Base mainnet reads' }, 500)
+  }
+
+  const adapters = [
+    new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
+    new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
+    new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK)
+  ];
   const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
   const pools = await orchestrator.getAllPools(token);
@@ -223,10 +231,18 @@ const cachedResponse = await cacheLayer.get(token, chain)
       continue
     }
 
+    if (!c.env?.PRICE_RPC_URL) {
+      return c.json({ error: 'server_error', message: 'PRICE_RPC_URL is not configured on the server' }, 500)
+    }
+
+    if (c.env?.PRICE_CHAIN_ID !== '8453') {
+      return c.json({ error: 'server_error', message: 'PRICE_CHAIN_ID must be configured as 8453 for Base mainnet reads' }, 500)
+    }
+
     const adapters = [
-      new AerodromeAdapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
-      new UniswapV2Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
-      new UniswapV3Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK)
+      new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
+      new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK),
+      new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PIN_BLOCK)
     ];
     const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 

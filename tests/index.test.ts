@@ -8,7 +8,9 @@ const VALID_ENV = {
   X402_FACILITATOR_URL: 'https://api.fathom.network/facilitator',
   FATHOM_X402_FACILITATOR_URL: 'https://api.fathom.network/facilitator',
   CACHE_DEFAULT_TTL_SECONDS: '60',
-  ADMIN_AUTH_TOKEN: 'mock-token'
+  ADMIN_AUTH_TOKEN: 'mock-token',
+  PRICE_RPC_URL: 'http://localhost:8545',
+  PRICE_CHAIN_ID: '8453'
 };
 import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'

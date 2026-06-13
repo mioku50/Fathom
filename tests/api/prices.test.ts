@@ -40,7 +40,7 @@ vi.mock('../../src/confidence', () => ({
 }));
 
 describe('Prices API Endpoint (/v1/prices)', () => {
-  global.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ success: true, transaction: '0x123', network: 'base-sepolia', amount: '10000', payer: '0xabc', errorReason: null, errorMessage: null, extensions: {} }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+  
     let mockEnv: any;
 
     beforeEach(() => {
@@ -56,7 +56,9 @@ describe('Prices API Endpoint (/v1/prices)', () => {
             BASE_RPC_URL: 'http://localhost:8545',
             X402_NETWORK: 'base',
             X402_RECIPIENT: '0x123',
-            X402_FACILITATOR_URL: 'http://facilitator'
+            X402_FACILITATOR_URL: 'http://facilitator',
+            PRICE_RPC_URL: 'http://localhost:8545',
+            PRICE_CHAIN_ID: '8453'
         };
     });
 
