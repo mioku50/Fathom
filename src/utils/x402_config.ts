@@ -1,10 +1,12 @@
 import type { FathomEnv } from '../cache'
+import { createCdpAuthHeaders } from '@coinbase/x402'
 
 export interface X402Config {
-  network: string
+  network: `${string}:${string}`
   price: string
   payTo: `0x${string}`
   facilitatorUrl: string
+  createAuthHeaders?: () => Promise<{ verify: Record<string, string>; settle: Record<string, string>; supported: Record<string, string>; bazaar?: Record<string, string> }>
 }
 
 export function parseX402Config(env?: FathomEnv): X402Config {
@@ -13,17 +15,18 @@ export function parseX402Config(env?: FathomEnv): X402Config {
   }
 
   // 1. Network normalization
-  let network = env.X402_NETWORK?.trim()
-  if (!network) {
+  const rawNetwork = env.X402_NETWORK?.trim()
+  if (!rawNetwork) {
     throw new Error('Missing X402_NETWORK in config')
   }
 
-  if (network === 'base-sepolia' || network === 'eip155:84532') {
+  let network: `${string}:${string}`
+  if (rawNetwork === 'base-sepolia' || rawNetwork === 'eip155:84532') {
     network = 'eip155:84532'
-  } else if (network === 'base' || network === 'eip155:8453') {
+  } else if (rawNetwork === 'base' || rawNetwork === 'eip155:8453') {
     network = 'eip155:8453'
   } else {
-    throw new Error(`Unsupported X402_NETWORK: ${network}`)
+    throw new Error(`Unsupported X402_NETWORK: ${rawNetwork}`)
   }
 
   // 2. Price normalization
@@ -61,10 +64,46 @@ export function parseX402Config(env?: FathomEnv): X402Config {
     throw new Error('Missing FATHOM_X402_FACILITATOR_URL in config')
   }
 
+  const isMainnet = network === 'eip155:8453'
+  const isCdpFacilitator = facilitatorUrl === 'https://api.cdp.coinbase.com/platform/v2/x402'
+  const isStagingFacilitator = facilitatorUrl === 'https://x402.org/facilitator'
+  let createAuthHeaders: undefined | (() => Promise<{ verify: Record<string, string>; settle: Record<string, string>; supported: Record<string, string>; bazaar?: Record<string, string> }>) = undefined
+
+  if (isMainnet) {
+    if (isStagingFacilitator) {
+      throw new Error('Mainnet x402 production cannot use the x402.org testnet facilitator')
+    }
+    if (!isCdpFacilitator) {
+      throw new Error('Mainnet x402 production requires the CDP facilitator (https://api.cdp.coinbase.com/platform/v2/x402)')
+    }
+
+    const cdpKeyId = env.CDP_API_KEY_ID?.trim()
+    const cdpKeySecret = env.CDP_API_KEY_SECRET?.trim()
+
+    if (!cdpKeyId) {
+      throw new Error('Missing CDP_API_KEY_ID in config for mainnet facilitator')
+    }
+    if (!cdpKeySecret) {
+      throw new Error('Missing CDP_API_KEY_SECRET in config for mainnet facilitator')
+    }
+
+    const authHeadersMap = createCdpAuthHeaders(cdpKeyId, cdpKeySecret)
+    
+    // Convert the map returned by createCdpAuthHeaders to the format expected by HTTPFacilitatorClient
+    createAuthHeaders = async () => (authHeadersMap as unknown) as { verify: Record<string, string>; settle: Record<string, string>; supported: Record<string, string>; bazaar?: Record<string, string> }
+  } else {
+    // For staging/base-sepolia
+    if (isCdpFacilitator) {
+      // It's possible to use CDP on testnet if desired, but user said "preserve existing flow"
+    }
+  }
+
   return {
     network,
     price: priceString,
     payTo: payTo as `0x${string}`,
-    facilitatorUrl
+    facilitatorUrl,
+    createAuthHeaders
   }
 }
+

@@ -6,7 +6,6 @@ describe('parseX402Config', () => {
     X402_NETWORK: 'base-sepolia',
     X402_PRICE_USDC: '0.01',
     FATHOM_X402_RECIPIENT: '0x123',
-            X402_PRICE_USDC: '0.01',
     FATHOM_X402_FACILITATOR_URL: 'https://x402.org/facilitator'
   }
 
@@ -21,12 +20,24 @@ describe('parseX402Config', () => {
   })
 
   it('normalizes base to eip155:8453', () => {
-    const config = parseX402Config({ ...baseValidEnv, X402_NETWORK: 'base' })
+    const config = parseX402Config({ 
+      ...baseValidEnv, 
+      X402_NETWORK: 'base',
+      FATHOM_X402_FACILITATOR_URL: 'https://api.cdp.coinbase.com/platform/v2/x402',
+      CDP_API_KEY_ID: 'id',
+      CDP_API_KEY_SECRET: 'secret'
+    })
     expect(config.network).toBe('eip155:8453')
   })
 
   it('normalizes eip155:8453 to eip155:8453', () => {
-    const config = parseX402Config({ ...baseValidEnv, X402_NETWORK: 'eip155:8453' })
+    const config = parseX402Config({ 
+      ...baseValidEnv, 
+      X402_NETWORK: 'eip155:8453',
+      FATHOM_X402_FACILITATOR_URL: 'https://api.cdp.coinbase.com/platform/v2/x402',
+      CDP_API_KEY_ID: 'id',
+      CDP_API_KEY_SECRET: 'secret'
+    })
     expect(config.network).toBe('eip155:8453')
   })
 
@@ -71,7 +82,10 @@ describe('parseX402Config', () => {
     expect(() => parseX402Config({ 
       ...baseValidEnv, 
       X402_NETWORK: 'base', 
-      FATHOM_X402_RECIPIENT: '0x0000000000000000000000000000000000000000' 
+      FATHOM_X402_RECIPIENT: '0x0000000000000000000000000000000000000000',
+      FATHOM_X402_FACILITATOR_URL: 'https://api.cdp.coinbase.com/platform/v2/x402',
+      CDP_API_KEY_ID: 'id',
+      CDP_API_KEY_SECRET: 'secret'
     })).toThrow(/Zero address FATHOM_X402_RECIPIENT is not allowed in production/)
   })
 
@@ -89,18 +103,54 @@ describe('parseX402Config', () => {
     })
   })
 
-  it('valid mainnet config builds x402 accept requirements', () => {
+  it('throws config error if mainnet uses x402.org testnet facilitator', () => {
+    expect(() => parseX402Config({
+      ...baseValidEnv,
+      X402_NETWORK: 'eip155:8453',
+      FATHOM_X402_FACILITATOR_URL: 'https://x402.org/facilitator'
+    })).toThrow(/Mainnet x402 production cannot use the x402.org testnet facilitator/)
+  })
+
+  it('throws config error if mainnet does not use CDP facilitator', () => {
+    expect(() => parseX402Config({
+      ...baseValidEnv,
+      X402_NETWORK: 'eip155:8453',
+      FATHOM_X402_FACILITATOR_URL: 'https://other.org/facilitator'
+    })).toThrow(/Mainnet x402 production requires the CDP facilitator/)
+  })
+
+  it('throws config error if mainnet CDP facilitator is missing CDP_API_KEY_ID', () => {
+    expect(() => parseX402Config({
+      ...baseValidEnv,
+      X402_NETWORK: 'eip155:8453',
+      FATHOM_X402_FACILITATOR_URL: 'https://api.cdp.coinbase.com/platform/v2/x402',
+      CDP_API_KEY_SECRET: 'secret'
+    })).toThrow(/Missing CDP_API_KEY_ID in config for mainnet facilitator/)
+  })
+
+  it('throws config error if mainnet CDP facilitator is missing CDP_API_KEY_SECRET', () => {
+    expect(() => parseX402Config({
+      ...baseValidEnv,
+      X402_NETWORK: 'eip155:8453',
+      FATHOM_X402_FACILITATOR_URL: 'https://api.cdp.coinbase.com/platform/v2/x402',
+      CDP_API_KEY_ID: 'id'
+    })).toThrow(/Missing CDP_API_KEY_SECRET in config for mainnet facilitator/)
+  })
+
+  it('valid mainnet config builds x402 accept requirements with CDP keys', () => {
     const config = parseX402Config({
       ...baseValidEnv,
       X402_NETWORK: 'eip155:8453',
       X402_PRICE_USDC: '0.001',
-      FATHOM_X402_RECIPIENT: '0xabc'
+      FATHOM_X402_RECIPIENT: '0xabc',
+      FATHOM_X402_FACILITATOR_URL: 'https://api.cdp.coinbase.com/platform/v2/x402',
+      CDP_API_KEY_ID: 'id',
+      CDP_API_KEY_SECRET: 'secret'
     })
-    expect(config).toEqual({
-      network: 'eip155:8453',
-      price: '$0.001',
-      payTo: '0xabc',
-      facilitatorUrl: 'https://x402.org/facilitator'
-    })
+    expect(config.network).toBe('eip155:8453')
+    expect(config.price).toBe('$0.001')
+    expect(config.payTo).toBe('0xabc')
+    expect(config.facilitatorUrl).toBe('https://api.cdp.coinbase.com/platform/v2/x402')
+    expect(config.createAuthHeaders).toBeDefined()
   })
 })

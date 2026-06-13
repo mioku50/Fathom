@@ -7,6 +7,8 @@ export interface FathomEnv {
   FATHOM_X402_RECIPIENT?: string
   X402_NETWORK?: string
   X402_PRICE_USDC?: string
+  CDP_API_KEY_ID?: string
+  CDP_API_KEY_SECRET?: string
   ADMIN_AUTH_TOKEN?: string
   PRICE_RPC_URL?: string
   PRICE_RPC_FALLBACK_URLS?: string

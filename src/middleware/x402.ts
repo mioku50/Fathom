@@ -24,7 +24,7 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       "*": {
           accepts: [{
               scheme: "exact",
-              network: x402Config.network,
+              network: x402Config.network as any,
               price: x402Config.price,
               payTo: x402Config.payTo
           }]
@@ -34,8 +34,11 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   try {
     const middleware = paymentMiddlewareFromConfig(
       routes,
-      [new HTTPFacilitatorClient({ url: x402Config.facilitatorUrl })],
-      [{ network: x402Config.network, server: new ExactEvmScheme() }]
+      [new HTTPFacilitatorClient({ 
+        url: x402Config.facilitatorUrl,
+        createAuthHeaders: x402Config.createAuthHeaders
+      })],
+      [{ network: x402Config.network as any, server: new ExactEvmScheme() }]
     )
 
     return await middleware(c, next)

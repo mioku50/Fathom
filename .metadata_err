@@ -1,2 +1,3 @@
 DEBUG: Sending request...
-DEBUG: Received response: 200
+DEBUG: Received response: 500
+HTTP 500: {"error":"internal_error","message":"Failed to fetch token metadata"}
