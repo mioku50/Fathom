@@ -55,6 +55,7 @@ app.get('/', (c) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="talentapp:project_verification" content="34028a50c36b980fe745235b3ef9e6c3bb0468930a288929bce33dfdf5139e2bf26e0a3122c76d9fefe2556ddffa7d32bdd40657f5303d675676fadd36acdd93">
+    <meta name="base:app_id" content="6a2da48c0cfd412b2ab2c558" />
     <title>Fathom - x402-powered pricing API for Base long-tail tokens</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; background: #000; color: #fff; }
