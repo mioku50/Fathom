@@ -14,6 +14,8 @@ export interface FathomEnv {
   PRICE_RPC_FALLBACK_URLS?: string
   PRICE_CHAIN_ID?: string
   PIN_BLOCK?: string
+  X402_PRICE_BATCH_USDC?: string
+  MAX_BATCH_TOKENS?: string
 }
 
 let hits = 0

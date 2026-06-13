@@ -109,10 +109,12 @@ describe('Prices API Endpoint (/v1/prices)', () => {
         expect(res.status).toBe(200);
         const data = await res.json() as any;
 
-        expect(Array.isArray(data)).toBe(true);
-        expect(data.length).toBe(1);
+        expect(typeof data).toBe('object');
+        expect(data.count).toBe(1);
+        expect(Array.isArray(data.results)).toBe(true);
+        expect(data.results.length).toBe(1);
 
-        const response = data[0];
+        const response = data.results[0];
         expect(response.token).toBe(validToken);
         expect(response.chain).toBe('base'); // Default
         expect(response.price_usd).toBe(1.5);
@@ -124,8 +126,8 @@ describe('Prices API Endpoint (/v1/prices)', () => {
         expect(response.updated_at).toBeDefined();
     });
 
-    it('Should limit to a maximum of 10 tokens', async () => {
-        const tokens = Array.from({ length: 11 }, (_, i) => `0x${i.toString().padStart(40, '0')}`).join(',');
+    it('Should limit to a maximum of 50 tokens', async () => {
+        const tokens = Array.from({ length: 51 }, (_, i) => `0x${i.toString().padStart(40, '0')}`).join(',');
         const req = new Request(`http://localhost/v1/prices?tokens=${tokens}`, {
           headers: { 'Authorization': 'Bearer mock-token' }
         });
@@ -134,7 +136,7 @@ describe('Prices API Endpoint (/v1/prices)', () => {
         expect(res.status).toBe(400);
         const data = await res.json() as any;
         expect(data.error).toBe('invalid_request');
-        expect(data.message).toBe('Maximum 10 tokens allowed per request');
+        expect(data.message).toMatch(/Maximum 50 tokens allowed per request/);
     });
 
     it('Should correctly split and handle multiple tokens, skipping invalid ones', async () => {
@@ -165,10 +167,12 @@ describe('Prices API Endpoint (/v1/prices)', () => {
 
         expect(res.status).toBe(200);
         const data = await res.json() as any;
-        expect(Array.isArray(data)).toBe(true);
-        expect(data.length).toBe(2);
-        expect(data[0].token).toBe(validToken1);
-        expect(data[1].token).toBe(validToken2);
+        expect(typeof data).toBe('object');
+        expect(data.count).toBe(2);
+        expect(Array.isArray(data.results)).toBe(true);
+        expect(data.results.length).toBe(2);
+        expect(data.results[0].token).toBe(validToken1);
+        expect(data.results[1].token).toBe(validToken2);
     });
 
     it('Should not fail if main pool data is not found for a token', async () => {
@@ -186,10 +190,13 @@ describe('Prices API Endpoint (/v1/prices)', () => {
         });
         const res = await app.fetch(req, mockEnv, { waitUntil: vi.fn() } as any);
 
-        // Since it continues when mainPoolData is not found, the results array will be empty
+        // It should return 200, with result status 'no_liquidity'
         expect(res.status).toBe(200);
         const data = await res.json() as any;
-        expect(Array.isArray(data)).toBe(true);
-        expect(data.length).toBe(0);
+        expect(typeof data).toBe('object');
+        expect(Array.isArray(data.results)).toBe(true);
+        expect(data.results.length).toBe(1);
+        expect(data.results[0].status).toBe('no_liquidity');
+        expect(data.results[0].token).toBe(validToken);
     });
 });

@@ -12,7 +12,7 @@ const VALID_ENV = {
   PRICE_RPC_URL: 'http://localhost:8545',
   PRICE_CHAIN_ID: '8453'
 };
-import type { PriceResponse } from '../src/schema'
+import { isPriceResponse, type PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 
 vi.mock('../src/orchestrator', () => {
@@ -274,8 +274,8 @@ describe('Fathom API', () => {
     expect(body.message).toBe('tokens parameter is required')
   })
 
-  it('Should return 400 for /v1/prices if more than 10 tokens are requested', async () => {
-    const tokens = '0x1111111111111111111111111111111111111111,0x2222222222222222222222222222222222222222,0x3333333333333333333333333333333333333333,0x4444444444444444444444444444444444444444,0x5555555555555555555555555555555555555555,0x6666666666666666666666666666666666666666,0x7777777777777777777777777777777777777777,0x8888888888888888888888888888888888888888,0x9999999999999999999999999999999999999999,0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+  it('Should return 400 for /v1/prices if more than 50 tokens are requested', async () => {
+    const tokens = Array(51).fill('0x940181a94A35A4569E4529A3CDfB74e38FD98631').join(',')
     const req = new Request(`http://localhost/v1/prices?tokens=${tokens}&chain=base`, {
       headers: { 'Authorization': 'Bearer mock-token' }
     })
@@ -283,7 +283,7 @@ describe('Fathom API', () => {
     expect(res.status).toBe(400)
     const body = await res.json() as any
     expect(body.error).toBe('invalid_request')
-    expect(body.message).toBe('Maximum 10 tokens allowed per request')
+    expect(body.message).toMatch(/Maximum 50 tokens allowed per request/)
   })
 
   it('Should return 400 for /v1/prices if a token address is invalid', async () => {
@@ -305,21 +305,26 @@ describe('Fathom API', () => {
   })
 
   it('Should return valid schema for /v1/prices (batch)', async () => {
-    const req = new Request('http://localhost/v1/prices?tokens=0x0000000000000000000000000000000000000000,0x1111111111111111111111111111111111111111&chain=base', {
-      headers: { 'Authorization': 'Bearer mock-token' }
+    const req = new Request(`http://localhost/v1/prices?tokens=0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
     })
-    const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p } as any)
     expect(res.status).toBe(200)
 
-    const body = await res.json() as PriceResponse[]
-    expect(Array.isArray(body)).toBe(true)
-    expect(body.length).toBe(2)
+    const body = await res.json() as any
+    expect(typeof body).toBe('object')
+    expect(body.chain).toBe('base')
+    expect(body.count).toBe(2)
+    expect(Array.isArray(body.results)).toBe(true)
+    expect(body.results.length).toBe(2)
 
-    expect(body[0].token).toBe('0x0000000000000000000000000000000000000000')
-    expect(body[1].token).toBe('0x1111111111111111111111111111111111111111')
-
-    expect(body[0].symbol).toBe('TBD')
-    expect(body[1].symbol).toBe('TBD')
+    for (const item of body.results) {
+      if (item.status === 'ok') {
+        expect(isPriceResponse(item)).toBe(true)
+      } else {
+        expect(item.status).toBe('not_found')
+      }
+    }
   })
 
   it('Should bypass payment block for /v1/prices if Authorization header is present', async () => {

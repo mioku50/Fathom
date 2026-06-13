@@ -535,11 +535,11 @@ Fathom is fully discoverable through CDP x402 Bazaar metadata (`@x402/extensions
 
 - **Canonical test token:** AERO (`0x940181a94A35A4569E4529A3CDfB74e38FD98631`)
 - **Paid endpoints:** 
-  - `GET /v1/price`
-  - `GET /v1/prices`
-  - `GET /v1/metadata`
-  - `GET /v1/metadatas`
-- **Price per call:** 0.001 USDC (configurable via `X402_PRICE_USDC`)
+  - `GET /v1/price` (Price: 0.001 USDC)
+  - `GET /v1/prices` (Batch pricing up to 50 tokens, Price: 0.003 USDC)
+  - `GET /v1/metadata` (Price: 0.001 USDC)
+  - `GET /v1/metadatas` (Batch metadata up to 10 tokens, Price: 0.001 USDC)
+- **Price Config:** Configurable via `X402_PRICE_USDC` and `X402_PRICE_BATCH_USDC`
 - **Base mainnet network ID:** `eip155:8453`
 - **Validation Commands:**
   - Check x402 discovery metadata: `npx vitest run tests/middleware/x402.test.ts`

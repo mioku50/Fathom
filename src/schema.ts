@@ -54,3 +54,15 @@ export function isPriceResponse(data: any): data is PriceResponse {
   if (typeof data.updated_at !== 'string') return false;
   return true;
 }
+
+export type BatchPriceResult = 
+  | (PriceResponse & { status: "ok" })
+  | { token: string; status: "not_found" | "no_liquidity" | "rpc_error"; error: { code: string; message: string } }
+
+export type BatchPriceResponse = {
+  chain: string;
+  count: number;
+  priced: number;
+  failed: number;
+  results: BatchPriceResult[];
+}

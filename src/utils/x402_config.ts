@@ -4,6 +4,7 @@ import { createCdpAuthHeaders } from '@coinbase/x402'
 export interface X402Config {
   network: `${string}:${string}`
   price: string
+  batchPrice?: string
   payTo: `0x${string}`
   facilitatorUrl: string
   createAuthHeaders?: () => Promise<{ verify: Record<string, string>; settle: Record<string, string>; supported: Record<string, string>; bazaar?: Record<string, string> }>
@@ -41,6 +42,16 @@ export function parseX402Config(env?: FathomEnv): X402Config {
   }
   // Construct valid exact-scheme price string like $0.01
   const priceString = `$${priceVal}`
+
+  let batchPriceString: string | undefined = undefined;
+  if (env.X402_PRICE_BATCH_USDC) {
+    const batchPriceVal = env.X402_PRICE_BATCH_USDC.trim()
+    const parsedBatchPrice = parseFloat(batchPriceVal)
+    if (isNaN(parsedBatchPrice) || parsedBatchPrice <= 0) {
+      throw new Error(`Invalid X402_PRICE_BATCH_USDC: ${batchPriceVal}`)
+    }
+    batchPriceString = `$${batchPriceVal}`
+  }
 
   // 3. Recipient
   const payTo = env.FATHOM_X402_RECIPIENT?.trim()
@@ -101,6 +112,7 @@ export function parseX402Config(env?: FathomEnv): X402Config {
   return {
     network,
     price: priceString,
+    batchPrice: batchPriceString,
     payTo: payTo as `0x${string}`,
     facilitatorUrl,
     createAuthHeaders

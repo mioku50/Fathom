@@ -165,7 +165,7 @@ describe('Fathom API Integration Test', () => {
 
     const body = await res.json() as any
     // It should have processed 2 tokens
-    expect(Object.keys(body).length).toBe(2)
+    expect(body.count).toBe(2)
   })
 
   it('Should fail end-to-end request if x402 payment is missing', async () => {

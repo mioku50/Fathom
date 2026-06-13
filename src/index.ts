@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { PriceResponse } from './schema'
+import type { PriceResponse, BatchPriceResponse, BatchPriceResult } from './schema'
 import { KVCacheLayer, type FathomEnv, getCacheStats } from './cache'
 import { Address } from 'viem'
 import { x402Middleware } from './middleware/x402'
@@ -268,8 +268,9 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
     return c.json({ error: 'invalid_request', message: 'tokens parameter cannot be empty' }, 400)
   }
 
-  if (tokens.length > 10) {
-    return c.json({ error: 'invalid_request', message: 'Maximum 10 tokens allowed per request' }, 400)
+  const maxTokens = c.env?.MAX_BATCH_TOKENS ? parseInt(c.env.MAX_BATCH_TOKENS) : 50
+  if (tokens.length > maxTokens) {
+    return c.json({ error: 'invalid_request', message: `Maximum ${maxTokens} tokens allowed per request` }, 400)
   }
 
   const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
@@ -277,12 +278,16 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
     : 60
 
   const cacheLayer = new KVCacheLayer(c.env?.FATHOM_KV, defaultTTL)
-  const results: PriceResponse[] = []
+  const results: BatchPriceResult[] = []
+
+  let priced = 0;
+  let failed = 0;
 
   for (const token of tokens) {
-const cachedResponse = await cacheLayer.get(token, chain)
+    const cachedResponse = await cacheLayer.get(token, chain)
     if (cachedResponse) {
-      results.push(cachedResponse)
+      results.push({ ...cachedResponse, status: "ok" })
+      priced++;
       continue
     }
 
@@ -294,68 +299,91 @@ const cachedResponse = await cacheLayer.get(token, chain)
       return c.json({ error: 'server_error', message: 'PRICE_CHAIN_ID must be configured as 8453 for Base mainnet reads' }, 500)
     }
 
-    const adapters = [
-      new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
-      new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
-      new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
-    ];
-    const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
+    try {
+      const adapters = [
+        new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
+        new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
+        new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
+      ];
+      const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
-    const pools = await orchestrator.getAllPools(token);
-    const rawData = await orchestrator.getAllRawData(pools);
-
-    let bestPrice = 0;
-    let bestLiquidity = 0;
-    let mainPoolData = null;
-
-    for (const poolWithData of rawData) {
-      const isToken0 = token.toLowerCase() < '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
-      const result = PriceCalculator.calculatePoolPriceAndLiquidity(poolWithData.rawData, isToken0, 18, 18);
-
-      if (result.liquidityInQuote > bestLiquidity) {
-        bestLiquidity = result.liquidityInQuote;
-        bestPrice = result.priceInQuote;
-        mainPoolData = {
-          dex: poolWithData.pool.dex,
-          address: poolWithData.pool.address,
-          fee: poolWithData.pool.fee,
-          liquidity_usd: result.liquidityInQuote,
-          price_usd: result.priceInQuote
-        };
+      const pools = await orchestrator.getAllPools(token);
+      
+      if (pools.length === 0) {
+        results.push({ token, status: "not_found", error: { code: "not_found", message: "No pools found" } });
+        failed++;
+        continue;
       }
+
+      const rawData = await orchestrator.getAllRawData(pools);
+
+      let bestPrice = 0;
+      let bestLiquidity = 0;
+      let mainPoolData = null;
+
+      for (const poolWithData of rawData) {
+        const isToken0 = token.toLowerCase() < '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
+        const result = PriceCalculator.calculatePoolPriceAndLiquidity(poolWithData.rawData, isToken0, 18, 18);
+
+        if (result.liquidityInQuote > bestLiquidity) {
+          bestLiquidity = result.liquidityInQuote;
+          bestPrice = result.priceInQuote;
+          mainPoolData = {
+            dex: poolWithData.pool.dex,
+            address: poolWithData.pool.address,
+            fee: poolWithData.pool.fee,
+            liquidity_usd: result.liquidityInQuote,
+            price_usd: result.priceInQuote
+          };
+        }
+      }
+
+      if (!mainPoolData) {
+        results.push({ token, status: "no_liquidity", error: { code: "no_liquidity", message: "No usable liquidity found" } });
+        failed++;
+        continue;
+      }
+
+      const confResult = calculateConfidence({
+        liquidity_usd: bestLiquidity,
+        max_deviation_percent: 0.01,
+        spot_vs_twap_percent: 0.01,
+        sigma_over_mu_percent: 0.02,
+        pool_age_days: 10,
+        volume_24h_usd: bestLiquidity * 0.1,
+        num_pools: pools.length,
+        is_stale: false,
+        is_unsellable: false
+      });
+
+      const finalResponse: PriceResponse = formatPriceResponse(
+        token,
+        chain,
+        bestPrice,
+        bestLiquidity,
+        mainPoolData,
+        confResult
+      )
+
+      c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
+      results.push({ ...finalResponse, status: "ok" })
+      priced++;
+    } catch (error) {
+      console.error(`Error pricing token ${token}:`, error);
+      results.push({ token, status: "rpc_error", error: { code: "rpc_error", message: "RPC or provider failure" } });
+      failed++;
     }
-
-    if (!mainPoolData) {
-      // Return a basic error structure or skip
-      continue;
-    }
-
-    const confResult = calculateConfidence({
-      liquidity_usd: bestLiquidity,
-      max_deviation_percent: 0.01,
-      spot_vs_twap_percent: 0.01,
-      sigma_over_mu_percent: 0.02,
-      pool_age_days: 10,
-      volume_24h_usd: bestLiquidity * 0.1,
-      num_pools: pools.length,
-      is_stale: false,
-      is_unsellable: false
-    });
-
-    const finalResponse: PriceResponse = formatPriceResponse(
-      token,
-      chain,
-      bestPrice,
-      bestLiquidity,
-      mainPoolData,
-      confResult
-    )
-
-    c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
-    results.push(finalResponse)
   }
 
-  return c.json(results)
+  const batchResponse: BatchPriceResponse = {
+    chain,
+    count: tokens.length,
+    priced,
+    failed,
+    results
+  };
+
+  return c.json(batchResponse)
 })
 
 app.post('/v1/cache/invalidate', adminAuthMiddleware, async (c) => {
