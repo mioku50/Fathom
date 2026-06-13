@@ -530,6 +530,21 @@ const slot0 = await client.readContract({
 - Бесплатный лимит (первые N вызовов в день) как «пробник» для разработчиков.
 - Пост в ленте Base App с живым демо.
 
+### x402 Bazaar Discovery (Base Mainnet)
+Fathom is fully discoverable through CDP x402 Bazaar metadata (`@x402/extensions`). Automated agents can dynamically query endpoints and discover the required parameters and prices.
+
+- **Canonical test token:** AERO (`0x940181a94A35A4569E4529A3CDfB74e38FD98631`)
+- **Paid endpoints:** 
+  - `GET /v1/price`
+  - `GET /v1/prices`
+  - `GET /v1/metadata`
+  - `GET /v1/metadatas`
+- **Price per call:** 0.001 USDC (configurable via `X402_PRICE_USDC`)
+- **Base mainnet network ID:** `eip155:8453`
+- **Validation Commands:**
+  - Check x402 discovery metadata: `npx vitest run tests/middleware/x402.test.ts`
+  - Check CDP facilitator status: `npx tsx scripts/check_x402_cdp_facilitator_support.ts`
+
 ## Первые клиенты (кого таргетим)
 
 Ключ к выручке — повторяющиеся машинные вызовы. Самые горячие первые клиенты:

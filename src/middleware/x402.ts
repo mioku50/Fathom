@@ -5,6 +5,7 @@ import { HTTPFacilitatorClient } from '@x402/core/server'
 import { ExactEvmScheme } from '@x402/evm/exact/server'
 import type { RoutesConfig } from '@x402/core/server'
 import { parseX402Config } from '../utils/x402_config'
+import { declareDiscoveryExtension } from '@x402/extensions'
 
 export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
@@ -20,14 +21,60 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
     return c.json({ error: 'config_error', message: 'Internal server config error' }, 500)
   }
 
+  const baseAccepts = {
+      scheme: "exact",
+      network: x402Config.network as any,
+      price: x402Config.price,
+      payTo: x402Config.payTo
+  }
+
   const routes: RoutesConfig = {
+      "/v1/price": {
+          accepts: [baseAccepts],
+          description: "Returns price, liquidity, confidence score, main pool, and risk flags for a Base ERC-20 token using Base mainnet DEX liquidity.",
+          mimeType: "application/json",
+          tags: ["base", "price", "oracle", "dex", "liquidity", "long-tail", "aero", "usdc", "agent"],
+          extensions: {
+              ...declareDiscoveryExtension({
+                  input: { token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+              })
+          }
+      },
+      "/v1/prices": {
+          accepts: [baseAccepts],
+          description: "Batch endpoint for Base ERC-20 token prices, liquidity, confidence scores, and risk flags.",
+          mimeType: "application/json",
+          tags: ["base", "batch", "price", "oracle", "liquidity", "agents"],
+          extensions: {
+              ...declareDiscoveryExtension({
+                  input: { tokens: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+              })
+          }
+      },
+      "/v1/metadata": {
+          accepts: [baseAccepts],
+          description: "Returns ERC-20 metadata for a Base token, including address, symbol, name, and decimals.",
+          mimeType: "application/json",
+          tags: ["base", "erc20", "metadata", "token"],
+          extensions: {
+              ...declareDiscoveryExtension({
+                  input: { token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+              })
+          }
+      },
+      "/v1/metadatas": {
+          accepts: [baseAccepts],
+          description: "Batch endpoint for Base ERC-20 token metadata.",
+          mimeType: "application/json",
+          tags: ["base", "erc20", "metadata", "batch"],
+          extensions: {
+              ...declareDiscoveryExtension({
+                  input: { tokens: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+              })
+          }
+      },
       "*": {
-          accepts: [{
-              scheme: "exact",
-              network: x402Config.network as any,
-              price: x402Config.price,
-              payTo: x402Config.payTo
-          }]
+          accepts: [baseAccepts]
       }
   }
 

@@ -43,4 +43,49 @@ describe('x402Middleware', () => {
       return Promise.resolve(new Response(null, { status: 404 }))
     })
   })
+
+  it('unpaid /v1/price?token=AERO still returns 402 and includes discovery metadata', async () => {
+    const req = new Request('http://localhost/v1/price?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631')
+    const res = await app.fetch(req, testEnv)
+    expect(res.status).toBe(402)
+
+    const reqHeader = res.headers.get('Payment-Required') || res.headers.get('payment-required')
+    expect(reqHeader).toBeTruthy()
+    const payload = JSON.parse(Buffer.from(reqHeader!, 'base64').toString('utf8'))
+    
+    expect(payload).toHaveProperty('accepts')
+    expect(payload).toHaveProperty('resource')
+    expect(payload.resource).toHaveProperty('description')
+    expect(payload.resource.description).toContain('Base ERC-20 token using Base mainnet DEX liquidity')
+    
+    expect(payload).toHaveProperty('extensions')
+    expect(payload.extensions).toHaveProperty('bazaar')
+    expect(payload.extensions.bazaar).toHaveProperty('info')
+    expect(payload.extensions.bazaar.info.input.queryParams.token).toBe('0x940181a94A35A4569E4529A3CDfB74e38FD98631')
+  })
+
+  it('unpaid /v1/metadata?token=AERO still returns 402 and includes discovery metadata', async () => {
+    const req = new Request('http://localhost/v1/metadata?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631')
+    const res = await app.fetch(req, testEnv)
+    expect(res.status).toBe(402)
+    
+    const reqHeader = res.headers.get('Payment-Required') || res.headers.get('payment-required')
+    const payload = JSON.parse(Buffer.from(reqHeader!, 'base64').toString('utf8'))
+    
+    expect(payload.resource.description).toContain('ERC-20 metadata for a Base token')
+    expect(payload.extensions.bazaar.info.input.queryParams.token).toBe('0x940181a94A35A4569E4529A3CDfB74e38FD98631')
+  })
+
+  it('admin/cache endpoints are not included in discovery metadata', async () => {
+    const req = new Request('http://localhost/v1/cache/clear')
+    const res = await app.fetch(req, testEnv)
+    expect(res.status).toBe(402)
+    
+    const reqHeader = res.headers.get('Payment-Required') || res.headers.get('payment-required')
+    const payload = JSON.parse(Buffer.from(reqHeader!, 'base64').toString('utf8'))
+    
+    // Fallback "*" route does not have a description, so it defaults to ""
+    expect(payload.resource.description).toBe('')
+    expect(payload).not.toHaveProperty('extensions')
+  })
 })
