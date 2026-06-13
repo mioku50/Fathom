@@ -83,4 +83,38 @@ export class PriceRpcClient {
       throw sanitizeRpcError(e);
     }
   }
+
+  async getTokenDecimals(tokenAddress: string, pinBlock?: bigint): Promise<number> {
+    const canonical: Record<string, number> = {
+      '0x4200000000000000000000000000000000000006': 18, // WETH
+      '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913': 6,  // USDC
+      '0x940181a94A35A4569E4529A3CDfB74e38FD98631': 18  // AERO
+    };
+
+    const lowerToken = tokenAddress.toLowerCase();
+    for (const [addr, dec] of Object.entries(canonical)) {
+      if (addr.toLowerCase() === lowerToken) {
+        return dec;
+      }
+    }
+
+    try {
+      const dec = await this.readContract({
+        address: tokenAddress as any,
+        abi: [{
+          inputs: [],
+          name: "decimals",
+          outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+          stateMutability: "view",
+          type: "function"
+        }],
+        functionName: 'decimals',
+        blockNumber: pinBlock
+      });
+      return Number(dec);
+    } catch (e) {
+      // Default to 18 if call fails
+      return 18;
+    }
+  }
 }

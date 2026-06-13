@@ -67,35 +67,26 @@ describe('UniswapV3Adapter', () => {
 
   describe('getRawData', () => {
     it('should return raw pool data', async () => {
-      // Mock slot0 and liquidity
-      mockReadContract.mockImplementation(async ({ functionName }) => {
-        if (functionName === 'slot0') {
-          return [
-            123456789n, // sqrtPriceX96
-            100,        // tick
-            0,
-            0,
-            0,
-            0,
-            true
-          ];
-        }
-        if (functionName === 'liquidity') {
-          return 987654321n;
-        }
-        throw new Error('Unknown function');
+      mockReadContract.mockImplementation(async (args: any) => {
+        if (args.functionName === 'slot0') return [79228162514264337593543950336n, -276324, 0, 0, 0, 0, false];
+        if (args.functionName === 'liquidity') return 1000000000000000000n;
+        if (args.functionName === 'token0') return '0xToken0';
+        if (args.functionName === 'token1') return '0xToken1';
+        return null;
       });
 
       const data = await adapter.getRawData('0xabc123');
 
-      expect(data).toEqual({
-        sqrtPriceX96: 123456789n,
-        tick: 100,
-        liquidity: 987654321n,
+      expect(data).toMatchObject({
+        sqrtPriceX96: 79228162514264337593543950336n,
+        tick: -276324,
+        liquidity: 1000000000000000000n,
+        token0: '0xToken0',
+        token1: '0xToken1',
         updatedAt: expect.any(Number)
       });
 
-      expect(mockReadContract).toHaveBeenCalledTimes(2);
+      expect(mockReadContract).toHaveBeenCalledTimes(4);
       expect(mockReadContract.mock.calls[0][0].address).toBe('0xabc123');
       expect(mockReadContract.mock.calls[1][0].address).toBe('0xabc123');
     });

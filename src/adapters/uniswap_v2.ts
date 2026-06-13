@@ -8,11 +8,11 @@ export class UniswapV2Adapter implements DEXAdapter {
   // Common quote tokens for Base (WETH, USDC)
   private quoteTokens: Address[] = [
     '0x4200000000000000000000000000000000000006', // WETH
-    '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'  // USDC
+    '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'  // USDC
   ];
 
   // Uniswap V2 factory on Base
-  private factoryAddress: Address = '0x8909Dc15e40173Ff4699343b6eB8132c65e18eC4';
+  private factoryAddress: Address = '0x8909dc15e40173ff4699343b6eb8132c65e18ec4';
 
   private pinBlock?: bigint;
 
@@ -84,20 +84,50 @@ export class UniswapV2Adapter implements DEXAdapter {
         ],
         stateMutability: "view",
         type: "function"
+      },
+      {
+        inputs: [],
+        name: "token0",
+        outputs: [{ internalType: "address", name: "", type: "address" }],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [],
+        name: "token1",
+        outputs: [{ internalType: "address", name: "", type: "address" }],
+        stateMutability: "view",
+        type: "function"
       }
     ] as const;
 
     try {
-      const reserves = await this.client.readContract({
-        address: poolAddress as Address,
-        abi: poolAbi,
-        functionName: 'getReserves',
-        blockNumber: this.pinBlock
-      });
+      const [reserves, token0, token1] = await Promise.all([
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'getReserves',
+          blockNumber: this.pinBlock
+        }),
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'token0',
+          blockNumber: this.pinBlock
+        }),
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'token1',
+          blockNumber: this.pinBlock
+        })
+      ]);
 
       return {
         reserve0: BigInt(reserves[0]),
         reserve1: BigInt(reserves[1]),
+        token0: token0 as string,
+        token1: token1 as string,
         updatedAt: Number(reserves[2])
       };
     } catch (error: any) {

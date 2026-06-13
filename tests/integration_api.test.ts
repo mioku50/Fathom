@@ -19,14 +19,20 @@ import { resetCacheStats } from '../src/cache'
 vi.mock('../src/orchestrator', () => {
   return {
     DEXOrchestrator: vi.fn().mockImplementation(() => {
+      let lastToken = '';
       return {
-        getAllPools: vi.fn().mockResolvedValue([{ address: '0xabc', dex: 'aerodrome', fee: 0.003 }]),
-        getAllRawData: vi.fn().mockResolvedValue([{
-          pool: { address: '0xabc', dex: 'aerodrome', fee: 0.003 },
+        getAllPools: vi.fn().mockImplementation(async (token: string) => {
+          lastToken = token.toLowerCase();
+          return [{ address: '0xabc', dex: 'aerodrome', fee: 0.003 }];
+        }),
+        getAllRawData: vi.fn().mockImplementation(async (pools: any[]) => [{
+          pool: pools[0] || { address: '0xabc', dex: 'aerodrome', fee: 0.003 },
           rawData: {
             reserve0: 1000000000000000000n,
             reserve1: 1500000000000000000n, // price 1.5
-            updatedAt: 12345
+            updatedAt: 12345,
+            token0: lastToken || '0x0000000000000000000000000000000000000000',
+            token1: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' // USDC
           }
         }])
       };

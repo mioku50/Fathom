@@ -8,11 +8,11 @@ export class AerodromeAdapter implements DEXAdapter {
   // Common quote tokens for Base (WETH, USDC)
   private quoteTokens: Address[] = [
     '0x4200000000000000000000000000000000000006', // WETH
-    '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'  // USDC
+    '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'  // USDC
   ];
 
   // Aerodrome v2 factory on Base
-  private factoryAddress: Address = '0x420DD381b31aEf6683db6b902084cB0FFeCE40Da';
+  private factoryAddress: Address = '0x420dd381b31aef6683db6b902084cb0ffece40da';
 
   private pinBlock?: bigint;
 
@@ -64,6 +64,7 @@ export class AerodromeAdapter implements DEXAdapter {
           }
         } catch (error: any) {
           if (isRpcFailure(error)) {
+            console.error('RPC FAILURE DETAILS:', error);
             throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken}`);
           }
           // Ignore errors for non-existent pools
@@ -88,20 +89,50 @@ export class AerodromeAdapter implements DEXAdapter {
         ],
         stateMutability: "view",
         type: "function"
+      },
+      {
+        inputs: [],
+        name: "token0",
+        outputs: [{ internalType: "address", name: "", type: "address" }],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [],
+        name: "token1",
+        outputs: [{ internalType: "address", name: "", type: "address" }],
+        stateMutability: "view",
+        type: "function"
       }
     ] as const;
 
     try {
-      const reserves = await this.client.readContract({
-        address: poolAddress as Address,
-        abi: poolAbi,
-        functionName: 'getReserves',
-        blockNumber: this.pinBlock
-      });
+      const [reserves, token0, token1] = await Promise.all([
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'getReserves',
+          blockNumber: this.pinBlock
+        }),
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'token0',
+          blockNumber: this.pinBlock
+        }),
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'token1',
+          blockNumber: this.pinBlock
+        })
+      ]);
 
       return {
         reserve0: reserves[0],
         reserve1: reserves[1],
+        token0: token0 as string,
+        token1: token1 as string,
         updatedAt: Number(reserves[2])
       };
     } catch (error: any) {

@@ -8,11 +8,11 @@ export class UniswapV3Adapter implements DEXAdapter {
   // Common quote tokens for Base (WETH, USDC)
   private quoteTokens: Address[] = [
     '0x4200000000000000000000000000000000000006', // WETH
-    '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'  // USDC
+    '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'  // USDC
   ];
 
   // Uniswap V3 factory on Base
-  private factoryAddress: Address = '0x33128a8fC17869897dcE68Ed026d694621f6FDfD';
+  private factoryAddress: Address = '0x33128a8fc17869897dce68ed026d694621f6fdfd';
 
   // Standard Uniswap V3 fee tiers
   private feeTiers = [100, 500, 3000, 10000];
@@ -66,6 +66,7 @@ export class UniswapV3Adapter implements DEXAdapter {
           }
         } catch (error: any) {
           if (isRpcFailure(error)) {
+            console.error('RPC FAILURE DETAILS:', error);
             throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}`);
           }
           // Ignore errors for non-existent pools
@@ -101,11 +102,25 @@ export class UniswapV3Adapter implements DEXAdapter {
         outputs: [{ internalType: "uint128", name: "", type: "uint128" }],
         stateMutability: "view",
         type: "function"
+      },
+      {
+        inputs: [],
+        name: "token0",
+        outputs: [{ internalType: "address", name: "", type: "address" }],
+        stateMutability: "view",
+        type: "function"
+      },
+      {
+        inputs: [],
+        name: "token1",
+        outputs: [{ internalType: "address", name: "", type: "address" }],
+        stateMutability: "view",
+        type: "function"
       }
     ] as const;
 
     try {
-      const [slot0, liquidity] = await Promise.all([
+      const [slot0, liquidity, token0, token1] = await Promise.all([
         this.client.readContract({
           address: poolAddress as Address,
           abi: poolAbi,
@@ -117,6 +132,18 @@ export class UniswapV3Adapter implements DEXAdapter {
           abi: poolAbi,
           functionName: 'liquidity',
           blockNumber: this.pinBlock
+        }),
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'token0',
+          blockNumber: this.pinBlock
+        }),
+        this.client.readContract({
+          address: poolAddress as Address,
+          abi: poolAbi,
+          functionName: 'token1',
+          blockNumber: this.pinBlock
         })
       ]);
 
@@ -124,6 +151,8 @@ export class UniswapV3Adapter implements DEXAdapter {
         sqrtPriceX96: slot0[0],
         tick: slot0[1],
         liquidity: liquidity,
+        token0: token0 as string,
+        token1: token1 as string,
         updatedAt: Math.floor(Date.now() / 1000) // slot0 doesn't have a timestamp, use current time
       };
     } catch (error: any) {

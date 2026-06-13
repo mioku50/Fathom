@@ -22,14 +22,24 @@ vi.mock('../../src/orchestrator', () => {
   };
 });
 
-vi.mock('../../src/calculator', () => ({
-  PriceCalculator: {
-    calculatePoolPriceAndLiquidity: vi.fn().mockReturnValue({
-      priceInQuote: 1.5,
-      liquidityInQuote: 1000000
-    })
-  }
-}));
+vi.mock('../../src/pricing_engine', () => {
+  return {
+    PricingEngine: class {
+      async calculatePrice(token: string) {
+        return {
+          token: token,
+          chain: 'base',
+          price_usd: 1.5,
+          liquidity_usd: 1000000,
+          confidence: 'high',
+          flags: [],
+          main_pool: { dex: 'uniswap_v3', address: '0x123' },
+          updated_at: 1670000000
+        };
+      }
+    }
+  };
+});
 
 vi.mock('../../src/confidence', () => ({
   calculateConfidence: vi.fn().mockReturnValue({
@@ -176,13 +186,8 @@ describe('Prices API Endpoint (/v1/prices)', () => {
     });
 
     it('Should not fail if main pool data is not found for a token', async () => {
-        // Change calculator mock to return no liquidity
-        // Instead of requireMock, override the mock just for this test
-        const { PriceCalculator } = await import('../../src/calculator');
-        (PriceCalculator.calculatePoolPriceAndLiquidity as any).mockReturnValueOnce({
-          priceInQuote: 0,
-          liquidityInQuote: 0
-        });
+        const { PricingEngine } = await import('../../src/pricing_engine');
+        vi.spyOn(PricingEngine.prototype, 'calculatePrice').mockResolvedValueOnce(null);
 
         const validToken = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
         const req = new Request(`http://localhost/v1/prices?tokens=${validToken}`, {

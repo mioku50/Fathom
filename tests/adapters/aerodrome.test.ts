@@ -67,23 +67,28 @@ describe('AerodromeAdapter', () => {
 
   describe('getRawData', () => {
     it('should return raw pool data', async () => {
-      mockReadContract.mockResolvedValue([
-        1000000n, // reserve0
-        2000000n, // reserve1
-        1670000000n // timestamp
-      ]);
+      mockReadContract.mockImplementation(async (args: any) => {
+        if (args.functionName === 'getReserves') return [1000000n, 2000000n, 1670000000];
+        if (args.functionName === 'token0') return '0xToken0';
+        if (args.functionName === 'token1') return '0xToken1';
+        return '0xPoolAddress';
+      });
 
       const data = await adapter.getRawData('0xabc123');
 
       expect(data).toEqual({
         reserve0: 1000000n,
         reserve1: 2000000n,
-        updatedAt: 1670000000
+        token0: '0xToken0',
+        token1: '0xToken1',
+        updatedAt: 1670000000,
       });
 
-      expect(mockReadContract).toHaveBeenCalledTimes(1);
-      expect(mockReadContract.mock.calls[0][0].functionName).toBe('getReserves');
-      expect(mockReadContract.mock.calls[0][0].address).toBe('0xabc123');
+      expect(mockReadContract).toHaveBeenCalledTimes(3);
+      const callNames = mockReadContract.mock.calls.map(c => c[0].functionName);
+      expect(callNames).toContain('getReserves');
+      expect(callNames).toContain('token0');
+      expect(callNames).toContain('token1');
     });
 
     it('should throw an error if fetching fails', async () => {

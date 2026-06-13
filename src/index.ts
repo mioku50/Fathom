@@ -7,11 +7,15 @@ import { validateAddressesMiddleware } from './middleware/validation'
 import { adminAuthMiddleware } from './middleware/adminAuth'
 import { rateLimitMiddleware } from './middleware/rate_limit'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
-
 import { DEXOrchestrator, type CacheLayer } from './orchestrator'
-import { validateEnv } from './utils/env'
+import { AerodromeAdapter } from './adapters/aerodrome'
+import { UniswapV2Adapter } from './adapters/uniswap_v2'
+import { UniswapV3Adapter } from './adapters/uniswap_v3'
+import { PricingEngine } from './pricing_engine'
+import { PriceRpcClient } from './utils/price_rpc'
+import { calculateConfidence } from './confidence'
 import { parseTokensParam, formatPriceResponse } from './utils'
-
+import { validateEnv } from './utils/env'
 
 class OrchestratorCacheAdapter implements CacheLayer {
   constructor(private kv?: KVNamespace, private defaultTTL: number = 60) {}
@@ -31,12 +35,6 @@ class OrchestratorCacheAdapter implements CacheLayer {
     } catch {}
   }
 }
-
-import { AerodromeAdapter } from './adapters/aerodrome'
-import { UniswapV2Adapter } from './adapters/uniswap_v2'
-import { UniswapV3Adapter } from './adapters/uniswap_v3'
-import { PriceCalculator } from './calculator'
-import { calculateConfidence } from './confidence'
 
 type ExtendedEnv = FathomEnv & {
   BASE_RPC_URL?: string; // Kept for metadata compatibility if needed
@@ -196,60 +194,14 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
     new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
   ];
   const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
+  const rpcClient = new PriceRpcClient(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS);
+  const engine = new PricingEngine(orchestrator, rpcClient, chain);
 
-  const pools = await orchestrator.getAllPools(token);
-  const rawData = await orchestrator.getAllRawData(pools);
+  const finalResponse = await engine.calculatePrice(token);
 
-  let bestPrice = 0;
-  let bestLiquidity = 0;
-  let mainPoolData = null;
-
-  for (const poolWithData of rawData) {
-    // Determine token ordering for price calc.
-    // Base quote tokens typically: WETH (0x420...) and USDC (0x833...)
-    // Assuming simple heuristic or standard lookup here, but simplified for now
-    const isToken0 = token.toLowerCase() < '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
-
-    // In a real scenario we need token decimals vs quote decimals. We assume 18 for both for simplicity unless known
-    const result = PriceCalculator.calculatePoolPriceAndLiquidity(poolWithData.rawData, isToken0, 18, 18);
-
-    if (result.liquidityInQuote > bestLiquidity) {
-      bestLiquidity = result.liquidityInQuote;
-      bestPrice = result.priceInQuote;
-      mainPoolData = {
-        dex: poolWithData.pool.dex,
-        address: poolWithData.pool.address,
-        fee: poolWithData.pool.fee,
-        liquidity_usd: result.liquidityInQuote,
-        price_usd: result.priceInQuote
-      };
-    }
-  }
-
-  if (!mainPoolData) {
+  if (!finalResponse) {
      return c.json({ error: 'not_found', message: 'No pools found or un-priceable' }, 404);
   }
-
-  const confResult = calculateConfidence({
-    liquidity_usd: bestLiquidity,
-    max_deviation_percent: 0.01,
-    spot_vs_twap_percent: 0.01,
-    sigma_over_mu_percent: 0.02,
-    pool_age_days: 10,
-    volume_24h_usd: bestLiquidity * 0.1, // mock
-    num_pools: pools.length,
-    is_stale: false,
-    is_unsellable: false
-  });
-
-  const finalResponse: PriceResponse = formatPriceResponse(
-    token,
-    chain,
-    bestPrice,
-    bestLiquidity,
-    mainPoolData,
-    confResult
-  )
 
   c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
   return c.json(finalResponse)
@@ -306,64 +258,16 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
         new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
       ];
       const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
+      const rpcClient = new PriceRpcClient(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS);
+      const engine = new PricingEngine(orchestrator, rpcClient, chain);
 
-      const pools = await orchestrator.getAllPools(token);
-      
-      if (pools.length === 0) {
-        results.push({ token, status: "not_found", error: { code: "not_found", message: "No pools found" } });
+      const finalResponse = await engine.calculatePrice(token);
+
+      if (!finalResponse) {
+        results.push({ token, status: "no_liquidity", error: { code: "no_liquidity", message: "No usable liquidity found or unpriceable" } });
         failed++;
         continue;
       }
-
-      const rawData = await orchestrator.getAllRawData(pools);
-
-      let bestPrice = 0;
-      let bestLiquidity = 0;
-      let mainPoolData = null;
-
-      for (const poolWithData of rawData) {
-        const isToken0 = token.toLowerCase() < '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
-        const result = PriceCalculator.calculatePoolPriceAndLiquidity(poolWithData.rawData, isToken0, 18, 18);
-
-        if (result.liquidityInQuote > bestLiquidity) {
-          bestLiquidity = result.liquidityInQuote;
-          bestPrice = result.priceInQuote;
-          mainPoolData = {
-            dex: poolWithData.pool.dex,
-            address: poolWithData.pool.address,
-            fee: poolWithData.pool.fee,
-            liquidity_usd: result.liquidityInQuote,
-            price_usd: result.priceInQuote
-          };
-        }
-      }
-
-      if (!mainPoolData) {
-        results.push({ token, status: "no_liquidity", error: { code: "no_liquidity", message: "No usable liquidity found" } });
-        failed++;
-        continue;
-      }
-
-      const confResult = calculateConfidence({
-        liquidity_usd: bestLiquidity,
-        max_deviation_percent: 0.01,
-        spot_vs_twap_percent: 0.01,
-        sigma_over_mu_percent: 0.02,
-        pool_age_days: 10,
-        volume_24h_usd: bestLiquidity * 0.1,
-        num_pools: pools.length,
-        is_stale: false,
-        is_unsellable: false
-      });
-
-      const finalResponse: PriceResponse = formatPriceResponse(
-        token,
-        chain,
-        bestPrice,
-        bestLiquidity,
-        mainPoolData,
-        confResult
-      )
 
       c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
       results.push({ ...finalResponse, status: "ok" })

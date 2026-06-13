@@ -81,17 +81,20 @@ describe('UniswapV2Adapter', () => {
   describe('getRawData', () => {
     it('should return reserves correctly', async () => {
       // Mock getReserves
-      mockReadContract.mockResolvedValue([
-        1000000000000000000n, // reserve0
-        2000000000000000000n, // reserve1
-        1620000000            // blockTimestampLast
-      ]);
+      mockReadContract.mockImplementation(async (args: any) => {
+        if (args.functionName === 'getReserves') return [1000000000000000000n, 2000000000000000000n, 1620000000];
+        if (args.functionName === 'token0') return '0xToken0';
+        if (args.functionName === 'token1') return '0xToken1';
+        return '0xPoolAddress';
+      });
 
       const data = await adapter.getRawData('0xPoolAddress');
 
       expect(data).toEqual({
         reserve0: 1000000000000000000n,
         reserve1: 2000000000000000000n,
+        token0: '0xToken0',
+        token1: '0xToken1',
         updatedAt: 1620000000,
       });
     });

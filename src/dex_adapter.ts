@@ -10,6 +10,8 @@ export interface RawPoolData {
   liquidity?: bigint;
   sqrtPriceX96?: bigint;
   tick?: number;
+  token0?: string;
+  token1?: string;
   updatedAt: number;
 }
 
