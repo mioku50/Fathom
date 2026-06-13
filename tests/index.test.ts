@@ -456,12 +456,12 @@ describe('Fathom API', () => {
     expect(mockPut).not.toHaveBeenCalled()
   })
 
-  it('Should return 402 for /v1/cache/invalidate without payment', async () => {
-    const req = new Request('http://localhost/v1/cache/invalidate?token=0x0000000000000000000000000000000000000000', {
-      method: 'POST'
+  it('Should return 401 for /v1/cache/invalidate without admin auth', async () => {
+    const req = new Request('http://localhost/v1/cache/invalidate?token=0xabc', {
+      method: 'POST',
     })
     const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
-    expect(res.status).toBe(402)
+    expect(res.status).toBe(401)
   })
 
   it('Should return 400 for /v1/cache/invalidate if token is missing', async () => {

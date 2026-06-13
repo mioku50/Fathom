@@ -17,10 +17,15 @@ export class UniswapV3Adapter implements DEXAdapter {
   // Standard Uniswap V3 fee tiers
   private feeTiers = [100, 500, 3000, 10000];
 
-  constructor(rpcUrl?: string) {
+  private pinBlock?: bigint;
+
+  constructor(rpcUrl?: string, pinBlock?: string) {
+    if (pinBlock && pinBlock !== 'latest') {
+      this.pinBlock = BigInt(pinBlock);
+    }
     this.client = createPublicClient({
       chain: base,
-      transport: http(rpcUrl)
+      transport: http(rpcUrl, { retryCount: 3, retryDelay: 1000 })
     });
   }
 
@@ -51,7 +56,8 @@ export class UniswapV3Adapter implements DEXAdapter {
             address: this.factoryAddress,
             abi: factoryAbi,
             functionName: 'getPool',
-            args: [tokenAddress as Address, quoteToken as Address, fee]
+            args: [tokenAddress as Address, quoteToken as Address, fee],
+            blockNumber: this.pinBlock
           });
 
           if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
@@ -106,12 +112,14 @@ export class UniswapV3Adapter implements DEXAdapter {
         this.client.readContract({
           address: poolAddress as Address,
           abi: poolAbi,
-          functionName: 'slot0'
+          functionName: 'slot0',
+          blockNumber: this.pinBlock
         }),
         this.client.readContract({
           address: poolAddress as Address,
           abi: poolAbi,
-          functionName: 'liquidity'
+          functionName: 'liquidity',
+          blockNumber: this.pinBlock
         })
       ]);
 

@@ -14,10 +14,15 @@ export class UniswapV2Adapter implements DEXAdapter {
   // Uniswap V2 factory on Base
   private factoryAddress: Address = '0x8909Dc15e40173Ff4699343b6eB8132c65e18eC4';
 
-  constructor(rpcUrl?: string) {
+  private pinBlock?: bigint;
+
+  constructor(rpcUrl?: string, pinBlock?: string) {
+    if (pinBlock && pinBlock !== 'latest') {
+      this.pinBlock = BigInt(pinBlock);
+    }
     this.client = createPublicClient({
       chain: base,
-      transport: http(rpcUrl)
+      transport: http(rpcUrl, { retryCount: 3, retryDelay: 1000 })
     });
   }
 
@@ -46,7 +51,8 @@ export class UniswapV2Adapter implements DEXAdapter {
           address: this.factoryAddress,
           abi: factoryAbi,
           functionName: 'getPair',
-          args: [tokenAddress as Address, quoteToken as Address]
+          args: [tokenAddress as Address, quoteToken as Address],
+          blockNumber: this.pinBlock
         });
 
         if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
@@ -88,7 +94,8 @@ export class UniswapV2Adapter implements DEXAdapter {
       const reserves = await this.client.readContract({
         address: poolAddress as Address,
         abi: poolAbi,
-        functionName: 'getReserves'
+        functionName: 'getReserves',
+        blockNumber: this.pinBlock
       });
 
       return {

@@ -500,14 +500,14 @@ describe('Fathom API Integration Test', () => {
     expect(mockDelete).toHaveBeenCalledWith(`orchestrator:raw:${pool.toLowerCase()}`)
   })
 
-  it('Should fail /v1/cache/invalidate if missing x402 payment', async () => {
+  it('Should fail /v1/cache/invalidate if missing admin auth', async () => {
     const env: FathomEnv = {}
-    const req = new Request('http://localhost/v1/cache/invalidate?token=0x1234', {
+    const req = new Request('http://localhost/v1/cache/invalidate?token=0xabc', {
       method: 'POST'
     })
 
-    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
-    expect(res.status).toBe(402)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: vi.fn() } as unknown as ExecutionContext)
+    expect(res.status).toBe(401)
   })
 
   it('Should successfully clear pool cache through /v1/cache/clear/pool', async () => {
@@ -587,15 +587,14 @@ describe('Fathom API Integration Test', () => {
     consoleSpy.mockRestore()
   })
 
-  it('Should fail /v1/cache/clear/pool if missing x402 payment', async () => {
+  it('Should fail /v1/cache/clear/pool if missing admin auth', async () => {
     const env: FathomEnv = {}
-    const pool = '0x0987654321098765432109876543210987654321'
-    const req = new Request(`http://localhost/v1/cache/clear/pool?pool=${pool}`, {
+    const req = new Request('http://localhost/v1/cache/clear/pool?pool=0xabc', {
       method: 'POST'
     })
 
-    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
-    expect(res.status).toBe(402)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: vi.fn() } as unknown as ExecutionContext)
+    expect(res.status).toBe(401)
   })
 
   it('Should fail /v1/cache/invalidate if missing token or pool', async () => {
@@ -710,14 +709,14 @@ describe('Fathom API Integration Test', () => {
   })
 
 
-  it('Should fail /v1/cache/clear if missing x402 payment', async () => {
+  it('Should fail /v1/cache/clear if missing admin auth', async () => {
     const env: FathomEnv = {}
     const req = new Request('http://localhost/v1/cache/clear', {
       method: 'POST'
     })
 
-    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
-    expect(res.status).toBe(402)
+    const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: vi.fn() } as unknown as ExecutionContext)
+    expect(res.status).toBe(401)
   })
 
   it('Should return total_keys as 0 if KV list is empty on /v1/cache/metrics', async () => {

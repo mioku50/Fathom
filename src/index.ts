@@ -4,6 +4,7 @@ import { KVCacheLayer, type FathomEnv, getCacheStats } from './cache'
 import { Address } from 'viem'
 import { x402Middleware } from './middleware/x402'
 import { validateAddressesMiddleware } from './middleware/validation'
+import { adminAuthMiddleware } from './middleware/adminAuth'
 import { rateLimitMiddleware } from './middleware/rate_limit'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
 
@@ -38,7 +39,10 @@ import { PriceCalculator } from './calculator'
 import { calculateConfidence } from './confidence'
 
 type ExtendedEnv = FathomEnv & {
-  BASE_RPC_URL?: string;
+  BASE_RPC_URL?: string; // Kept for metadata compatibility if needed
+  PRICE_RPC_URL?: string;
+  PRICE_CHAIN_ID?: string;
+  PIN_BLOCK?: string;
   X402_NETWORK?: string;
 };
 
@@ -123,11 +127,11 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
     return c.json(cachedResponse)
   }
 
-  const adapters = [
-    new AerodromeAdapter(c.env?.BASE_RPC_URL),
-    new UniswapV2Adapter(c.env?.BASE_RPC_URL),
-    new UniswapV3Adapter(c.env?.BASE_RPC_URL)
-  ];
+    const adapters = [
+      new AerodromeAdapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
+      new UniswapV2Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
+      new UniswapV3Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK)
+    ];
   const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
   const pools = await orchestrator.getAllPools(token);
@@ -220,9 +224,9 @@ const cachedResponse = await cacheLayer.get(token, chain)
     }
 
     const adapters = [
-      new AerodromeAdapter(c.env?.BASE_RPC_URL),
-      new UniswapV2Adapter(c.env?.BASE_RPC_URL),
-      new UniswapV3Adapter(c.env?.BASE_RPC_URL)
+      new AerodromeAdapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
+      new UniswapV2Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK),
+      new UniswapV3Adapter(c.env?.PRICE_RPC_URL || c.env?.BASE_RPC_URL, c.env?.PIN_BLOCK)
     ];
     const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
 
@@ -283,7 +287,7 @@ const cachedResponse = await cacheLayer.get(token, chain)
   return c.json(results)
 })
 
-app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
+app.post('/v1/cache/invalidate', adminAuthMiddleware, async (c) => {
   const token = c.req.query('token')
   const pool = c.req.query('pool')
   const chain = c.req.query('chain') || 'base'
@@ -317,7 +321,7 @@ app.post('/v1/cache/invalidate', x402Middleware, async (c) => {
   return c.json({ status: 'ok', message: 'Cache invalidated successfully' })
 })
 
-app.post('/v1/cache/clear/pool', x402Middleware, async (c) => {
+app.post('/v1/cache/clear/pool', adminAuthMiddleware, async (c) => {
   const pool = c.req.query('pool')
 
   if (!pool) {
@@ -342,7 +346,7 @@ app.post('/v1/cache/clear/pool', x402Middleware, async (c) => {
   }
 })
 
-app.post('/v1/cache/clear', x402Middleware, async (c) => {
+app.post('/v1/cache/clear', adminAuthMiddleware, async (c) => {
   if (!c.env?.FATHOM_KV) {
     return c.json({ error: 'internal_error', message: 'KV not configured' }, 500)
   }

@@ -14,10 +14,15 @@ export class AerodromeAdapter implements DEXAdapter {
   // Aerodrome v2 factory on Base
   private factoryAddress: Address = '0x420DD381b31aEf6683db6b902084cB0FFeCE40Da';
 
-  constructor(rpcUrl?: string) {
+  private pinBlock?: bigint;
+
+  constructor(rpcUrl?: string, pinBlock?: string) {
+    if (pinBlock && pinBlock !== 'latest') {
+      this.pinBlock = BigInt(pinBlock);
+    }
     this.client = createPublicClient({
       chain: base,
-      transport: http(rpcUrl)
+      transport: http(rpcUrl, { retryCount: 3, retryDelay: 1000 })
     });
   }
 
@@ -49,7 +54,8 @@ export class AerodromeAdapter implements DEXAdapter {
             address: this.factoryAddress,
             abi: factoryAbi,
             functionName: 'getPool',
-            args: [tokenAddress as Address, quoteToken as Address, stable]
+            args: [tokenAddress as Address, quoteToken as Address, stable],
+            blockNumber: this.pinBlock
           });
 
           if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
@@ -92,7 +98,8 @@ export class AerodromeAdapter implements DEXAdapter {
       const reserves = await this.client.readContract({
         address: poolAddress as Address,
         abi: poolAbi,
-        functionName: 'getReserves'
+        functionName: 'getReserves',
+        blockNumber: this.pinBlock
       });
 
       return {

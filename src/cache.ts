@@ -6,6 +6,9 @@ export interface FathomEnv {
   FATHOM_X402_FACILITATOR_URL?: string
   FATHOM_X402_RECIPIENT?: string
   ADMIN_AUTH_TOKEN?: string
+  PRICE_RPC_URL?: string
+  PRICE_CHAIN_ID?: string
+  PIN_BLOCK?: string
 }
 
 let hits = 0
