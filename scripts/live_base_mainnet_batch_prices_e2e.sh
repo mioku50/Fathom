@@ -27,16 +27,32 @@ fi
 echo "✅ Unpaid request returned 402 as expected."
 
 # If we don't have CDP keys, we can't test the paid flow locally
-if [ -z "$CDP_API_KEY_ID" ] || [ -z "$CDP_API_KEY_SECRET" ]; then
-  echo "⚠️ Skipping paid flow test: CDP_API_KEY_ID or CDP_API_KEY_SECRET not set."
-  echo "You must provide valid CDP keys to generate X-PAYMENT headers for testing."
+if [ -z "$FATHOM_TEST_WALLET_PRIVATE_KEY" ]; then
+  echo "⚠️ Skipping paid flow test: FATHOM_TEST_WALLET_PRIVATE_KEY not set."
   exit 0
 fi
 
-# To test paid flow we'd need to generate an X-PAYMENT header using the CDP SDK.
-# Because this requires signing and wallet interaction, the standard test stops here
-# or uses a node script to perform the actual CDP flow if needed.
-# For this E2E bash script, confirming 402 is sufficient to prove the route is protected.
-# A full e2e test would use @x402/core in TS to complete the payment.
+echo "2. Testing paid batch request..."
+
+# Check /v1/prices
+node scripts/live_e2e_x402_helper.js prices > .prices_res 2> .prices_err
+if [ $? -ne 0 ]; then
+    echo "❌ /v1/prices failed:"
+    cat .prices_err
+    exit 1
+fi
+
+PRICES_RES=$(cat .prices_res)
+echo "$PRICES_RES"
+
+if ! echo "$PRICES_RES" | grep -q '"chain"'; then echo "❌ Missing chain" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '"count"'; then echo "❌ Missing count" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '"priced"'; then echo "❌ Missing priced" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '"failed"'; then echo "❌ Missing failed" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '"results"'; then echo "❌ Missing results" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '"status":"ok"'; then echo "❌ Missing status: ok" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '"price_usd"'; then echo "❌ Missing price_usd" && exit 1; fi
+
+echo "✅ Paid batch request successful!"
 
 echo "E2E batch pricing script finished successfully."

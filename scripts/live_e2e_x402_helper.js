@@ -38,9 +38,22 @@ async function main() {
   const myFetch = (url, init) => fetch(url, init);
   const fetchWithPayment = wrapFetchWithPayment(myFetch, paymentClient);
 
-  const requestUrl = `${URL}/v1/${ENDPOINT}?token=${TOKEN}`;
-  console.error("DEBUG: Sending request...");
-  const res = await fetchWithPayment(requestUrl, { headers: { 'Connection': 'close' } });
+  let requestUrl;
+  if (ENDPOINT.startsWith('/')) {
+    requestUrl = `${URL}${ENDPOINT}`;
+  } else if (ENDPOINT === 'prices' || ENDPOINT === 'metadatas') {
+    const tokens = process.env.FATHOM_TEST_TOKENS || TOKEN;
+    requestUrl = `${URL}/v1/${ENDPOINT}?tokens=${tokens}`;
+  } else {
+    requestUrl = `${URL}/v1/${ENDPOINT}?token=${TOKEN}`;
+  }
+  
+  // Add a cache-buster to ensure we don't get a stale 402 challenge from the CDN
+  const cb = `cb=${Date.now()}`;
+  requestUrl += requestUrl.includes('?') ? `&${cb}` : `?${cb}`;
+  
+  console.error(`DEBUG: Sending request to endpoint...`);
+  const res = await fetchWithPayment(requestUrl, { headers: { 'Connection': 'close', 'Cache-Control': 'no-cache' } });
   console.error(`DEBUG: Received response: ${res.status}`);
   
   const text = await res.text();

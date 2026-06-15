@@ -110,6 +110,7 @@ describe('Discovery Endpoints', () => {
     // Check bazaar extension
     expect(decodedPayload.extensions.bazaar).toBeDefined()
     expect(decodedPayload.extensions.bazaar.info.input.type).toBe('http')
+    expect(decodedPayload.extensions.bazaar.info.input.method).toBe('GET')
     
     expect(decodedPayload.extensions.bazaar.schema.properties.input).toBeDefined()
     expect(decodedPayload.extensions.bazaar.schema.properties.output).toBeDefined()
