@@ -46,6 +46,13 @@ type ExtendedEnv = FathomEnv & {
 
 const app = new Hono<{ Bindings: ExtendedEnv }>()
 
+import {
+  priceInputSchema, priceOutputSchema,
+  pricesInputSchema, pricesOutputSchema,
+  metadataInputSchema, metadataOutputSchema,
+  metadatasInputSchema, metadatasOutputSchema
+} from './schemas/x402DiscoverySchemas'
+
 app.get('/', (c) => {
   return c.html(`<!DOCTYPE html>
 <html lang="en">
@@ -87,10 +94,17 @@ app.get('/', (c) => {
     <div class="endpoints">
         <h3>Public Docs / Endpoints</h3>
         <ul>
+            <li><code>GET <a href="/v1/prices?tokens=0x940181a94A35A4569E4529A3CDfB74e38FD98631">/v1/prices</a></code> - Batch price, liquidity, confidence, and risk flags for Base token lists.</li>
             <li><code>GET /v1/price?token=0x...</code></li>
-            <li><code>GET /v1/prices?tokens=0x...</code></li>
             <li><code>GET /v1/metadata?token=0x...</code></li>
             <li><code>GET /v1/health</code></li>
+        </ul>
+        <h3>Agent Integration</h3>
+        <ul>
+            <li><code>GET <a href="/openapi.json">/openapi.json</a></code> - OpenAPI 3.1 Spec</li>
+            <li><code>GET <a href="/.well-known/x402">/.well-known/x402</a></code> - x402 Manifest</li>
+            <li><code>GET <a href="/schemas/v1/prices.input.json">/schemas/v1/prices.input.json</a></code> - Batch Prices Input Schema</li>
+            <li><code>GET <a href="/schemas/v1/prices.output.json">/schemas/v1/prices.output.json</a></code> - Batch Prices Output Schema</li>
         </ul>
         <div class="example">
             <strong>Canonical example token (AERO):</strong><br/>
@@ -99,6 +113,155 @@ app.get('/', (c) => {
     </div>
 </body>
 </html>`)
+})
+
+app.get('/schemas/v1/price.input.json', (c) => c.json(priceInputSchema))
+app.get('/schemas/v1/price.output.json', (c) => c.json(priceOutputSchema))
+app.get('/schemas/v1/prices.input.json', (c) => c.json(pricesInputSchema))
+app.get('/schemas/v1/prices.output.json', (c) => c.json(pricesOutputSchema))
+app.get('/schemas/v1/metadata.input.json', (c) => c.json(metadataInputSchema))
+app.get('/schemas/v1/metadata.output.json', (c) => c.json(metadataOutputSchema))
+app.get('/schemas/v1/metadatas.input.json', (c) => c.json(metadatasInputSchema))
+app.get('/schemas/v1/metadatas.output.json', (c) => c.json(metadatasOutputSchema))
+
+app.get('/.well-known/x402', (c) => {
+  return c.json({
+    project: "Fathom",
+    description: "x402-powered pricing API for Base long-tail tokens",
+    websiteUrl: "https://fathom-api.mioku-fathom.workers.dev",
+    apiBaseUrl: "https://fathom-api.mioku-fathom.workers.dev",
+    x402Network: "eip155:8453",
+    paymentAsset: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", // Base USDC
+    primaryEndpoint: "/v1/prices",
+    endpoints: [
+      "/v1/prices",
+      "/v1/price",
+      "/v1/metadata",
+      "/v1/metadatas"
+    ],
+    pricing: {
+      "/v1/price": "0.001 USDC",
+      "/v1/prices": "0.003 USDC"
+    },
+    schemaUrls: {
+      pricesInput: "/schemas/v1/prices.input.json",
+      pricesOutput: "/schemas/v1/prices.output.json"
+    },
+    openapiUrl: "/openapi.json",
+    tags: ["base", "price", "oracle", "dex", "liquidity", "long-tail", "aero", "usdc", "agent"]
+  })
+})
+
+app.get('/openapi.json', (c) => {
+  return c.json({
+    openapi: "3.1.0",
+    info: {
+      title: "Fathom API",
+      version: "1.0.0",
+      description: "x402-powered pricing API for Base long-tail tokens"
+    },
+    paths: {
+      "/v1/prices": {
+        get: {
+          summary: "Batch pricing for Base tokens",
+          description: "Batch price, liquidity, confidence, and risk flags for Base token lists. Note: Requires x402 payment (HTTP 402 Payment Required returned when unpaid).",
+          parameters: [
+            {
+              name: "tokens",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "Comma-separated list of Base ERC-20 token addresses",
+              example: "0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+            }
+          ],
+          responses: {
+            "200": {
+              description: "Successful pricing result",
+              content: { "application/json": { schema: pricesOutputSchema } }
+            },
+            "402": {
+              description: "Payment Required - Follow x402 protocol instructions in headers to pay 0.003 USDC via Base."
+            }
+          }
+        }
+      },
+      "/v1/price": {
+        get: {
+          summary: "Price for a single Base token",
+          description: "Returns price, liquidity, confidence score, main pool, and risk flags for a Base ERC-20 token. Requires x402 payment.",
+          parameters: [
+            {
+              name: "token",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "Base ERC-20 token address",
+              example: "0x940181a94A35A4569E4529A3CDfB74e38FD98631"
+            }
+          ],
+          responses: {
+            "200": {
+              description: "Successful pricing result",
+              content: { "application/json": { schema: priceOutputSchema } }
+            },
+            "402": {
+              description: "Payment Required - Follow x402 protocol instructions to pay 0.001 USDC."
+            }
+          }
+        }
+      },
+      "/v1/metadata": {
+        get: {
+          summary: "Token Metadata",
+          description: "Returns ERC-20 metadata. Requires x402 payment.",
+          parameters: [
+            {
+              name: "token",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "Base ERC-20 token address",
+              example: "0x940181a94A35A4569E4529A3CDfB74e38FD98631"
+            }
+          ],
+          responses: {
+            "200": {
+              description: "Successful metadata result",
+              content: { "application/json": { schema: metadataOutputSchema } }
+            },
+            "402": {
+              description: "Payment Required."
+            }
+          }
+        }
+      },
+      "/v1/metadatas": {
+        get: {
+          summary: "Batch Token Metadata",
+          description: "Batch endpoint for Base ERC-20 token metadata. Requires x402 payment.",
+          parameters: [
+            {
+              name: "tokens",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "Comma-separated list of Base ERC-20 token addresses"
+            }
+          ],
+          responses: {
+            "200": {
+              description: "Successful batch metadata result",
+              content: { "application/json": { schema: metadatasOutputSchema } }
+            },
+            "402": {
+              description: "Payment Required."
+            }
+          }
+        }
+      }
+    }
+  })
 })
 
 app.use('*', async (c, next) => {

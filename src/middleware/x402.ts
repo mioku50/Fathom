@@ -6,6 +6,12 @@ import { ExactEvmScheme } from '@x402/evm/exact/server'
 import type { RoutesConfig } from '@x402/core/server'
 import { parseX402Config } from '../utils/x402_config'
 import { declareDiscoveryExtension } from '@x402/extensions'
+import {
+  priceInputSchema, priceOutputSchema,
+  pricesInputSchema, pricesOutputSchema,
+  metadataInputSchema, metadataOutputSchema,
+  metadatasInputSchema, metadatasOutputSchema
+} from '../schemas/x402DiscoverySchemas'
 
 export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
@@ -41,7 +47,16 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
           tags: ["base", "price", "oracle", "dex", "liquidity", "long-tail", "aero", "usdc", "agent"],
           extensions: {
               ...declareDiscoveryExtension({
-                  input: { token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+                  input: { token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" },
+                  inputSchema: priceInputSchema,
+                  output: { 
+                      example: { 
+                          token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631",
+                          chain: "base",
+                          status: "ok" 
+                      },
+                      schema: priceOutputSchema 
+                  }
               })
           }
       },
@@ -52,7 +67,22 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
           tags: ["base", "batch", "price", "oracle", "liquidity", "long-tail", "agents", "wallets", "trading"],
           extensions: {
               ...declareDiscoveryExtension({
-                  input: { tokens: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+                  input: { tokens: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" },
+                  inputSchema: pricesInputSchema,
+                  output: { 
+                      example: { 
+                          chain: "base",
+                          count: 1,
+                          priced: 1,
+                          failed: 0,
+                          results: [{
+                              token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631",
+                              chain: "base",
+                              status: "ok"
+                          }]
+                      },
+                      schema: pricesOutputSchema 
+                  }
               })
           }
       },
@@ -63,7 +93,17 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
           tags: ["base", "erc20", "metadata", "token"],
           extensions: {
               ...declareDiscoveryExtension({
-                  input: { token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+                  input: { token: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" },
+                  inputSchema: metadataInputSchema,
+                  output: { 
+                      example: { 
+                          address: "0x940181a94A35A4569E4529A3CDfB74e38FD98631", 
+                          symbol: "AERO",
+                          name: "Aerodrome",
+                          decimals: 18
+                      },
+                      schema: metadataOutputSchema 
+                  }
               })
           }
       },
@@ -74,7 +114,21 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
           tags: ["base", "erc20", "metadata", "batch"],
           extensions: {
               ...declareDiscoveryExtension({
-                  input: { tokens: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" }
+                  input: { tokens: "0x940181a94A35A4569E4529A3CDfB74e38FD98631" },
+                  inputSchema: metadatasInputSchema,
+                  output: { 
+                      example: { 
+                          chain: "base",
+                          count: 1,
+                          results: [{
+                              address: "0x940181a94A35A4569E4529A3CDfB74e38FD98631", 
+                              symbol: "AERO",
+                              name: "Aerodrome",
+                              decimals: 18
+                          }]
+                      },
+                      schema: metadatasOutputSchema 
+                  }
               })
           }
       },
