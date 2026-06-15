@@ -16,23 +16,27 @@ async function main() {
     process.exit(1);
   }
 
-const network = (process.env.X402_NETWORK || "base-sepolia").trim();
+  const network = (process.env.X402_NETWORK || "base-sepolia").trim();
 
-const isBaseMainnet = network === "base" || network === "eip155:8453";
-const isBaseSepolia = network === "base-sepolia" || network === "eip155:84532";
+  const isBaseMainnet = network === "base" || network === "eip155:8453";
+  const isBaseSepolia = network === "base-sepolia" || network === "eip155:84532";
 
-if (!isBaseMainnet && !isBaseSepolia) {
-  console.error(`Unsupported X402_NETWORK: ${network}`);
-  process.exit(1);
-}
+  if (!isBaseMainnet && !isBaseSepolia) {
+    console.error(`Unsupported X402_NETWORK: ${network}`);
+    process.exit(1);
+  }
 
-const chain = isBaseMainnet ? base : baseSepolia;
-const rpcUrl = isBaseMainnet ? process.env.BASE_RPC_URL : process.env.BASE_SEPOLIA_RPC_URL;
+  const chain = isBaseMainnet ? base : baseSepolia;
+  const rpcUrl = isBaseMainnet 
+    ? (process.env.BASE_RPC_URL || process.env.BASE_MAINNET_RPC_URL) 
+    : (process.env.BASE_SEPOLIA_RPC_URL || process.env.BASE_RPC_URL);
 
-if (!rpcUrl) {
-  console.error(`Missing RPC URL for ${network}. Expected ${isBaseMainnet ? "BASE_RPC_URL" : "BASE_SEPOLIA_RPC_URL"}`);
-  process.exit(1);
-}
+  if (!rpcUrl) {
+    console.error(`Missing RPC URL for ${network}. Expected ${isBaseMainnet ? "BASE_RPC_URL or BASE_MAINNET_RPC_URL" : "BASE_SEPOLIA_RPC_URL or BASE_RPC_URL"}`);
+    process.exit(1);
+  }
+
+  console.error(`DEBUG: Helper starting | endpoint: ${ENDPOINT} | network: ${isBaseMainnet ? 'base' : 'baseSepolia'} (${network}) | rpc exists: ${!!rpcUrl}`);
 
   const account = privateKeyToAccount(PRIVATE_KEY);
   const client = createWalletClient({

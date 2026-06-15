@@ -70,6 +70,7 @@ fi
 echo "✅ /v1/metadata with MAINNET payment OK"
 
 # Check /v1/prices
+export FATHOM_TEST_TOKENS="${FATHOM_TEST_TOKENS:-0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x4200000000000000000000000000000000000006}"
 node scripts/live_e2e_x402_helper.js prices > .prices_res 2> .prices_err
 if [ $? -ne 0 ]; then
     echo "❌ /v1/prices failed:"
