@@ -8,7 +8,8 @@ fi
 
 WORKER_URL="https://fathom-api.mioku-fathom.workers.dev"
 # AERO and WETH
-TOKENS="0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x4200000000000000000000000000000000000006"
+export FATHOM_TEST_TOKENS="0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x4200000000000000000000000000000000000006"
+TOKENS=$FATHOM_TEST_TOKENS
 
 echo "========================================"
 echo " FATHOM LIVE BATCH PRICES E2E TEST"
@@ -46,10 +47,12 @@ PRICES_RES=$(cat .prices_res)
 echo "$PRICES_RES"
 
 if ! echo "$PRICES_RES" | grep -q '"chain"'; then echo "❌ Missing chain" && exit 1; fi
-if ! echo "$PRICES_RES" | grep -q '"count"'; then echo "❌ Missing count" && exit 1; fi
-if ! echo "$PRICES_RES" | grep -q '"priced"'; then echo "❌ Missing priced" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '"count":2'; then echo "❌ Expected count: 2" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -E -q '"priced":[1-2]'; then echo "❌ Expected priced >= 1" && exit 1; fi
 if ! echo "$PRICES_RES" | grep -q '"failed"'; then echo "❌ Missing failed" && exit 1; fi
 if ! echo "$PRICES_RES" | grep -q '"results"'; then echo "❌ Missing results" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -q '0x940181a94A35A4569E4529A3CDfB74e38FD98631'; then echo "❌ Missing AERO" && exit 1; fi
+if ! echo "$PRICES_RES" | grep -i -q '0x4200000000000000000000000000000000000006'; then echo "❌ Missing WETH" && exit 1; fi
 if ! echo "$PRICES_RES" | grep -q '"status":"ok"'; then echo "❌ Missing status: ok" && exit 1; fi
 if ! echo "$PRICES_RES" | grep -q '"price_usd"'; then echo "❌ Missing price_usd" && exit 1; fi
 
