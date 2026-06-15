@@ -13,7 +13,7 @@ export const priceInputSchema = {
     }
   },
   required: ["token"],
-  additionalProperties: false
+
 };
 
 export const priceOutputSchema = {
@@ -74,7 +74,7 @@ export const pricesInputSchema = {
     }
   },
   required: ["tokens"],
-  additionalProperties: false
+
 };
 
 export const pricesOutputSchema = {
@@ -107,7 +107,7 @@ export const metadataInputSchema = {
     }
   },
   required: ["token"],
-  additionalProperties: false
+
 };
 
 export const metadataOutputSchema = {
@@ -135,7 +135,7 @@ export const metadatasInputSchema = {
     }
   },
   required: ["tokens"],
-  additionalProperties: false
+
 };
 
 export const metadatasOutputSchema = {

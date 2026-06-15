@@ -174,7 +174,11 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       [{ network: x402Config.network as any, server: new ExactEvmScheme() }]
     )
 
-    return await middleware(c, next)
+    const res = await middleware(c, next)
+    if (res && res.status === 402) {
+      res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    }
+    return res
   } catch (err) {
     console.error("X402_MIDDLEWARE_ERROR", err)
     throw err
