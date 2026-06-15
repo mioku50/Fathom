@@ -16,9 +16,23 @@ async function main() {
     process.exit(1);
   }
 
-  const network = process.env.X402_NETWORK || "base-sepolia";
-  const chain = network === "base" ? base : baseSepolia;
-  const rpcUrl = network === "base" ? process.env.BASE_RPC_URL : process.env.BASE_SEPOLIA_RPC_URL;
+const network = (process.env.X402_NETWORK || "base-sepolia").trim();
+
+const isBaseMainnet = network === "base" || network === "eip155:8453";
+const isBaseSepolia = network === "base-sepolia" || network === "eip155:84532";
+
+if (!isBaseMainnet && !isBaseSepolia) {
+  console.error(`Unsupported X402_NETWORK: ${network}`);
+  process.exit(1);
+}
+
+const chain = isBaseMainnet ? base : baseSepolia;
+const rpcUrl = isBaseMainnet ? process.env.BASE_RPC_URL : process.env.BASE_SEPOLIA_RPC_URL;
+
+if (!rpcUrl) {
+  console.error(`Missing RPC URL for ${network}. Expected ${isBaseMainnet ? "BASE_RPC_URL" : "BASE_SEPOLIA_RPC_URL"}`);
+  process.exit(1);
+}
 
   const account = privateKeyToAccount(PRIVATE_KEY);
   const client = createWalletClient({
