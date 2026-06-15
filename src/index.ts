@@ -54,22 +54,17 @@ import {
 } from './schemas/x402DiscoverySchemas'
 
 app.get('/', (c) => {
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate')
   return c.html(`<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="talentapp:project_verification" content="34028a50c36b980fe745235b3ef9e6c3bb0468930a288929bce33dfdf5139e2bf26e0a3122c76d9fefe2556ddffa7d32bdd40657f5303d675676fadd36acdd93">
-    <meta name="base:app_id" content="6a2da48c0cfd412b2ab2c558" />
-    <title>Fathom - x402-powered pricing API for Base long-tail tokens</title>
+    <title>Fathom - x402-powered Base token price oracle for agents</title>
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; background: #000; color: #fff; }
         h1 { color: #0052FF; margin-bottom: 0.5rem; }
         .tagline { font-size: 1.2rem; color: #888; margin-bottom: 2rem; }
-        .status { background: #111; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid #333; }
-        .status h3 { margin-top: 0; }
-        .status-item { display: flex; align-items: center; margin: 0.8rem 0; }
-        .status-indicator { width: 10px; height: 10px; background: #00ff00; border-radius: 50%; margin-right: 12px; box-shadow: 0 0 8px #00ff00; }
         .endpoints { background: #111; padding: 1.5rem; border-radius: 8px; border: 1px solid #333; }
         .endpoints h3 { margin-top: 0; }
         ul { list-style: none; padding: 0; }
@@ -83,82 +78,76 @@ app.get('/', (c) => {
 </head>
 <body>
     <h1>Fathom</h1>
-    <div class="tagline">x402-powered pricing API for Base long-tail tokens</div>
+    <div class="tagline">x402-powered Base token price oracle for agents</div>
     
-    <div class="status">
-        <h3>Production Status</h3>
-        <div class="status-item"><div class="status-indicator"></div>x402 Base mainnet payments: validated</div>
-        <div class="status-item"><div class="status-indicator"></div>Base mainnet read-only price path: validated</div>
-    </div>
-
     <div class="endpoints">
-        <h3>Public Docs / Endpoints</h3>
+        <h3>Primary Endpoint</h3>
         <ul>
-            <li><code>GET <a href="/v1/prices?tokens=0x940181a94A35A4569E4529A3CDfB74e38FD98631">/v1/prices</a></code> - Batch price, liquidity, confidence, and risk flags for Base token lists.</li>
-            <li><code>GET /v1/price?token=0x...</code></li>
-            <li><code>GET /v1/metadata?token=0x...</code></li>
-            <li><code>GET /v1/health</code></li>
+            <li><code>GET <a href="/v1/prices?tokens=0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x4200000000000000000000000000000000000006">/v1/prices</a></code></li>
         </ul>
-        <h3>Agent Integration</h3>
+        <p><strong>Price:</strong> $0.003 per batch</p>
+        <p><strong>Limit:</strong> Up to 50 Base ERC-20 token addresses</p>
+        <p><strong>Network:</strong> Base mainnet</p>
+        <p><strong>Payment:</strong> USDC via x402</p>
+
+        <h3>Public Docs / Agent Integration</h3>
         <ul>
-            <li><code>GET <a href="/openapi.json">/openapi.json</a></code> - OpenAPI 3.1 Spec</li>
             <li><code>GET <a href="/.well-known/x402">/.well-known/x402</a></code> - x402 Manifest</li>
-            <li><code>GET <a href="/schemas/v1/prices.input.json">/schemas/v1/prices.input.json</a></code> - Batch Prices Input Schema</li>
-            <li><code>GET <a href="/schemas/v1/prices.output.json">/schemas/v1/prices.output.json</a></code> - Batch Prices Output Schema</li>
+            <li><code>GET <a href="/openapi.json">/openapi.json</a></code> - OpenAPI 3.1 Spec</li>
+            <li><code>GET <a href="/schemas/prices.input.json">/schemas/prices.input.json</a></code> - Input Schema</li>
+            <li><code>GET <a href="/schemas/prices.output.json">/schemas/prices.output.json</a></code> - Output Schema</li>
         </ul>
-        <div class="example">
-            <strong>Canonical example token (AERO):</strong><br/>
-            <code style="display:inline-block; margin-top: 0.5rem;">0x940181a94A35A4569E4529A3CDfB74e38FD98631</code>
-        </div>
     </div>
 </body>
 </html>`)
 })
 
-app.get('/schemas/v1/price.input.json', (c) => c.json(priceInputSchema))
-app.get('/schemas/v1/price.output.json', (c) => c.json(priceOutputSchema))
-app.get('/schemas/v1/prices.input.json', (c) => c.json(pricesInputSchema))
-app.get('/schemas/v1/prices.output.json', (c) => c.json(pricesOutputSchema))
-app.get('/schemas/v1/metadata.input.json', (c) => c.json(metadataInputSchema))
-app.get('/schemas/v1/metadata.output.json', (c) => c.json(metadataOutputSchema))
-app.get('/schemas/v1/metadatas.input.json', (c) => c.json(metadatasInputSchema))
-app.get('/schemas/v1/metadatas.output.json', (c) => c.json(metadatasOutputSchema))
+app.get('/schemas/price.input.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(priceInputSchema) })
+app.get('/schemas/price.output.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(priceOutputSchema) })
+app.get('/schemas/prices.input.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(pricesInputSchema) })
+app.get('/schemas/prices.output.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(pricesOutputSchema) })
+app.get('/schemas/metadata.input.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(metadataInputSchema) })
+app.get('/schemas/metadata.output.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(metadataOutputSchema) })
+app.get('/schemas/metadatas.input.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(metadatasInputSchema) })
+app.get('/schemas/metadatas.output.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(metadatasOutputSchema) })
 
 app.get('/.well-known/x402', (c) => {
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate')
   return c.json({
-    project: "Fathom",
-    description: "x402-powered pricing API for Base long-tail tokens",
-    websiteUrl: "https://fathom-api.mioku-fathom.workers.dev",
-    apiBaseUrl: "https://fathom-api.mioku-fathom.workers.dev",
-    x402Network: "eip155:8453",
-    paymentAsset: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", // Base USDC
+    name: "Fathom",
+    description: "x402-powered Base token price oracle for agents",
+    version: "1.0.0",
+    baseUrl: "https://fathom-api.mioku-fathom.workers.dev",
+    network: "eip155:8453",
+    asset: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", // Base USDC
     primaryEndpoint: "/v1/prices",
     endpoints: [
       "/v1/prices",
-      "/v1/price",
       "/v1/metadata",
-      "/v1/metadatas"
+      "/v1/price"
     ],
     pricing: {
-      "/v1/price": "0.001 USDC",
-      "/v1/prices": "0.003 USDC"
+      "/v1/prices": "$0.003",
+      "/v1/metadata": "$0.001",
+      "/v1/price": "$0.001"
     },
+    maxBatchTokens: 50,
     schemaUrls: {
-      pricesInput: "/schemas/v1/prices.input.json",
-      pricesOutput: "/schemas/v1/prices.output.json"
+      input: "/schemas/prices.input.json",
+      output: "/schemas/prices.output.json"
     },
-    openapiUrl: "/openapi.json",
-    tags: ["base", "price", "oracle", "dex", "liquidity", "long-tail", "aero", "usdc", "agent"]
+    tags: ["base", "x402", "price-oracle", "batch-pricing", "liquidity", "dex", "agents", "wallets", "trading"]
   })
 })
 
 app.get('/openapi.json', (c) => {
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate')
   return c.json({
     openapi: "3.1.0",
     info: {
       title: "Fathom API",
       version: "1.0.0",
-      description: "x402-powered pricing API for Base long-tail tokens"
+      description: "x402-powered Base token price oracle for agents"
     },
     paths: {
       "/v1/prices": {
@@ -171,8 +160,15 @@ app.get('/openapi.json', (c) => {
               in: "query",
               required: true,
               schema: { type: "string" },
-              description: "Comma-separated list of Base ERC-20 token addresses",
+              description: "Comma-separated list of Base ERC-20 token addresses (1 to 50)",
               example: "0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+            },
+            {
+              name: "chain",
+              in: "query",
+              required: false,
+              schema: { type: "string", default: "base" },
+              description: "Target chain (default: base)"
             }
           ],
           responses: {

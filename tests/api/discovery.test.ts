@@ -32,13 +32,12 @@ describe('Discovery Endpoints', () => {
     expect(res.status).toBe(200)
     
     const body: any = await res.json()
-    expect(body.project).toBe('Fathom')
-    expect(body.x402Network).toBe('eip155:8453')
+    expect(body.name).toBe('Fathom')
+    expect(body.network).toBe('eip155:8453')
     expect(body.primaryEndpoint).toBe('/v1/prices')
-    expect(body.pricing['/v1/prices']).toBe('0.003 USDC')
-    expect(body.openapiUrl).toBe('/openapi.json')
-    expect(body.schemaUrls.pricesInput).toBe('/schemas/v1/prices.input.json')
-    expect(body.schemaUrls.pricesOutput).toBe('/schemas/v1/prices.output.json')
+    expect(body.pricing['/v1/prices']).toBe('$0.003')
+    expect(body.schemaUrls.input).toBe('/schemas/prices.input.json')
+    expect(body.schemaUrls.output).toBe('/schemas/prices.output.json')
     
     // Ensure no secrets
     expect(JSON.stringify(body)).not.toContain('admin-secret')
@@ -60,14 +59,14 @@ describe('Discovery Endpoints', () => {
 
   it('Should return 200 for all schema endpoints', async () => {
     const schemaEndpoints = [
-      '/schemas/v1/price.input.json',
-      '/schemas/v1/price.output.json',
-      '/schemas/v1/prices.input.json',
-      '/schemas/v1/prices.output.json',
-      '/schemas/v1/metadata.input.json',
-      '/schemas/v1/metadata.output.json',
-      '/schemas/v1/metadatas.input.json',
-      '/schemas/v1/metadatas.output.json'
+      '/schemas/price.input.json',
+      '/schemas/price.output.json',
+      '/schemas/prices.input.json',
+      '/schemas/prices.output.json',
+      '/schemas/metadata.input.json',
+      '/schemas/metadata.output.json',
+      '/schemas/metadatas.input.json',
+      '/schemas/metadatas.output.json'
     ]
 
     for (const endpoint of schemaEndpoints) {
