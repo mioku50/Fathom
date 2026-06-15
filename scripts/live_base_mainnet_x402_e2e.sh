@@ -69,19 +69,38 @@ if ! echo "$META_RES" | grep -q "address"; then
 fi
 echo "✅ /v1/metadata with MAINNET payment OK"
 
-# Check /v1/price
-node scripts/live_e2e_x402_helper.js price > .price_res 2> .price_err
+# Check /v1/prices
+node scripts/live_e2e_x402_helper.js prices > .prices_res 2> .prices_err
 if [ $? -ne 0 ]; then
-    echo "❌ /v1/price failed:"
-    cat .price_err
+    echo "❌ /v1/prices failed:"
+    cat .prices_err
     exit 1
 else
-    PRICE_RES=$(cat .price_res)
-    if ! echo "$PRICE_RES" | grep -q "price_usd"; then
-        echo "❌ /v1/price did not return expected orchestrator data"
+    if ! jq -e '.chain == "base"' .prices_res > /dev/null; then
+        echo "❌ /v1/prices returned wrong chain"
         exit 1
     fi
-    echo "✅ /v1/price with MAINNET payment OK, received price data."
+    if ! jq -e '.count >= 1' .prices_res > /dev/null; then
+        echo "❌ /v1/prices returned count < 1"
+        exit 1
+    fi
+    if ! jq -e '.priced >= 1' .prices_res > /dev/null; then
+        echo "❌ /v1/prices returned priced < 1"
+        exit 1
+    fi
+    if ! jq -e '.results | type == "array"' .prices_res > /dev/null; then
+        echo "❌ /v1/prices did not return results array"
+        exit 1
+    fi
+    if ! jq -e '.results | map(select(.status == "ok")) | length >= 1' .prices_res > /dev/null; then
+        echo "❌ /v1/prices did not return any result with status ok"
+        exit 1
+    fi
+    if ! jq -e '.results | map(select(.price_usd != null)) | length >= 1' .prices_res > /dev/null; then
+        echo "❌ /v1/prices did not return any result with price_usd"
+        exit 1
+    fi
+    echo "✅ /v1/prices with MAINNET payment OK, received batch price data."
 fi
 
 echo "All tests passed successfully!"
