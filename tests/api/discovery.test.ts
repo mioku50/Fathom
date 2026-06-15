@@ -112,6 +112,9 @@ describe('Discovery Endpoints', () => {
     expect(decodedPayload.extensions.bazaar.info.input.type).toBe('http')
     
     expect(decodedPayload.extensions.bazaar.schema.properties.input).toBeDefined()
-    expect(decodedPayload.extensions.bazaar.schema.properties.output.properties.example).toBeDefined()
+    expect(decodedPayload.extensions.bazaar.schema.properties.output).toBeDefined()
+    expect(decodedPayload.extensions.bazaar.schema.properties.output.type).toBe('object')
+    expect(decodedPayload.extensions.bazaar.schema.required).toContain('input')
+    expect(decodedPayload.extensions.bazaar.schema.required).toContain('output')
   })
 })
