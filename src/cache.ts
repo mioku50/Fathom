@@ -16,6 +16,7 @@ export interface FathomEnv {
   PIN_BLOCK?: string
   X402_PRICE_BATCH_USDC?: string
   MAX_BATCH_TOKENS?: string
+  BASE_BUILDER_CODE?: string
 }
 
 let hits = 0
