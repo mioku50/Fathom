@@ -8,6 +8,11 @@ preview_urls = true
 [observability]
 enabled = true
 
+# Scheduled self-check. Fathom fails quietly - a moved factory or a reverting
+# quoter still returns 200 - so the checks assert real invariants, not uptime.
+[triggers]
+crons = ["*/15 * * * *"]
+
 [placement]
 mode = "smart"
 

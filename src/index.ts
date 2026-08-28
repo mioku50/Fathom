@@ -18,6 +18,7 @@ import { parseTokensParam } from './utils'
 import { validateEnv } from './utils/env'
 import { isPricingError } from './errors'
 import { mapWithConcurrency } from './concurrency'
+import { runSmokeChecks, SMOKE_KV_KEY, type SmokeResult } from './smoke'
 
 /**
  * Tokens priced in parallel within one batch request. Bounded so a 50-token
@@ -318,7 +319,25 @@ app.get('/v1/health', async (c) => {
 })
 
 app.get('/v1/cache/stats', (c) => {
-  return c.json(getCacheStats())
+  // These counters live in one Worker isolate's memory. They are useful when
+  // reproducing something locally and meaningless as a fleet-wide metric, so
+  // the response says so rather than letting a caller assume otherwise.
+  return c.json({
+    ...getCacheStats(),
+    scope: 'single_isolate',
+    note: 'Per-isolate counters, reset on eviction. Not a fleet-wide metric.'
+  })
+})
+
+app.get('/v1/admin/smoke', adminAuthMiddleware, async (c) => {
+  if (!c.env?.FATHOM_KV) {
+    return c.json({ error: 'internal_error', message: 'KV not configured' }, 500)
+  }
+  const last = await c.env.FATHOM_KV.get(SMOKE_KV_KEY, 'json')
+  if (!last) {
+    return c.json({ error: 'not_found', message: 'No scheduled run recorded yet' }, 404)
+  }
+  return c.json(last)
 })
 
 app.get('/v1/cache/metrics', adminAuthMiddleware, async (c) => {
@@ -682,4 +701,35 @@ app.get('/v1/metadatas', validateAddressesMiddleware, x402Middleware, async (c) 
   return c.json(results)
 })
 
-export default app
+async function scheduled(_event: ScheduledEvent, env: ExtendedEnv, ctx: ExecutionContext) {
+  if (!env?.PRICE_RPC_URL || env.PRICE_CHAIN_ID !== '8453') {
+    console.error('[smoke] skipped: price RPC is not configured for Base mainnet')
+    return
+  }
+
+  const result: SmokeResult = await runSmokeChecks(() => buildPricingEngine(env, 'base', 60))
+
+  // Structured so Workers observability can be queried on it.
+  const line = JSON.stringify({ event: 'smoke', ...result })
+  if (result.ok) {
+    console.log(line)
+  } else {
+    // Error level is what a Cloudflare alert policy watches for.
+    console.error(`[smoke] FAILED ${line}`)
+  }
+
+  if (env.FATHOM_KV) {
+    ctx.waitUntil(
+      env.FATHOM_KV.put(SMOKE_KV_KEY, JSON.stringify(result), { expirationTtl: 86400 })
+        .catch(e => console.error('[smoke] could not record result:', e))
+    )
+  }
+}
+
+/** The Hono app itself, for tests that use its request() helper. */
+export { app }
+
+export default {
+  fetch: (request: Request, env: ExtendedEnv, ctx: ExecutionContext) => app.fetch(request, env, ctx),
+  scheduled
+}

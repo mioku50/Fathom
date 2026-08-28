@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import app from '../../src/index'
+import { app } from '../../src/index'
 import { FathomEnv } from '../../src/cache'
 
 describe('Discovery Endpoints', () => {

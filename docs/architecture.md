@@ -263,6 +263,22 @@ sequenceDiagram
   - Price/Confidence data: Short TTL (seconds) to ensure fresh data.
   - Reduces RPC costs and latency for repeated requests for the same token.
 
+4b. Scheduled self-check
+- Fathom fails quietly: a moved factory, a reverting quoter or a changed RPC
+  still returns HTTP 200 with a thinner answer. Uptime checks do not see that,
+  so a cron trigger (every 15 minutes) asserts real invariants against live
+  mainnet state instead:
+  - WETH prices inside a plausible USD band - the shape a decimals or anchor bug
+    produces is a confident, wrong number, not an error
+  - WETH and AERO each price from two or more independent sources
+  - at least one sell quote fills, so the quoters are still answering
+  - the TWAP oracle still answers
+- A failing run logs at error level, which is what a Cloudflare alert policy
+  watches; the last result is stored in KV and readable at `/v1/admin/smoke`
+  behind admin auth.
+- `/v1/cache/stats` counters live in a single isolate's memory. The response now
+  says so, rather than letting a caller read them as a fleet-wide metric.
+
 5. Payment layer (x402)
 - Implements the x402 protocol:
   1. Client sends a request without payment.
