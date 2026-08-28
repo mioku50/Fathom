@@ -175,3 +175,34 @@ export function isDepthUnknown(depth: DepthResult): boolean {
     depth.sell_quotes.every(q => q.proceeds_usd === null)
   );
 }
+
+/**
+ * The headline execution signal: price impact on the largest advertised sale.
+ *
+ * Three distinct answers, deliberately not collapsed:
+ *   number  - the sale fills, at this cost in basis points
+ *   0-flag  - we asked and it cannot be filled (`fillable: false`)
+ *   null    - we never established anything (`fillable: null`)
+ *
+ * "Cannot exit $10k" is a measurement and must score badly. "We do not know"
+ * must be excluded from scoring instead.
+ */
+export function headlineExecution(depth: DepthResult): {
+  impactBps: number | null;
+  fillable: boolean | null;
+} {
+  const headlineSize = SELL_QUOTE_SIZES_USD[SELL_QUOTE_SIZES_USD.length - 1];
+  const quote = depth.sell_quotes.find(q => q.size_usd === headlineSize);
+
+  if (quote && quote.price_impact_bps !== null && Number.isFinite(quote.price_impact_bps)) {
+    return { impactBps: quote.price_impact_bps, fillable: true };
+  }
+
+  // Some smaller size filled, so the quoter answered - this size simply cannot.
+  const anyFilled = depth.sell_quotes.some(q => q.proceeds_usd !== null);
+  if (anyFilled || depth.depth_1pct_usd !== null) {
+    return { impactBps: null, fillable: false };
+  }
+
+  return { impactBps: null, fillable: null };
+}

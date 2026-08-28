@@ -8,6 +8,7 @@ import { PriceRpcClient } from './utils/price_rpc';
 import { PricingError } from './errors';
 import { computeDispersion, type PriceSample } from './dispersion';
 import {
+  headlineExecution,
   constantProductDepthProfile,
   quotedDepthProfile,
   unknownDepth,
@@ -87,6 +88,8 @@ export class PricingEngine {
       quoteToken: string;
       quoteDecimals: number;
       quoteUsdPrice: number;
+      /** True when the pool reports real balances; false for concentrated liquidity. */
+      hasRealReserves: boolean;
       /** Present only when the pool is x*y=k and depth is solvable in closed form. */
       constantProduct: {
         reserveToken: number;
@@ -155,6 +158,7 @@ export class PricingEngine {
           quoteToken,
           quoteDecimals,
           quoteUsdPrice,
+          hasRealReserves: reserveTokenRaw !== undefined && reserveQuoteRaw !== undefined,
           constantProduct: constantProduct
             ? {
                 reserveToken: Number(reserveTokenRaw) / Math.pow(10, tokenDecimals),
@@ -207,8 +211,16 @@ export class PricingEngine {
       depth = unknownDepth();
     }
 
+    const execution = headlineExecution(depth);
+
     const confResult = calculateConfidence({
-      liquidity_usd: bestLiquidityUsd,
+      // Uniswap V3's figure is derived from `L * sqrtP`, an active-range
+      // parameter rather than a balance. Reporting it as liquidity would be
+      // the same class of fabrication this engine has been removing, so the
+      // component is excluded instead and its weight redistributed.
+      liquidity_usd: mainPoolContext?.hasRealReserves ? bestLiquidityUsd : null,
+      execution_impact_bps: execution.impactBps,
+      execution_fillable: execution.fillable,
       max_deviation_percent: dispersion.maxDeviation,
       sigma_over_mu_percent: dispersion.sigmaOverMu,
       // Not yet measured. Passing null keeps these components out of the score
@@ -229,11 +241,13 @@ export class PricingEngine {
       confResult.flags.push('depth_unavailable');
     }
 
+    const reportedLiquidityUsd = mainPoolContext?.hasRealReserves ? bestLiquidityUsd : null;
+
     return formatPriceResponse(
       token,
       this.chain,
       bestPriceUsd,
-      bestLiquidityUsd,
+      reportedLiquidityUsd,
       mainPoolData,
       confResult,
       {

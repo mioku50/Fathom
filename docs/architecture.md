@@ -127,11 +127,24 @@ sequenceDiagram
 
   | Component | Weight | Status |
   |---|---|---|
-  | `liquidity` — depth of the deepest pool | 0.35 | measured |
+  | `liquidity` — parked balance of the main pool | 0.15 | measured, except on concentrated liquidity |
+  | `execution_quality` — price impact on the $10k sale | 0.20 | measured wherever depth is |
   | `source_agreement` — max spread across independent pools | 0.20 | measured |
   | `twap_deviation` — spot vs TWAP | 0.20 | **not yet measured** |
   | `volatility` — liquidity-weighted sigma/mu across pools | 0.15 | measured |
   | `maturity` — pool age and 24h volume | 0.10 | **not yet measured** |
+
+  Parked liquidity used to carry 0.35 alone. Most of that weight moved to
+  `execution_quality`, because "what can I actually get out" is the question the
+  parked figure was standing in for. Impact is scored against a 1000 bps ceiling.
+
+  **Concentrated liquidity reports no `liquidity_usd` at all.** Uniswap V3's
+  on-chain figure derives from `L * sqrtP`, an active-range parameter rather
+  than a balance, so it is null in the response and excluded from the score,
+  with a `liquidity_unmeasured` flag. `sell_quotes` answers the question instead.
+
+  `no_exit_liquidity` is not a gap but a measurement: the $10k sale was quoted
+  and cannot be filled. It scores 0 and caps confidence at 39.
 
   **A component whose input is unavailable is excluded from the score and its
   weight is redistributed across the measured components.** It is never scored

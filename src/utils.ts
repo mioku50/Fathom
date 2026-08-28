@@ -9,7 +9,8 @@ export type PriceMetrics = {
 };
 
 const UNMEASURED_COMPONENTS: ConfidenceComponents = {
-  liquidity: { score: null, weight: 0.35, effective_weight: 0 },
+  liquidity: { score: null, weight: 0.15, effective_weight: 0 },
+  execution_quality: { score: null, weight: 0.20, effective_weight: 0 },
   source_agreement: { score: null, weight: 0.20, effective_weight: 0 },
   twap_deviation: { score: null, weight: 0.20, effective_weight: 0 },
   volatility: { score: null, weight: 0.15, effective_weight: 0 },
@@ -79,7 +80,7 @@ export function formatPriceResponse(
   token: string,
   chain: string,
   bestPrice: number,
-  bestLiquidity: number,
+  bestLiquidity: number | null,
   mainPoolData: PoolData,
   confResult: { confidence: number; label: string; flags: string[]; components?: ConfidenceComponents },
   metrics: PriceMetrics = { source_count: 0, price_dispersion_bps: null }

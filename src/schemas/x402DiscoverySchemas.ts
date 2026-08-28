@@ -30,7 +30,10 @@ export const priceOutputSchema = {
       description: "How much this price can be trusted, 0-100. See `flags` for the reasons behind a low score."
     },
     label: { type: "string", enum: ["reliable", "thin / volatile", "unreliable"] },
-    liquidity_usd: { type: "number" },
+    liquidity_usd: {
+      type: ["number", "null"],
+      description: "Parked liquidity in the main pool. Null for concentrated-liquidity pools, where the on-chain figure is an active-range parameter rather than a balance - use sell_quotes there."
+    },
     source_count: {
       type: "number",
       description: "Independent pools deep enough to count as a price source. 1 means single-venue."
@@ -44,6 +47,15 @@ export const priceOutputSchema = {
       description: "Per-component breakdown of `confidence`. A component with score null was not measured and its weight was redistributed.",
       properties: {
         liquidity: {
+      type: "object",
+      properties: {
+        score: { type: ["number", "null"], minimum: 0, maximum: 1 },
+        weight: { type: "number" },
+        effective_weight: { type: "number" }
+      },
+      required: ["score", "weight", "effective_weight"]
+    },
+        execution_quality: {
       type: "object",
       properties: {
         score: { type: ["number", "null"], minimum: 0, maximum: 1 },
@@ -126,7 +138,7 @@ export const priceOutputSchema = {
     flags: {
       type: "array",
       items: { type: "string" },
-      description: "Risk markers. `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked` and `depth_unavailable` mean the corresponding check did not run."
+      description: "Risk markers. `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked`, `depth_unavailable` and `liquidity_unmeasured` mean the corresponding check did not run. `no_exit_liquidity` is a measurement: the largest advertised sale cannot be filled."
     },
     updated_at: { type: "string", format: "date-time" },
     status: { type: "string", enum: ["ok", "not_found", "no_liquidity", "rpc_error", "unpriceable", "stale_anchor", "unknown_decimals"] },

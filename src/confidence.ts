@@ -12,7 +12,11 @@
  */
 
 export type ConfidenceInput = {
-  liquidity_usd: number;
+  /**
+   * Parked liquidity. null when the pool's figure is not a real TVL - notably
+   * Uniswap V3, where `L * sqrtP` is an active-range parameter, not a balance.
+   */
+  liquidity_usd: number | null;
   /** Max relative spread of independent pool prices, as a fraction (0.015 = 1.5%). */
   max_deviation_percent: number | null;
   /** |spot - twap| / twap, as a fraction. */
@@ -21,6 +25,13 @@ export type ConfidenceInput = {
   sigma_over_mu_percent: number | null;
   pool_age_days: number | null;
   volume_24h_usd: number | null;
+  /** Price impact in bps on the largest advertised sale; null when unmeasured. */
+  execution_impact_bps: number | null;
+  /**
+   * Whether that sale can be filled at all. false is a measurement (scores 0),
+   * null means we never established it (excluded from the score).
+   */
+  execution_fillable: boolean | null;
   /** Number of independent pools deep enough to count as a price source. */
   num_pools: number;
   /** null = freshness was not established. */
@@ -31,6 +42,7 @@ export type ConfidenceInput = {
 
 export type ConfidenceComponentName =
   | "liquidity"
+  | "execution_quality"
   | "source_agreement"
   | "twap_deviation"
   | "volatility"
@@ -68,9 +80,17 @@ const T_MAX = 0.10; // 10%
 const SG_MAX = 0.08; // 8%
 const V_MIN = 5000;
 const V_MAX = 500000;
+/** At or beyond this impact on the headline sale, execution quality scores 0. */
+const IMPACT_MAX_BPS = 1000; // 10%
 
+/**
+ * The old model gave 0.35 to parked liquidity alone. That weight is now split:
+ * what is parked still counts, but most of it moves to what an agent can
+ * actually get out, which is the question the number was standing in for.
+ */
 const WEIGHTS: Record<ConfidenceComponentName, number> = {
-  liquidity: 0.35,
+  liquidity: 0.15,
+  execution_quality: 0.20,
   source_agreement: 0.20,
   twap_deviation: 0.20,
   volatility: 0.15,
@@ -81,13 +101,25 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
   const flags: string[] = [];
 
   // S_liq = clamp( log10(liq / L_min) / log10(L_good / L_min), 0, 1 )
-  let S_liq = 0;
-  if (input.liquidity_usd > 0) {
-    const liqRatio = input.liquidity_usd / L_MIN;
-    const goodRatio = L_GOOD / L_MIN;
-    if (liqRatio > 0) {
-      S_liq = clamp(Math.log10(liqRatio) / Math.log10(goodRatio), 0, 1);
+  let S_liq: number | null = null;
+  if (input.liquidity_usd !== null) {
+    S_liq = 0;
+    if (input.liquidity_usd > 0) {
+      const liqRatio = input.liquidity_usd / L_MIN;
+      const goodRatio = L_GOOD / L_MIN;
+      if (liqRatio > 0) {
+        S_liq = clamp(Math.log10(liqRatio) / Math.log10(goodRatio), 0, 1);
+      }
     }
+  }
+
+  // S_exec: what the headline sale actually costs.
+  let S_exec: number | null = null;
+  if (input.execution_fillable === false) {
+    // Established that the sale cannot be filled. That is a bad score, not a gap.
+    S_exec = 0;
+  } else if (input.execution_fillable === true && input.execution_impact_bps !== null) {
+    S_exec = 1 - clamp(input.execution_impact_bps / IMPACT_MAX_BPS, 0, 1);
   }
 
   // S_src = 1 - clamp( max_dev / D_max, 0, 1 )
@@ -132,6 +164,7 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
 
   const scores: Record<ConfidenceComponentName, number | null> = {
     liquidity: S_liq,
+    execution_quality: S_exec,
     source_agreement: S_src,
     twap_deviation: S_twap,
     volatility: S_sigma,
@@ -175,11 +208,17 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
   if (input.spot_vs_twap_percent === null) flags.push("twap_unavailable");
   if (input.is_stale === null) flags.push("freshness_unchecked");
   if (input.is_unsellable === null) flags.push("sellability_unchecked");
+  if (input.liquidity_usd === null) flags.push("liquidity_unmeasured");
 
   // Apply risk ceilings (flags)
-  if (input.liquidity_usd < L_MIN) {
+  if (input.liquidity_usd !== null && input.liquidity_usd < L_MIN) {
     flags.push("thin_liquidity");
     confidence = Math.min(confidence, 49);
+  }
+  if (input.execution_fillable === false) {
+    // No exit at the size we advertise is a hard risk, not a soft deduction.
+    flags.push("no_exit_liquidity");
+    confidence = Math.min(confidence, 39);
   }
   if (input.spot_vs_twap_percent !== null && input.spot_vs_twap_percent > 0.25) {
     flags.push("possible_manipulation");

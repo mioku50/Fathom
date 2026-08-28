@@ -473,4 +473,55 @@ describe('PricingEngine guards', () => {
     expect(res!.depth_1pct_usd).toBeNull();
     expect(res!.sell_quotes.every(q => q.proceeds_usd === null)).toBe(true);
   });
+  it('excludes V3 pseudo-TVL from both the score and the response', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_V3_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_V3_POOL.address]: tokenUsdcV3Raw },
+      async ({ amountsIn }: any) =>
+        amountsIn.map((_: bigint, i: number) => BigInt(Math.floor([990, 4900, 9700][i] * 1e6)))
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res).not.toBeNull();
+    // L * sqrtP is an active-range parameter, not a balance - so we report none
+    expect(res!.liquidity_usd).toBeNull();
+    expect(res!.confidence_components.liquidity.score).toBeNull();
+    expect(res!.flags).toContain('liquidity_unmeasured');
+
+    // ...but execution quality is real, and carries the weight instead
+    expect(res!.confidence_components.execution_quality.score).not.toBeNull();
+    expect(res!.confidence_components.execution_quality.effective_weight).toBeGreaterThan(0);
+  });
+
+  it('keeps reporting liquidity for pools that hold real balances', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_POOL.address]: tokenUsdcRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res!.liquidity_usd).toBeGreaterThan(0);
+    expect(res!.confidence_components.liquidity.score).not.toBeNull();
+    expect(res!.flags).not.toContain('liquidity_unmeasured');
+  });
+
+  it('flags a token whose headline sale cannot be filled at all', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_V3_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_V3_POOL.address]: tokenUsdcV3Raw },
+      // only the smallest size fills
+      async () => [BigInt(995 * 1e6), null, null]
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res!.flags).toContain('no_exit_liquidity');
+    expect(res!.confidence).toBeLessThanOrEqual(39);
+    expect(res!.confidence_components.execution_quality.score).toBe(0);
+  });
 });

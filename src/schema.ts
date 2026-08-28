@@ -16,7 +16,12 @@ export type PriceResponse = {
   price_usd: number;
   confidence: number;
   label: string;
-  liquidity_usd: number;
+  /**
+   * Parked liquidity in the main pool. null for concentrated-liquidity pools,
+   * where the on-chain figure is an active-range parameter rather than a
+   * balance; use `sell_quotes` for those.
+   */
+  liquidity_usd: number | null;
   /** Pools deep enough to count as an independent price source. */
   source_count: number;
   /** Spread between independent sources, in basis points; null with <2 sources. */
@@ -53,7 +58,7 @@ export function isPriceResponse(data: any): data is PriceResponse {
   if (typeof data.price_usd !== 'number') return false;
   if (typeof data.confidence !== 'number') return false;
   if (typeof data.label !== 'string') return false;
-  if (typeof data.liquidity_usd !== 'number') return false;
+  if (data.liquidity_usd !== null && typeof data.liquidity_usd !== 'number') return false;
   if (typeof data.source_count !== 'number') return false;
   if (data.price_dispersion_bps !== null && typeof data.price_dispersion_bps !== 'number') return false;
   if (!data.confidence_components || typeof data.confidence_components !== 'object') return false;
