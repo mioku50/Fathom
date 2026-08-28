@@ -9,6 +9,7 @@ import { rateLimitMiddleware } from './middleware/rate_limit'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
 import { DEXOrchestrator, type CacheLayer } from './orchestrator'
 import { AerodromeAdapter } from './adapters/aerodrome'
+import { AerodromeSlipstreamAdapter } from './adapters/aerodrome_slipstream'
 import { UniswapV2Adapter } from './adapters/uniswap_v2'
 import { UniswapV3Adapter } from './adapters/uniswap_v3'
 import { PricingEngine } from './pricing_engine'
@@ -52,6 +53,7 @@ function buildPricingEngine(env: ExtendedEnv, chain: string, defaultTTL: number)
   const rpcClient = new PriceRpcClient(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS)
   const adapters = [
     new AerodromeAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
+    new AerodromeSlipstreamAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new UniswapV2Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new UniswapV3Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient)
   ]

@@ -120,6 +120,19 @@ sequenceDiagram
   - `getPools(tokenAddress)`: Discover all relevant pools for a token.
   - `getRawData(poolAddress)`: Fetch reserves, ticks, or state for price/liquidity calculation.
 - Discovery logic uses Factory and Registry contracts to locate pools programmatically.
+- **Coverage**: Aerodrome v2 (volatile + stable), Aerodrome Slipstream,
+  Uniswap V2, Uniswap V3.
+- **Slipstream** pools are keyed by tick spacing rather than a fee tier, and
+  more than one CL factory is live at once, so factories are read from the
+  **FactoryRegistry** (`0x5C3F18F06CC09CA1910767A34a20F771039E37C0`) rather than
+  hardcoded. The registry currently lists one v2 factory and three CL factories;
+  a factory without `tickSpacings()` drops out on its own. The topology is
+  memoized per request, so a 50-token batch reads it once. Overlapping factories
+  cannot double-count a pool.
+- Every Slipstream address and ABI was verified against Base mainnet before
+  shipping - notably, the "SlipStream Pool Factory" address published by block
+  explorers is not in the registry and does not answer `getPool`. Slipstream's
+  `slot0` returns six fields, without Uniswap V3's `feeProtocol`.
 
 3. Pricing engine
 - Orchestrates price discovery by querying DEX adapters.

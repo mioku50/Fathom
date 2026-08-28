@@ -7,6 +7,8 @@ export interface PoolInfo {
    * constant product. Depth math must not treat them as x*y=k.
    */
   stable?: boolean;
+  /** Slipstream pools are keyed by tick spacing rather than a fee tier. */
+  tickSpacing?: number;
 }
 
 export interface RawPoolData {
