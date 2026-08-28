@@ -16,6 +16,13 @@ import { PriceRpcClient } from './utils/price_rpc'
 import { parseTokensParam } from './utils'
 import { validateEnv } from './utils/env'
 import { isPricingError } from './errors'
+import { mapWithConcurrency } from './concurrency'
+
+/**
+ * Tokens priced in parallel within one batch request. Bounded so a 50-token
+ * batch does not fan out every token's RPC calls at once.
+ */
+const BATCH_CONCURRENCY = 8
 
 class OrchestratorCacheAdapter implements CacheLayer {
   constructor(private kv?: KVNamespace, private defaultTTL: number = 60) {}
@@ -34,6 +41,22 @@ class OrchestratorCacheAdapter implements CacheLayer {
       await this.kv.put(key, JSON.stringify(value), { expirationTtl: ttlSeconds || this.defaultTTL });
     } catch {}
   }
+}
+
+/**
+ * Builds the pricing stack for one request. Every adapter shares a single RPC
+ * client, and the returned engine memoizes its WETH/USD anchor, so a batch pays
+ * for both once rather than once per token.
+ */
+function buildPricingEngine(env: ExtendedEnv, chain: string, defaultTTL: number): PricingEngine {
+  const rpcClient = new PriceRpcClient(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS)
+  const adapters = [
+    new AerodromeAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
+    new UniswapV2Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
+    new UniswapV3Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient)
+  ]
+  const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(env.FATHOM_KV, defaultTTL))
+  return new PricingEngine(orchestrator, rpcClient, chain)
 }
 
 type ExtendedEnv = FathomEnv & {
@@ -347,14 +370,7 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
     return c.json({ error: 'server_error', message: 'PRICE_CHAIN_ID must be configured as 8453 for Base mainnet reads' }, 500)
   }
 
-  const adapters = [
-    new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
-    new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
-    new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
-  ];
-  const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
-  const rpcClient = new PriceRpcClient(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS);
-  const engine = new PricingEngine(orchestrator, rpcClient, chain);
+  const engine = buildPricingEngine(c.env, chain, defaultTTL);
 
   let finalResponse
   try {
@@ -398,59 +414,46 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
     ? Math.max(60, parseInt(c.env.CACHE_DEFAULT_TTL_SECONDS) || 60)
     : 60
 
+  if (!c.env?.PRICE_RPC_URL) {
+    return c.json({ error: 'server_error', message: 'PRICE_RPC_URL is not configured on the server' }, 500)
+  }
+
+  if (c.env?.PRICE_CHAIN_ID !== '8453') {
+    return c.json({ error: 'server_error', message: 'PRICE_CHAIN_ID must be configured as 8453 for Base mainnet reads' }, 500)
+  }
+
   const cacheLayer = new KVCacheLayer(c.env?.FATHOM_KV, defaultTTL)
-  const results: BatchPriceResult[] = []
 
-  let priced = 0;
-  let failed = 0;
+  // One engine for the whole batch: one set of adapters, one RPC client, one
+  // shared WETH/USD anchor. This used to be rebuilt from scratch per token.
+  const engine = buildPricingEngine(c.env, chain, defaultTTL)
 
-  for (const token of tokens) {
-    const cachedResponse = await cacheLayer.get(token, chain)
-    if (cachedResponse) {
-      results.push({ ...cachedResponse, status: "ok" })
-      priced++;
-      continue
-    }
-
-    if (!c.env?.PRICE_RPC_URL) {
-      return c.json({ error: 'server_error', message: 'PRICE_RPC_URL is not configured on the server' }, 500)
-    }
-
-    if (c.env?.PRICE_CHAIN_ID !== '8453') {
-      return c.json({ error: 'server_error', message: 'PRICE_CHAIN_ID must be configured as 8453 for Base mainnet reads' }, 500)
-    }
-
+  const results = await mapWithConcurrency(tokens, BATCH_CONCURRENCY, async (token): Promise<BatchPriceResult> => {
     try {
-      const adapters = [
-        new AerodromeAdapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
-        new UniswapV2Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK),
-        new UniswapV3Adapter(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS, c.env.PIN_BLOCK)
-      ];
-      const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(c.env?.FATHOM_KV, defaultTTL));
-      const rpcClient = new PriceRpcClient(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS);
-      const engine = new PricingEngine(orchestrator, rpcClient, chain);
+      const cachedResponse = await cacheLayer.get(token, chain)
+      if (cachedResponse) {
+        return { ...cachedResponse, status: "ok" }
+      }
 
       const finalResponse = await engine.calculatePrice(token);
 
       if (!finalResponse) {
-        results.push({ token, status: "no_liquidity", error: { code: "no_liquidity", message: "No usable liquidity found or unpriceable" } });
-        failed++;
-        continue;
+        return { token, status: "no_liquidity", error: { code: "no_liquidity", message: "No usable liquidity found or unpriceable" } };
       }
 
       c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
-      results.push({ ...finalResponse, status: "ok" })
-      priced++;
+      return { ...finalResponse, status: "ok" }
     } catch (error) {
       console.error(`Error pricing token ${token}:`, error);
       if (isPricingError(error)) {
-        results.push({ token, status: error.code, error: { code: error.code, message: error.message } });
-      } else {
-        results.push({ token, status: "rpc_error", error: { code: "rpc_error", message: "RPC or provider failure" } });
+        return { token, status: error.code, error: { code: error.code, message: error.message } };
       }
-      failed++;
+      return { token, status: "rpc_error", error: { code: "rpc_error", message: "RPC or provider failure" } };
     }
-  }
+  })
+
+  const priced = results.filter(r => r.status === "ok").length
+  const failed = results.length - priced
 
   const batchResponse: BatchPriceResponse = {
     chain,

@@ -41,8 +41,8 @@ describe('Real Adapters in Orchestrator', () => {
     const v3Adapter = new UniswapV3Adapter('http://localhost:8545');
 
     // Mock the internal viem clients
-    const mockV2Client = { readContract: vi.fn() };
-    const mockV3Client = { readContract: vi.fn() };
+    const mockV2Client = { multicall: vi.fn() };
+    const mockV3Client = { multicall: vi.fn() };
 
     (v2Adapter as any).client = mockV2Client;
     (v3Adapter as any).client = mockV3Client;
@@ -53,8 +53,11 @@ describe('Real Adapters in Orchestrator', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // v2 fails with rate limit, v3 succeeds
-    mockV2Client.readContract.mockRejectedValue(new Error('RPC rate limit exceeded (429)'));
-    mockV3Client.readContract.mockResolvedValue('0xPoolAddressV3');
+    mockV2Client.multicall.mockRejectedValue(new Error('RPC rate limit exceeded (429)'));
+    // One multicall covers every (quote, fee tier) probe; each entry is a result.
+    mockV3Client.multicall.mockImplementation(async ({ contracts }: any) =>
+      contracts.map(() => ({ status: 'success', result: '0xPoolAddressV3' }))
+    );
 
     const pools = await orchestrator.getAllPools('0xWETH');
 
@@ -74,8 +77,8 @@ describe('Real Adapters in Orchestrator', () => {
     const v3Adapter = new UniswapV3Adapter('http://localhost:8545');
 
     // Mock the internal viem clients
-    const mockV2Client = { readContract: vi.fn() };
-    const mockV3Client = { readContract: vi.fn() };
+    const mockV2Client = { multicall: vi.fn() };
+    const mockV3Client = { multicall: vi.fn() };
 
     (v2Adapter as any).client = mockV2Client;
     (v3Adapter as any).client = mockV3Client;
@@ -86,14 +89,15 @@ describe('Real Adapters in Orchestrator', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // v2 fails with rate limit, v3 succeeds
-    mockV2Client.readContract.mockRejectedValue(new Error('RPC rate limit exceeded (429)'));
-    mockV3Client.readContract.mockResolvedValue([100n, 200n, 12345]); // v3 returns slot0/liquidity shape roughly (slot0 is mocked, liquidity we need to handle if both are called but we only mock one. Actually getRawData calls slot0 and liquidity. We will just mock readContract implementation.)
-
-    mockV3Client.readContract.mockImplementation(async (args) => {
-        if (args.functionName === 'slot0') return [1000n, 10, 1, 1, 1, 1, true];
-        if (args.functionName === 'liquidity') return 5000n;
+    mockV2Client.multicall.mockRejectedValue(new Error('RPC rate limit exceeded (429)'));
+    // getRawData batches slot0/liquidity/token0/token1 into one allowFailure:false call.
+    mockV3Client.multicall.mockImplementation(async ({ contracts }: any) =>
+      contracts.map(({ functionName }: any) => {
+        if (functionName === 'slot0') return [1000n, 10, 1, 1, 1, 1, true];
+        if (functionName === 'liquidity') return 5000n;
         return null;
-    });
+      })
+    );
 
     const testPools = [
       { address: '0xPool1', dex: 'uniswap_v2', fee: 0.003 },

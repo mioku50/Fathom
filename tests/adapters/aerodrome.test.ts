@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AerodromeAdapter } from '../../src/adapters/aerodrome';
 import { createPublicClient } from 'viem';
+import { makeMulticallMock } from './multicall_mock';
 
 // Mock viem
 vi.mock('viem', async () => {
@@ -13,24 +14,30 @@ vi.mock('viem', async () => {
 
 describe('AerodromeAdapter', () => {
   let adapter: AerodromeAdapter;
-  let mockReadContract: ReturnType<typeof vi.fn>;
+  let mockMulticall: any;
+
+  function useResolver(resolve: (contract: any) => any) {
+    mockMulticall = makeMulticallMock(resolve);
+    (createPublicClient as any).mockReturnValue({ multicall: mockMulticall });
+    adapter = new AerodromeAdapter('http://localhost:8545');
+  }
+
+  function useRejectingClient(error: Error) {
+    mockMulticall = vi.fn().mockRejectedValue(error);
+    (createPublicClient as any).mockReturnValue({ multicall: mockMulticall });
+    adapter = new AerodromeAdapter('http://localhost:8545');
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockReadContract = vi.fn();
-    (createPublicClient as any).mockReturnValue({
-      readContract: mockReadContract
-    });
-
-    adapter = new AerodromeAdapter('http://localhost:8545');
+    useResolver(() => '0x0000000000000000000000000000000000000000');
   });
 
   describe('getPools', () => {
     it('should return found pools', async () => {
       // Mock finding one stable pool for WETH
-      mockReadContract.mockImplementation(async ({ args }) => {
-        const [tokenA, tokenB, stable] = args;
+      useResolver(({ args }: any) => {
+        const [, tokenB, stable] = args;
         if (tokenB === '0x4200000000000000000000000000000000000006' && stable === true) {
           return '0xabc123';
         }
@@ -46,31 +53,38 @@ describe('AerodromeAdapter', () => {
         fee: 0.0005
       });
 
-      // Should have checked both volatile and stable for WETH and USDC (4 calls)
-      expect(mockReadContract).toHaveBeenCalledTimes(4);
+      // volatile + stable for WETH and USDC, batched into a single round trip
+      expect(mockMulticall).toHaveBeenCalledTimes(1);
+      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(4);
     });
 
-    it('should handle contract errors gracefully', async () => {
-      mockReadContract.mockRejectedValue(new Error('Contract call failed'));
+    it('should skip probes that revert', async () => {
+      useResolver(() => {
+        throw new Error('Contract call failed');
+      });
 
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const pools = await adapter.getPools('0x123');
+      consoleSpy.mockRestore();
 
       expect(pools).toHaveLength(0);
     });
 
     it('should explicitly handle rate limit errors', async () => {
-      mockReadContract.mockRejectedValue(new Error('HTTP request failed: 429 Too Many Requests'));
+      useRejectingClient(new Error('HTTP request failed: 429 Too Many Requests'));
 
-      await expect(adapter.getPools('0x123')).rejects.toThrow('RPC rate limit exceeded while checking pool for 0x123 and 0x4200000000000000000000000000000000000006');
+      await expect(adapter.getPools('0x123')).rejects.toThrow(
+        'RPC rate limit exceeded while checking pools for 0x123'
+      );
     });
   });
 
   describe('getRawData', () => {
     it('should return raw pool data', async () => {
-      mockReadContract.mockImplementation(async (args: any) => {
-        if (args.functionName === 'getReserves') return [1000000n, 2000000n, 1670000000];
-        if (args.functionName === 'token0') return '0xToken0';
-        if (args.functionName === 'token1') return '0xToken1';
+      useResolver(({ functionName }: any) => {
+        if (functionName === 'getReserves') return [1000000n, 2000000n, 1670000000];
+        if (functionName === 'token0') return '0xToken0';
+        if (functionName === 'token1') return '0xToken1';
         return '0xPoolAddress';
       });
 
@@ -84,23 +98,23 @@ describe('AerodromeAdapter', () => {
         updatedAt: 1670000000,
       });
 
-      expect(mockReadContract).toHaveBeenCalledTimes(3);
-      const callNames = mockReadContract.mock.calls.map(c => c[0].functionName);
-      expect(callNames).toContain('getReserves');
-      expect(callNames).toContain('token0');
-      expect(callNames).toContain('token1');
+      expect(mockMulticall).toHaveBeenCalledTimes(1);
+      const callNames = mockMulticall.mock.calls[0][0].contracts.map((c: any) => c.functionName);
+      expect(callNames).toEqual(['getReserves', 'token0', 'token1']);
     });
 
     it('should throw an error if fetching fails', async () => {
-      mockReadContract.mockRejectedValue(new Error('Network error'));
+      useRejectingClient(new Error('Network error'));
 
       await expect(adapter.getRawData('0xabc123')).rejects.toThrow(/Failed to fetch raw data for pool/);
     });
 
     it('should explicitly handle rate limit errors on getRawData', async () => {
-      mockReadContract.mockRejectedValue(new Error('Rate limit exceeded. Try again in 10s'));
+      useRejectingClient(new Error('Rate limit exceeded. Try again in 10s'));
 
-      await expect(adapter.getRawData('0xabc123')).rejects.toThrow('RPC rate limit exceeded while fetching raw data for pool 0xabc123');
+      await expect(adapter.getRawData('0xabc123')).rejects.toThrow(
+        'RPC rate limit exceeded while fetching raw data for pool 0xabc123'
+      );
     });
   });
 });

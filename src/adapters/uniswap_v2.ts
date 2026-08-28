@@ -16,11 +16,16 @@ export class UniswapV2Adapter implements DEXAdapter {
 
   private pinBlock?: bigint;
 
-  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string) {
+  /**
+   * @param sharedClient Reuse one RPC client across every adapter in a request.
+   *   Without it each adapter builds its own viem client, so a 50-token batch
+   *   used to construct 200 of them.
+   */
+  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string, sharedClient?: PriceRpcClient) {
     if (pinBlock && pinBlock !== 'latest') {
       this.pinBlock = BigInt(pinBlock);
     }
-    this.client = new PriceRpcClient(rpcUrl, fallbackUrlsStr);
+    this.client = sharedClient ?? new PriceRpcClient(rpcUrl, fallbackUrlsStr);
   }
 
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
@@ -40,33 +45,49 @@ export class UniswapV2Adapter implements DEXAdapter {
       }
     ] as const;
 
-    for (const quoteToken of this.quoteTokens) {
-      if (tokenAddress.toLowerCase() === quoteToken.toLowerCase()) continue;
+    // One multicall for every quote token instead of a round trip each.
+    const probes: Address[] = this.quoteTokens.filter(
+      q => tokenAddress.toLowerCase() !== q.toLowerCase()
+    );
 
-      try {
-        const poolAddress = await this.client.readContract({
+    if (probes.length === 0) return [];
+
+    let results: any[];
+    try {
+      results = await this.client.multicall({
+        contracts: probes.map(quoteToken => ({
           address: this.factoryAddress,
           abi: factoryAbi,
           functionName: 'getPair',
-          args: [tokenAddress as Address, quoteToken as Address],
-          blockNumber: this.pinBlock
-        });
-
-        if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
-          pools.push({
-            address: poolAddress,
-            dex: 'uniswap_v2',
-            fee: 0.003 // Standard Uniswap V2 fee is 0.3%
-          });
-        }
-      } catch (error: any) {
-        if (isRpcFailure(error)) {
-          throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken}`);
-        }
-        // Ignore errors for non-existent pools
-        console.error(`Error checking pool for ${tokenAddress} and ${quoteToken}:`, error.message);
+          args: [tokenAddress as Address, quoteToken]
+        })),
+        allowFailure: true,
+        blockNumber: this.pinBlock
+      });
+    } catch (error: any) {
+      if (isRpcFailure(error)) {
+        console.error('RPC FAILURE DETAILS:', error);
+        throw new Error(`RPC rate limit exceeded while checking pools for ${tokenAddress}`);
       }
+      console.error(`Error checking pools for ${tokenAddress}:`, error.message);
+      return [];
     }
+
+    results.forEach((result, i) => {
+      const quoteToken = probes[i];
+      if (result?.status !== 'success') {
+        console.error(`Error checking pool for ${tokenAddress} and ${quoteToken}:`, result?.error?.message);
+        return;
+      }
+      const poolAddress = result.result;
+      if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
+        pools.push({
+          address: poolAddress,
+          dex: 'uniswap_v2',
+          fee: 0.003 // Standard Uniswap V2 fee is 0.3%
+        });
+      }
+    });
 
     return pools;
   }
@@ -102,26 +123,16 @@ export class UniswapV2Adapter implements DEXAdapter {
     ] as const;
 
     try {
-      const [reserves, token0, token1] = await Promise.all([
-        this.client.readContract({
+      // Single round trip; also guarantees reserves and tokens share one block.
+      const [reserves, token0, token1] = await this.client.multicall({
+        contracts: (['getReserves', 'token0', 'token1'] as const).map(functionName => ({
           address: poolAddress as Address,
           abi: poolAbi,
-          functionName: 'getReserves',
-          blockNumber: this.pinBlock
-        }),
-        this.client.readContract({
-          address: poolAddress as Address,
-          abi: poolAbi,
-          functionName: 'token0',
-          blockNumber: this.pinBlock
-        }),
-        this.client.readContract({
-          address: poolAddress as Address,
-          abi: poolAbi,
-          functionName: 'token1',
-          blockNumber: this.pinBlock
-        })
-      ]);
+          functionName
+        })),
+        allowFailure: false,
+        blockNumber: this.pinBlock
+      }) as [any, string, string];
 
       return {
         reserve0: BigInt(reserves[0]),

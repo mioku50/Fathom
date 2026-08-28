@@ -16,11 +16,16 @@ export class AerodromeAdapter implements DEXAdapter {
 
   private pinBlock?: bigint;
 
-  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string) {
+  /**
+   * @param sharedClient Reuse one RPC client across every adapter in a request.
+   *   Without it each adapter builds its own viem client, so a 50-token batch
+   *   used to construct 200 of them.
+   */
+  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string, sharedClient?: PriceRpcClient) {
     if (pinBlock && pinBlock !== 'latest') {
       this.pinBlock = BigInt(pinBlock);
     }
-    this.client = new PriceRpcClient(rpcUrl, fallbackUrlsStr);
+    this.client = sharedClient ?? new PriceRpcClient(rpcUrl, fallbackUrlsStr);
   }
 
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
@@ -41,37 +46,54 @@ export class AerodromeAdapter implements DEXAdapter {
       }
     ] as const;
 
-    // Check for both volatile (false) and stable (true) pools against common quote tokens
+    // One multicall for all (quote, stable) combinations instead of four
+    // sequential round trips per token.
+    const probes: { quoteToken: Address; stable: boolean }[] = [];
     for (const quoteToken of this.quoteTokens) {
       if (tokenAddress.toLowerCase() === quoteToken.toLowerCase()) continue;
-
       for (const stable of [false, true]) {
-        try {
-          const poolAddress = await this.client.readContract({
-            address: this.factoryAddress,
-            abi: factoryAbi,
-            functionName: 'getPool',
-            args: [tokenAddress as Address, quoteToken as Address, stable],
-            blockNumber: this.pinBlock
-          });
-
-          if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
-            pools.push({
-              address: poolAddress,
-              dex: 'aerodrome',
-              fee: stable ? 0.0005 : 0.003 // Simplified, actual fees vary
-            });
-          }
-        } catch (error: any) {
-          if (isRpcFailure(error)) {
-            console.error('RPC FAILURE DETAILS:', error);
-            throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken}`);
-          }
-          // Ignore errors for non-existent pools
-          console.error(`Error checking pool for ${tokenAddress} and ${quoteToken}:`, error.message);
-        }
+        probes.push({ quoteToken, stable });
       }
     }
+
+    if (probes.length === 0) return [];
+
+    let results: any[];
+    try {
+      results = await this.client.multicall({
+        contracts: probes.map(({ quoteToken, stable }) => ({
+          address: this.factoryAddress,
+          abi: factoryAbi,
+          functionName: 'getPool',
+          args: [tokenAddress as Address, quoteToken, stable]
+        })),
+        allowFailure: true,
+        blockNumber: this.pinBlock
+      });
+    } catch (error: any) {
+      if (isRpcFailure(error)) {
+        console.error('RPC FAILURE DETAILS:', error);
+        throw new Error(`RPC rate limit exceeded while checking pools for ${tokenAddress}`);
+      }
+      console.error(`Error checking pools for ${tokenAddress}:`, error.message);
+      return [];
+    }
+
+    results.forEach((result, i) => {
+      const { quoteToken, stable } = probes[i];
+      if (result?.status !== 'success') {
+        console.error(`Error checking pool for ${tokenAddress} and ${quoteToken}:`, result?.error?.message);
+        return;
+      }
+      const poolAddress = result.result;
+      if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
+        pools.push({
+          address: poolAddress,
+          dex: 'aerodrome',
+          fee: stable ? 0.0005 : 0.003 // Simplified, actual fees vary
+        });
+      }
+    });
 
     return pools;
   }
@@ -107,26 +129,16 @@ export class AerodromeAdapter implements DEXAdapter {
     ] as const;
 
     try {
-      const [reserves, token0, token1] = await Promise.all([
-        this.client.readContract({
+      // Single round trip; also guarantees reserves and tokens share one block.
+      const [reserves, token0, token1] = await this.client.multicall({
+        contracts: (['getReserves', 'token0', 'token1'] as const).map(functionName => ({
           address: poolAddress as Address,
           abi: poolAbi,
-          functionName: 'getReserves',
-          blockNumber: this.pinBlock
-        }),
-        this.client.readContract({
-          address: poolAddress as Address,
-          abi: poolAbi,
-          functionName: 'token0',
-          blockNumber: this.pinBlock
-        }),
-        this.client.readContract({
-          address: poolAddress as Address,
-          abi: poolAbi,
-          functionName: 'token1',
-          blockNumber: this.pinBlock
-        })
-      ]);
+          functionName
+        })),
+        allowFailure: false,
+        blockNumber: this.pinBlock
+      }) as [any, string, string];
 
       return {
         reserve0: reserves[0],

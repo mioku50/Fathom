@@ -161,6 +161,25 @@ sequenceDiagram
   never mistaken for a pass:
   - `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked`.
 
+3b. Batch execution (`/v1/prices`)
+- **One engine per request.** Adapters, the viem RPC client and the orchestrator
+  are constructed once for the whole batch. They used to be rebuilt per token,
+  so a 50-token request created 200 RPC clients.
+- **Shared WETH/USD anchor.** The engine memoizes the anchor *promise*, so
+  tokens priced concurrently share a single in-flight lookup instead of racing.
+- **Bounded parallelism.** Tokens are priced 8 at a time (`BATCH_CONCURRENCY`).
+  Sequential processing paid every token's round-trip latency in series;
+  unbounded parallelism would fan out 50 tokens' RPC calls at once and invite
+  provider rate limiting. Results keep request order regardless of completion
+  order.
+- **Batched reads.** Every adapter issues one `multicall` per operation instead
+  of one `eth_call` per probe: V3 pool discovery went from 8 sequential round
+  trips per token to 1, Aerodrome from 4 to 1, and each `getRawData` from 3-4
+  calls to 1. Besides latency, this keeps large batches clear of the Workers
+  subrequest ceiling, and guarantees all reads for a pool share one block.
+- **Decimals are cached per RPC client**, so a token's `decimals()` is read once
+  per request. Failures are not cached, so a transient error stays retryable.
+
 4. Cache
 - **Storage**: Uses Cloudflare KV or Upstash Redis for fast lookups.
 - **Strategy**:

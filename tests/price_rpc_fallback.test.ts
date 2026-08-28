@@ -94,3 +94,46 @@ describe('PriceRpcClient Fallback', () => {
     })).rejects.toThrow(/\[REDACTED_URL\]/);
   });
 });
+
+describe('PriceRpcClient decimals caching', () => {
+  it('reads decimals once per token across a request', async () => {
+    const client = new PriceRpcClient('http://primary.example');
+    const readContract = vi.fn().mockResolvedValue(9);
+    (client as any).client = { readContract };
+
+    const token = '0x1111111111111111111111111111111111111111';
+    const results = await Promise.all([
+      client.getTokenDecimals(token),
+      client.getTokenDecimals(token),
+      client.getTokenDecimals(token)
+    ]);
+
+    expect(results).toEqual([9, 9, 9]);
+    expect(readContract).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache a failure, so a transient RPC error is retryable', async () => {
+    const client = new PriceRpcClient('http://primary.example');
+    const readContract = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockResolvedValueOnce(18);
+    (client as any).client = { readContract };
+
+    const token = '0x2222222222222222222222222222222222222222';
+
+    await expect(client.getTokenDecimals(token)).rejects.toMatchObject({ code: 'unknown_decimals' });
+    await expect(client.getTokenDecimals(token)).resolves.toBe(18);
+    expect(readContract).toHaveBeenCalledTimes(2);
+  });
+
+  it('answers canonical tokens without touching the network', async () => {
+    const client = new PriceRpcClient('http://primary.example');
+    const readContract = vi.fn();
+    (client as any).client = { readContract };
+
+    await expect(client.getTokenDecimals('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913')).resolves.toBe(6);
+    await expect(client.getTokenDecimals('0x4200000000000000000000000000000000000006')).resolves.toBe(18);
+    expect(readContract).not.toHaveBeenCalled();
+  });
+});

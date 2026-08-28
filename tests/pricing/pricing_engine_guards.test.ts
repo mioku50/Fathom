@@ -268,4 +268,49 @@ describe('PricingEngine guards', () => {
     expect(res!.price_dispersion_bps).toBeNull();
     expect(res!.confidence_components.source_agreement.score).toBeNull();
   });
+  it('resolves the WETH/USD anchor once per engine, not once per token', async () => {
+    const orchestrator = makeOrchestrator(
+      {
+        [WETH.toLowerCase()]: [WETH_USDC_POOL],
+        [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL]
+      },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_WETH_POOL.address]: tokenWethRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+
+    await engine.calculatePrice(TOKEN);
+    await engine.calculatePrice(TOKEN);
+    await engine.calculatePrice(TOKEN);
+
+    const wethLookups = orchestrator.getAllPools.mock.calls.filter(
+      ([t]: [string]) => t.toLowerCase() === WETH.toLowerCase()
+    );
+    expect(wethLookups).toHaveLength(1);
+  });
+
+  it('shares one in-flight anchor lookup between concurrently priced tokens', async () => {
+    const orchestrator = makeOrchestrator(
+      {
+        [WETH.toLowerCase()]: [WETH_USDC_POOL],
+        [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL]
+      },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_WETH_POOL.address]: tokenWethRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+
+    // Started together, so a value-memoized anchor would still race; only
+    // memoizing the promise collapses these into one lookup.
+    await Promise.all([
+      engine.calculatePrice(TOKEN),
+      engine.calculatePrice(TOKEN),
+      engine.calculatePrice(TOKEN)
+    ]);
+
+    const wethLookups = orchestrator.getAllPools.mock.calls.filter(
+      ([t]: [string]) => t.toLowerCase() === WETH.toLowerCase()
+    );
+    expect(wethLookups).toHaveLength(1);
+  });
 });

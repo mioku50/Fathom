@@ -13,11 +13,30 @@ const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
 const AERO = '0x940181a94A35A4569E4529A3CDfB74e38FD98631'.toLowerCase();
 
 export class PricingEngine {
+  /**
+   * Resolved once per engine instance. The engine is built once per request, so
+   * a 50-token batch now shares a single WETH/USD lookup instead of repeating
+   * it per token. The promise itself is memoized, not the value, so tokens
+   * priced concurrently share one in-flight resolution rather than racing.
+   */
+  private wethAnchor?: Promise<number | null>;
+
   constructor(
     private orchestrator: DEXOrchestrator,
     private rpcClient: PriceRpcClient,
     private chain: string
   ) {}
+
+  private getWethAnchorUsd(): Promise<number | null> {
+    if (!this.wethAnchor) {
+      this.wethAnchor = this.getBestPoolPrice(WETH, USDC, 18, 6).then(result =>
+        result && result.priceInQuote > 0 && Number.isFinite(result.priceInQuote)
+          ? result.priceInQuote
+          : null
+      );
+    }
+    return this.wethAnchor;
+  }
 
   async calculatePrice(token: string): Promise<PriceResponse | null> {
     const lowerToken = token.toLowerCase();
@@ -33,10 +52,7 @@ export class PricingEngine {
     // WETH-quoted price by roughly the ETH price itself.
     let wethPriceUsd: number | null = null;
     if (lowerToken !== WETH) {
-      const wethResult = await this.getBestPoolPrice(WETH, USDC, 18, 6);
-      if (wethResult && wethResult.priceInQuote > 0 && Number.isFinite(wethResult.priceInQuote)) {
-        wethPriceUsd = wethResult.priceInQuote;
-      }
+      wethPriceUsd = await this.getWethAnchorUsd();
     }
 
     // 3. For the requested token, try pools.

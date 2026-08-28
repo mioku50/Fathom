@@ -195,27 +195,28 @@ describe('Real Adapters Error Handling', () => {
 
   it('UniswapV2Adapter should handle 429 errors and generic errors correctly', async () => {
     const adapter = new UniswapV2Adapter('http://localhost:8545');
-    const mockClient = { readContract: vi.fn() };
+    // Adapters batch their reads through multicall: one call per getPools/getRawData.
+    const mockClient = { multicall: vi.fn() };
     (adapter as any).client = mockClient;
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // getPools rate limit
-    mockClient.readContract.mockRejectedValueOnce(new Error('RPC rate limit exceeded (429)'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('RPC rate limit exceeded (429)'));
     await expect(adapter.getPools('0xWETH')).rejects.toThrow('RPC rate limit exceeded');
 
     // getPools generic error
-    mockClient.readContract.mockRejectedValueOnce(new Error('Contract reverted'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Contract reverted'));
     const pools = await adapter.getPools('0xWETH');
     expect(pools).toEqual([]);
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     // getRawData rate limit
-    mockClient.readContract.mockRejectedValueOnce(new Error('Returned 429'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Returned 429'));
     await expect(adapter.getRawData('0xPool')).rejects.toThrow('RPC rate limit exceeded');
 
     // getRawData generic error
-    mockClient.readContract.mockRejectedValueOnce(new Error('Contract reverted'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Contract reverted'));
     await expect(adapter.getRawData('0xPool')).rejects.toThrow('Failed to fetch raw data');
 
     consoleErrorSpy.mockRestore();
@@ -223,27 +224,28 @@ describe('Real Adapters Error Handling', () => {
 
   it('UniswapV3Adapter should handle 429 errors and generic errors correctly', async () => {
     const adapter = new UniswapV3Adapter('http://localhost:8545');
-    const mockClient = { readContract: vi.fn() };
+    // Adapters batch their reads through multicall: one call per getPools/getRawData.
+    const mockClient = { multicall: vi.fn() };
     (adapter as any).client = mockClient;
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // getPools rate limit
-    mockClient.readContract.mockRejectedValueOnce(new Error('RPC rate limit exceeded (429)'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('RPC rate limit exceeded (429)'));
     await expect(adapter.getPools('0xWETH')).rejects.toThrow('RPC rate limit exceeded');
 
     // getPools generic error
-    mockClient.readContract.mockRejectedValueOnce(new Error('Contract reverted'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Contract reverted'));
     const pools = await adapter.getPools('0xWETH');
     expect(pools).toEqual([]);
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     // getRawData rate limit
-    mockClient.readContract.mockRejectedValueOnce(new Error('Returned 429'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Returned 429'));
     await expect(adapter.getRawData('0xPool')).rejects.toThrow('RPC rate limit exceeded');
 
     // getRawData generic error
-    mockClient.readContract.mockRejectedValueOnce(new Error('Contract reverted'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Contract reverted'));
     await expect(adapter.getRawData('0xPool')).rejects.toThrow('Failed to fetch raw data');
 
     consoleErrorSpy.mockRestore();
@@ -251,19 +253,20 @@ describe('Real Adapters Error Handling', () => {
 
   it('AerodromeAdapter should handle generic errors correctly', async () => {
     const adapter = new AerodromeAdapter('http://localhost:8545');
-    const mockClient = { readContract: vi.fn() };
+    // Adapters batch their reads through multicall: one call per getPools/getRawData.
+    const mockClient = { multicall: vi.fn() };
     (adapter as any).client = mockClient;
 
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // getPools generic error
-    mockClient.readContract.mockRejectedValueOnce(new Error('Contract reverted'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Contract reverted'));
     const pools = await adapter.getPools('0xWETH');
     expect(pools).toEqual([]);
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     // getRawData generic error
-    mockClient.readContract.mockRejectedValueOnce(new Error('Contract reverted'));
+    mockClient.multicall.mockRejectedValueOnce(new Error('Contract reverted'));
     await expect(adapter.getRawData('0xPool')).rejects.toThrow('Failed to fetch raw data');
 
     consoleErrorSpy.mockRestore();

@@ -19,16 +19,19 @@ export class UniswapV3Adapter implements DEXAdapter {
 
   private pinBlock?: bigint;
 
-  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string) {
+  /**
+   * @param sharedClient Reuse one RPC client across every adapter in a request.
+   *   Without it each adapter builds its own viem client, so a 50-token batch
+   *   used to construct 200 of them.
+   */
+  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string, sharedClient?: PriceRpcClient) {
     if (pinBlock && pinBlock !== 'latest') {
       this.pinBlock = BigInt(pinBlock);
     }
-    this.client = new PriceRpcClient(rpcUrl, fallbackUrlsStr);
+    this.client = sharedClient ?? new PriceRpcClient(rpcUrl, fallbackUrlsStr);
   }
 
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
-    const pools: PoolInfo[] = [];
-
     // ABI for Uniswap V3 Factory getPool
     const factoryAbi = [
       {
@@ -44,36 +47,57 @@ export class UniswapV3Adapter implements DEXAdapter {
       }
     ] as const;
 
+    // One multicall instead of one round trip per (quote, fee tier) pair.
+    // This used to be 8 sequential eth_calls per token, which dominated latency
+    // and pushed large batches toward the Workers subrequest limit.
+    const probes: { quoteToken: Address; fee: number }[] = [];
     for (const quoteToken of this.quoteTokens) {
       if (tokenAddress.toLowerCase() === quoteToken.toLowerCase()) continue;
-
       for (const fee of this.feeTiers) {
-        try {
-          const poolAddress = await this.client.readContract({
-            address: this.factoryAddress,
-            abi: factoryAbi,
-            functionName: 'getPool',
-            args: [tokenAddress as Address, quoteToken as Address, fee],
-            blockNumber: this.pinBlock
-          });
-
-          if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
-            pools.push({
-              address: poolAddress,
-              dex: 'uniswap_v3',
-              fee: fee / 1000000 // Format to decimal like 0.0005 for 500
-            });
-          }
-        } catch (error: any) {
-          if (isRpcFailure(error)) {
-            console.error('RPC FAILURE DETAILS:', error);
-            throw new Error(`RPC rate limit exceeded while checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}`);
-          }
-          // Ignore errors for non-existent pools
-          console.error(`Error checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}:`, error.message);
-        }
+        probes.push({ quoteToken, fee });
       }
     }
+
+    if (probes.length === 0) return [];
+
+    let results: any[];
+    try {
+      results = await this.client.multicall({
+        contracts: probes.map(({ quoteToken, fee }) => ({
+          address: this.factoryAddress,
+          abi: factoryAbi,
+          functionName: 'getPool',
+          args: [tokenAddress as Address, quoteToken, fee]
+        })),
+        allowFailure: true,
+        blockNumber: this.pinBlock
+      });
+    } catch (error: any) {
+      if (isRpcFailure(error)) {
+        console.error('RPC FAILURE DETAILS:', error);
+        throw new Error(`RPC rate limit exceeded while checking pools for ${tokenAddress}`);
+      }
+      console.error(`Error checking pools for ${tokenAddress}:`, error.message);
+      return [];
+    }
+
+    const pools: PoolInfo[] = [];
+    results.forEach((result, i) => {
+      const { quoteToken, fee } = probes[i];
+      if (result?.status !== 'success') {
+        // A reverting probe just means the pool does not exist.
+        console.error(`Error checking pool for ${tokenAddress} and ${quoteToken} at fee ${fee}:`, result?.error?.message);
+        return;
+      }
+      const poolAddress = result.result;
+      if (poolAddress && poolAddress !== '0x0000000000000000000000000000000000000000') {
+        pools.push({
+          address: poolAddress,
+          dex: 'uniswap_v3',
+          fee: fee / 1000000 // Format to decimal like 0.0005 for 500
+        });
+      }
+    });
 
     return pools;
   }
@@ -120,32 +144,16 @@ export class UniswapV3Adapter implements DEXAdapter {
     ] as const;
 
     try {
-      const [slot0, liquidity, token0, token1] = await Promise.all([
-        this.client.readContract({
+      // Single round trip; also guarantees all four reads share one block.
+      const [slot0, liquidity, token0, token1] = await this.client.multicall({
+        contracts: (['slot0', 'liquidity', 'token0', 'token1'] as const).map(functionName => ({
           address: poolAddress as Address,
           abi: poolAbi,
-          functionName: 'slot0',
-          blockNumber: this.pinBlock
-        }),
-        this.client.readContract({
-          address: poolAddress as Address,
-          abi: poolAbi,
-          functionName: 'liquidity',
-          blockNumber: this.pinBlock
-        }),
-        this.client.readContract({
-          address: poolAddress as Address,
-          abi: poolAbi,
-          functionName: 'token0',
-          blockNumber: this.pinBlock
-        }),
-        this.client.readContract({
-          address: poolAddress as Address,
-          abi: poolAbi,
-          functionName: 'token1',
-          blockNumber: this.pinBlock
-        })
-      ]);
+          functionName
+        })),
+        allowFailure: false,
+        blockNumber: this.pinBlock
+      }) as [any, bigint, string, string];
 
       return {
         sqrtPriceX96: slot0[0],

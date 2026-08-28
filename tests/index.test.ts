@@ -13,6 +13,7 @@ const VALID_ENV = {
   PRICE_CHAIN_ID: '8453'
 };
 import { PriceRpcClient } from '../src/utils/price_rpc'
+import { DEXOrchestrator } from '../src/orchestrator'
 import { isPriceResponse, type PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 
@@ -319,6 +320,47 @@ describe('Fathom API', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith('[Validation Middleware] Invalid token address format in batch: invalid_token')
     consoleSpy.mockRestore()
+  })
+
+  it('Should build one pricing engine for the whole batch, not one per token', async () => {
+    vi.mocked(DEXOrchestrator).mockClear()
+
+    const tokens = [
+      '0x1111111111111111111111111111111111111111',
+      '0x2222222222222222222222222222222222222222',
+      '0x3333333333333333333333333333333333333333',
+      '0x4444444444444444444444444444444444444444'
+    ]
+
+    const req = new Request(`http://localhost/v1/prices?tokens=${tokens.join(',')}`, {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
+    const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p } as any)
+    expect(res.status).toBe(200)
+
+    // Adapters, RPC client and orchestrator used to be reconstructed per token.
+    expect(vi.mocked(DEXOrchestrator)).toHaveBeenCalledTimes(1)
+  })
+
+  it('Should return batch results in request order despite parallel pricing', async () => {
+    const tokens = [
+      '0x1111111111111111111111111111111111111111',
+      '0x2222222222222222222222222222222222222222',
+      '0x3333333333333333333333333333333333333333',
+      '0x4444444444444444444444444444444444444444',
+      '0x5555555555555555555555555555555555555555'
+    ]
+
+    const req = new Request(`http://localhost/v1/prices?tokens=${tokens.join(',')}`, {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
+    const res = await app.fetch(req, VALID_ENV, { waitUntil: (p: Promise<any>) => p } as any)
+    expect(res.status).toBe(200)
+
+    const body = await res.json() as any
+    expect(body.count).toBe(5)
+    expect(body.results.map((r: any) => r.token)).toEqual(tokens)
+    expect(body.priced + body.failed).toBe(5)
   })
 
   it('Should return valid schema for /v1/prices (batch)', async () => {

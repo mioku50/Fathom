@@ -46,6 +46,8 @@ export function isRpcFailure(error: any): boolean {
 
 export class PriceRpcClient {
   public client: any;
+  /** Per-client decimals cache; a token's decimals cannot change. */
+  private decimalsCache = new Map<string, Promise<number>>();
 
   constructor(primaryUrl: string, fallbackUrlsStr?: string) {
     const fallbacks = parseFallbackUrls(fallbackUrlsStr);
@@ -86,6 +88,19 @@ export class PriceRpcClient {
   }
 
   async getTokenDecimals(tokenAddress: string, pinBlock?: bigint): Promise<number> {
+    const cacheKey = `${tokenAddress.toLowerCase()}:${pinBlock ?? 'latest'}`;
+    const cached = this.decimalsCache.get(cacheKey);
+    if (cached) return cached;
+
+    const pending = this.readTokenDecimals(tokenAddress, pinBlock);
+    this.decimalsCache.set(cacheKey, pending);
+    // Do not cache a failure: a transient RPC error must not poison the token
+    // for the rest of the request.
+    pending.catch(() => this.decimalsCache.delete(cacheKey));
+    return pending;
+  }
+
+  private async readTokenDecimals(tokenAddress: string, pinBlock?: bigint): Promise<number> {
     const canonical: Record<string, number> = {
       '0x4200000000000000000000000000000000000006': 18, // WETH
       '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913': 6,  // USDC

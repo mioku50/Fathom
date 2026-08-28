@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UniswapV2Adapter } from '../../src/adapters/uniswap_v2';
 import * as viem from 'viem';
+import { makeMulticallMock } from './multicall_mock';
 
 vi.mock('viem', async () => {
   const actual = await vi.importActual('viem');
@@ -12,23 +13,28 @@ vi.mock('viem', async () => {
 
 describe('UniswapV2Adapter', () => {
   let adapter: UniswapV2Adapter;
-  let mockReadContract: any;
+  let mockMulticall: any;
+
+  function useResolver(resolve: (contract: any) => any) {
+    mockMulticall = makeMulticallMock(resolve);
+    (viem.createPublicClient as any).mockReturnValue({ multicall: mockMulticall });
+    adapter = new UniswapV2Adapter('http://localhost:8545');
+  }
+
+  function useRejectingClient(error: Error) {
+    mockMulticall = vi.fn().mockRejectedValue(error);
+    (viem.createPublicClient as any).mockReturnValue({ multicall: mockMulticall });
+    adapter = new UniswapV2Adapter('http://localhost:8545');
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockReadContract = vi.fn();
-    (viem.createPublicClient as any).mockReturnValue({
-      readContract: mockReadContract,
-    });
-
-    adapter = new UniswapV2Adapter('http://localhost:8545');
+    useResolver(() => '0x0000000000000000000000000000000000000000');
   });
 
   describe('getPools', () => {
     it('should find pools for valid tokens', async () => {
-      // Mock getPair returning a valid address
-      mockReadContract.mockResolvedValue('0xPoolAddress');
+      useResolver(() => '0xPoolAddress');
 
       const pools = await adapter.getPools('0xTokenAddress');
 
@@ -38,53 +44,55 @@ describe('UniswapV2Adapter', () => {
         dex: 'uniswap_v2',
         fee: 0.003,
       });
+
+      // Both quote tokens probed in a single round trip
+      expect(mockMulticall).toHaveBeenCalledTimes(1);
+      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(2);
     });
 
     it('should handle zero address gracefully', async () => {
-      // Mock getPair returning zero address (no pool)
-      mockReadContract.mockResolvedValue('0x0000000000000000000000000000000000000000');
+      useResolver(() => '0x0000000000000000000000000000000000000000');
 
       const pools = await adapter.getPools('0xTokenAddress');
 
       expect(pools.length).toBe(0);
     });
 
-    it('should handle contract errors gracefully', async () => {
-      // Mock getPair throwing an error
-      mockReadContract.mockRejectedValue(new Error('Contract call failed'));
+    it('should skip probes that revert', async () => {
+      useResolver(() => {
+        throw new Error('Contract call failed');
+      });
 
-      // Suppress console.error for this test
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
       const pools = await adapter.getPools('0xTokenAddress');
+      consoleSpy.mockRestore();
 
       expect(pools.length).toBe(0);
-
-      consoleSpy.mockRestore();
     });
 
     it('should explicitly handle rate limit errors', async () => {
-      // Mock getPair throwing a rate limit error
-      mockReadContract.mockRejectedValue(new Error('HTTP request failed: 429 Too Many Requests'));
+      useRejectingClient(new Error('HTTP request failed: 429 Too Many Requests'));
 
-      await expect(adapter.getPools('0xTokenAddress')).rejects.toThrow('RPC rate limit exceeded while checking pool for 0xTokenAddress and 0x4200000000000000000000000000000000000006');
+      await expect(adapter.getPools('0xTokenAddress')).rejects.toThrow(
+        'RPC rate limit exceeded while checking pools for 0xTokenAddress'
+      );
     });
 
     it('should explicitly handle different rate limit error messages', async () => {
-      // Mock getPair throwing a different rate limit error
-      mockReadContract.mockRejectedValue(new Error('rate limit exceeded for endpoint'));
+      useRejectingClient(new Error('rate limit exceeded for endpoint'));
 
-      await expect(adapter.getPools('0xTokenAddress')).rejects.toThrow('RPC rate limit exceeded while checking pool for 0xTokenAddress and 0x4200000000000000000000000000000000000006');
+      await expect(adapter.getPools('0xTokenAddress')).rejects.toThrow(
+        'RPC rate limit exceeded while checking pools for 0xTokenAddress'
+      );
     });
   });
 
   describe('getRawData', () => {
     it('should return reserves correctly', async () => {
-      // Mock getReserves
-      mockReadContract.mockImplementation(async (args: any) => {
-        if (args.functionName === 'getReserves') return [1000000000000000000n, 2000000000000000000n, 1620000000];
-        if (args.functionName === 'token0') return '0xToken0';
-        if (args.functionName === 'token1') return '0xToken1';
+      useResolver(({ functionName }: any) => {
+        if (functionName === 'getReserves') return [1000000000000000000n, 2000000000000000000n, 1620000000];
+        if (functionName === 'token0') return '0xToken0';
+        if (functionName === 'token1') return '0xToken1';
         return '0xPoolAddress';
       });
 
@@ -97,18 +105,24 @@ describe('UniswapV2Adapter', () => {
         token1: '0xToken1',
         updatedAt: 1620000000,
       });
+
+      expect(mockMulticall).toHaveBeenCalledTimes(1);
     });
 
     it('should throw an error on failure', async () => {
-      mockReadContract.mockRejectedValue(new Error('Contract call failed'));
+      useRejectingClient(new Error('Contract call failed'));
 
-      await expect(adapter.getRawData('0xPoolAddress')).rejects.toThrow('Failed to fetch raw data for pool 0xPoolAddress: Contract call failed');
+      await expect(adapter.getRawData('0xPoolAddress')).rejects.toThrow(
+        'Failed to fetch raw data for pool 0xPoolAddress: Contract call failed'
+      );
     });
 
     it('should explicitly handle rate limit errors on getRawData', async () => {
-      mockReadContract.mockRejectedValue(new Error('Rate limit exceeded. Try again in 10s'));
+      useRejectingClient(new Error('Rate limit exceeded. Try again in 10s'));
 
-      await expect(adapter.getRawData('0xPoolAddress')).rejects.toThrow('RPC rate limit exceeded while fetching raw data for pool 0xPoolAddress');
+      await expect(adapter.getRawData('0xPoolAddress')).rejects.toThrow(
+        'RPC rate limit exceeded while fetching raw data for pool 0xPoolAddress'
+      );
     });
   });
 });
