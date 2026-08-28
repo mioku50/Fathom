@@ -53,6 +53,9 @@ describe('schema validation', () => {
         liquidity_usd: 10000,
         source_count: 2,
         price_dispersion_bps: 120,
+        sell_quotes: [],
+        depth_1pct_usd: null,
+        depth_5pct_usd: null,
         confidence_components: {
           liquidity: { score: 0.77, weight: 0.35, effective_weight: 0.5 },
           source_agreement: { score: 0.76, weight: 0.20, effective_weight: 0.286 },
@@ -90,6 +93,9 @@ describe('schema validation', () => {
         liquidity_usd: 10000,
         source_count: 2,
         price_dispersion_bps: 120,
+        sell_quotes: [],
+        depth_1pct_usd: null,
+        depth_5pct_usd: null,
         confidence_components: {
           liquidity: { score: 0.77, weight: 0.35, effective_weight: 0.5 },
           source_agreement: { score: 0.76, weight: 0.20, effective_weight: 0.286 },

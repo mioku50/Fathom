@@ -149,7 +149,21 @@ sequenceDiagram
   pool), not pools merely discovered. Empty fee tiers therefore no longer
   suppress the `single_pool` ceiling, and a dust pool cannot fake a dispersion
   spike.
-- **Liquidity Depth** *(planned)*: TVL and slippage depth (how much $ moves the price by 1%).
+- **Executable depth**: `sell_quotes` answers what selling $1k / $5k / $10k of the
+  token actually returns on the main pool, fees and slippage included, plus
+  `depth_1pct_usd` / `depth_5pct_usd` for the notional that moves its marginal
+  price. This is the number an agent holding a position needs; `liquidity_usd`
+  only says how much is parked.
+
+  Computed closed-form and exactly for constant-product pools (Uniswap V2,
+  Aerodrome volatile) from reserves already fetched, so it costs no extra RPC:
+  `dy = y*dx'/(x + dx')` for the fill, and `dx' = x*(1/sqrt(1-drop) - 1)` for depth.
+
+  **Not approximated for other curves.** Concentrated liquidity (Uniswap V3) and
+  Aerodrome stable pools (x3y+y3x) return null fields and a `depth_unavailable`
+  flag. For V3 the active range cannot be recovered from `slot0` + `L` alone, so
+  a within-range figure would be a plausible number with nothing behind it.
+  Both need a real quoter (QuoterV2 / Aerodrome Router), which is the next step.
 - **TWAP** *(planned)*: historical ticks/reserves for a time-weighted average price.
 - **Risk Flags**: Hard ceilings applied to the confidence score:
   - `thin_liquidity`: Liquidity below minimum threshold.

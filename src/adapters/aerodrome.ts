@@ -90,7 +90,8 @@ export class AerodromeAdapter implements DEXAdapter {
         pools.push({
           address: poolAddress,
           dex: 'aerodrome',
-          fee: stable ? 0.0005 : 0.003 // Simplified, actual fees vary
+          fee: stable ? 0.0005 : 0.003, // Simplified, actual fees vary
+          stable
         });
       }
     });

@@ -1,4 +1,5 @@
 import type { ConfidenceComponents } from './confidence';
+import type { SellQuote } from './depth';
 
 export type PoolData = {
   dex: string;
@@ -22,6 +23,12 @@ export type PriceResponse = {
   price_dispersion_bps: number | null;
   /** Per-component breakdown of the confidence score, incl. what was not measured. */
   confidence_components: ConfidenceComponents;
+  /** What selling $1k / $5k / $10k of this token actually returns on the main pool. */
+  sell_quotes: SellQuote[];
+  /** Notional that moves the main pool's marginal price 1%; null when not computable. */
+  depth_1pct_usd: number | null;
+  /** Notional that moves the main pool's marginal price 5%; null when not computable. */
+  depth_5pct_usd: number | null;
   main_pool: PoolData;
   pools?: PoolData[];
   flags: string[];
@@ -50,6 +57,9 @@ export function isPriceResponse(data: any): data is PriceResponse {
   if (typeof data.source_count !== 'number') return false;
   if (data.price_dispersion_bps !== null && typeof data.price_dispersion_bps !== 'number') return false;
   if (!data.confidence_components || typeof data.confidence_components !== 'object') return false;
+  if (!Array.isArray(data.sell_quotes)) return false;
+  if (data.depth_1pct_usd !== null && typeof data.depth_1pct_usd !== 'number') return false;
+  if (data.depth_5pct_usd !== null && typeof data.depth_5pct_usd !== 'number') return false;
   if (!isPoolData(data.main_pool)) return false;
   if (data.pools !== undefined) {
     if (!Array.isArray(data.pools)) return false;

@@ -1,9 +1,11 @@
 import type { PriceResponse, PoolData } from './schema';
 import type { ConfidenceComponents } from './confidence';
+import { unknownDepth, type DepthResult } from './depth';
 
 export type PriceMetrics = {
   source_count: number;
   price_dispersion_bps: number | null;
+  depth?: DepthResult;
 };
 
 const UNMEASURED_COMPONENTS: ConfidenceComponents = {
@@ -34,6 +36,7 @@ export function generateDummyResponse(token: string, chain: string): PriceRespon
     source_count: 1,
     price_dispersion_bps: null,
     confidence_components: UNMEASURED_COMPONENTS,
+    ...unknownDepth(),
     main_pool: {
       dex: "aerodrome",
       address: "0x123",
@@ -92,6 +95,7 @@ export function formatPriceResponse(
     source_count: metrics.source_count,
     price_dispersion_bps: metrics.price_dispersion_bps,
     confidence_components: confResult.components ?? UNMEASURED_COMPONENTS,
+    ...(metrics.depth ?? unknownDepth()),
     main_pool: mainPoolData,
     flags: confResult.flags,
     updated_at: new Date().toISOString()

@@ -90,6 +90,28 @@ export const priceOutputSchema = {
     }
       }
     },
+    sell_quotes: {
+      type: "array",
+      description: "What selling this notional actually returns on the main pool, fees and slippage included. Null fields mean the pool's curve needs a quoter we do not call yet.",
+      items: {
+        type: "object",
+        properties: {
+          size_usd: { type: "number" },
+          proceeds_usd: { type: ["number", "null"] },
+          execution_price_usd: { type: ["number", "null"] },
+          price_impact_bps: { type: ["number", "null"] }
+        },
+        required: ["size_usd", "proceeds_usd", "execution_price_usd", "price_impact_bps"]
+      }
+    },
+    depth_1pct_usd: {
+      type: ["number", "null"],
+      description: "Notional that moves the main pool's marginal price by 1%."
+    },
+    depth_5pct_usd: {
+      type: ["number", "null"],
+      description: "Notional that moves the main pool's marginal price by 5%."
+    },
     main_pool: {
       type: "object",
       properties: {
@@ -104,7 +126,7 @@ export const priceOutputSchema = {
     flags: {
       type: "array",
       items: { type: "string" },
-      description: "Risk markers. `twap_unavailable`, `freshness_unchecked` and `sellability_unchecked` mean the corresponding check did not run."
+      description: "Risk markers. `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked` and `depth_unavailable` mean the corresponding check did not run."
     },
     updated_at: { type: "string", format: "date-time" },
     status: { type: "string", enum: ["ok", "not_found", "no_liquidity", "rpc_error", "unpriceable", "stale_anchor", "unknown_decimals"] },

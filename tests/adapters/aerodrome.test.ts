@@ -50,7 +50,9 @@ describe('AerodromeAdapter', () => {
       expect(pools[0]).toEqual({
         address: '0xabc123',
         dex: 'aerodrome',
-        fee: 0.0005
+        fee: 0.0005,
+        // stable pools use x3y+y3x, so depth math must not treat them as x*y=k
+        stable: true
       });
 
       // volatile + stable for WETH and USDC, batched into a single round trip

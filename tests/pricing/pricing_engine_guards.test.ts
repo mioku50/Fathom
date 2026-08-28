@@ -58,6 +58,19 @@ const emptyRaw = {
   updatedAt: 12345
 };
 
+const TOKEN_USDC_V3_POOL = { address: '0xpoolv3', dex: 'uniswap_v3', fee: 0.003 };
+const TOKEN_USDC_STABLE_POOL = { address: '0xpoolstable', dex: 'aerodrome', fee: 0.0005, stable: true };
+
+// Concentrated liquidity: sqrtPriceX96 + L, no reserves.
+const tokenUsdcV3Raw = {
+  token0: TOKEN,
+  token1: USDC,
+  sqrtPriceX96: 79228162514264337593543950336n,
+  liquidity: 5_000_000_000_000_000_000n,
+  tick: 0,
+  updatedAt: 12345
+};
+
 function makeOrchestrator(poolsByToken: Record<string, any[]>, rawByPool: Record<string, any>) {
   return {
     getAllPools: vi.fn(async (token: string) => poolsByToken[token.toLowerCase()] ?? []),
@@ -312,5 +325,88 @@ describe('PricingEngine guards', () => {
       ([t]: [string]) => t.toLowerCase() === WETH.toLowerCase()
     );
     expect(wethLookups).toHaveLength(1);
+  });
+  it('quotes real executable depth for a constant-product main pool', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_POOL.address]: tokenUsdcRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res).not.toBeNull();
+    expect(res!.sell_quotes.map(q => q.size_usd)).toEqual([1000, 5000, 10000]);
+
+    // 1000 TOKEN <-> 5000 USDC is a shallow pool: $10k out of it hurts badly,
+    // and every size must cost more than the one before it.
+    const impacts = res!.sell_quotes.map(q => q.price_impact_bps!);
+    expect(impacts.every(i => i > 0)).toBe(true);
+    expect(impacts[0]).toBeLessThan(impacts[1]);
+    expect(impacts[1]).toBeLessThan(impacts[2]);
+
+    // proceeds are strictly less than the notional asked for
+    for (const q of res!.sell_quotes) {
+      expect(q.proceeds_usd!).toBeLessThan(q.size_usd);
+    }
+
+    expect(res!.depth_1pct_usd).not.toBeNull();
+    expect(res!.depth_5pct_usd!).toBeGreaterThan(res!.depth_1pct_usd!);
+    expect(res!.flags).not.toContain('depth_unavailable');
+  });
+
+  it('refuses to invent depth for a concentrated-liquidity main pool', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_V3_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_V3_POOL.address]: tokenUsdcV3Raw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res).not.toBeNull();
+    // priced fine, but exit liquidity is a different question
+    expect(res!.price_usd).toBeGreaterThan(0);
+    expect(res!.depth_1pct_usd).toBeNull();
+    expect(res!.sell_quotes.every(q => q.proceeds_usd === null)).toBe(true);
+    expect(res!.flags).toContain('depth_unavailable');
+  });
+
+  it('refuses to apply x*y=k to an Aerodrome stable pool', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_STABLE_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_STABLE_POOL.address]: tokenUsdcRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res).not.toBeNull();
+    // reserves are present, but the curve is x3y+y3x - constant product would lie
+    expect(res!.depth_1pct_usd).toBeNull();
+    expect(res!.flags).toContain('depth_unavailable');
+  });
+
+  it('converts depth through the WETH anchor for a WETH-quoted pool', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_WETH_POOL.address]: tokenWethRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    // pool holds 1 WETH = $3000, so 1% depth is a small dollar figure, not a WETH figure
+    expect(res!.depth_1pct_usd).not.toBeNull();
+    expect(res!.depth_1pct_usd!).toBeGreaterThan(0);
+    expect(res!.depth_1pct_usd!).toBeLessThan(6000);
+  });
+
+  it('reports no depth for the hardcoded USDC response', async () => {
+    const engine = new PricingEngine(makeOrchestrator({}, {}), makeRpc(), 'base');
+    const res = await engine.calculatePrice(USDC);
+
+    expect(res!.depth_1pct_usd).toBeNull();
+    expect(res!.sell_quotes.every(q => q.proceeds_usd === null)).toBe(true);
   });
 });

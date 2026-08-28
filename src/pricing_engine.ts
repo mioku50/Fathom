@@ -7,6 +7,7 @@ import { PriceResponse } from './schema';
 import { PriceRpcClient } from './utils/price_rpc';
 import { PricingError } from './errors';
 import { computeDispersion, type PriceSample } from './dispersion';
+import { constantProductDepthProfile, unknownDepth, type DepthResult } from './depth';
 
 const WETH = '0x4200000000000000000000000000000000000006'.toLowerCase();
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
@@ -71,6 +72,15 @@ export class PricingEngine {
     // Every successfully priced pool is an independent observation of the same
     // token. Kept so source agreement can be measured instead of assumed.
     const samples: PriceSample[] = [];
+    // Everything the depth math needs from whichever pool wins, captured as we
+    // go so we do not have to re-derive or re-fetch it afterwards.
+    let mainPoolInputs: {
+      reserveToken: number;
+      reserveQuote: number;
+      quoteUsdPrice: number;
+      fee: number;
+      constantProduct: boolean;
+    } | null = null;
 
     const tokenDecimals = await this.rpcClient.getTokenDecimals(token);
 
@@ -113,6 +123,27 @@ export class PricingEngine {
       }
 
       if (liquidityUsd > bestLiquidityUsd) {
+        const raw = poolWithData.rawData;
+        const reserveTokenRaw = isToken0 ? raw.reserve0 : raw.reserve1;
+        const reserveQuoteRaw = isToken0 ? raw.reserve1 : raw.reserve0;
+        // Constant product only: Uniswap V2 and Aerodrome volatile pools.
+        // Concentrated liquidity (no reserves) and Aerodrome stable pools
+        // (x3y+y3x) need a real quoter and are left unmeasured instead.
+        const constantProduct =
+          reserveTokenRaw !== undefined &&
+          reserveQuoteRaw !== undefined &&
+          poolWithData.pool.stable !== true;
+
+        mainPoolInputs = constantProduct
+          ? {
+              reserveToken: Number(reserveTokenRaw) / Math.pow(10, tokenDecimals),
+              reserveQuote: Number(reserveQuoteRaw) / Math.pow(10, quoteDecimals),
+              quoteUsdPrice: lowerQuote === USDC ? 1 : (wethPriceUsd as number),
+              fee: poolWithData.pool.fee ?? 0.003,
+              constantProduct: true
+            }
+          : null;
+
         bestLiquidityUsd = liquidityUsd;
         bestPriceUsd = priceUsd;
         mainPoolData = {
@@ -144,6 +175,11 @@ export class PricingEngine {
     // Measured from the pool prices we already computed - no extra RPC calls.
     const dispersion = computeDispersion(samples);
 
+    // What an agent actually gets on the way out, rather than what is parked.
+    const depth: DepthResult = mainPoolInputs
+      ? constantProductDepthProfile(mainPoolInputs)
+      : unknownDepth();
+
     const confResult = calculateConfidence({
       liquidity_usd: bestLiquidityUsd,
       max_deviation_percent: dispersion.maxDeviation,
@@ -160,6 +196,12 @@ export class PricingEngine {
       is_unsellable: null
     });
 
+    if (depth.depth_1pct_usd === null) {
+      // Says plainly that exit liquidity was not established for this token,
+      // rather than leaving a reader to infer it from null fields.
+      confResult.flags.push('depth_unavailable');
+    }
+
     return formatPriceResponse(
       token,
       this.chain,
@@ -170,7 +212,8 @@ export class PricingEngine {
       {
         source_count: dispersion.sourceCount,
         price_dispersion_bps:
-          dispersion.maxDeviation === null ? null : dispersion.maxDeviation * 10000
+          dispersion.maxDeviation === null ? null : dispersion.maxDeviation * 10000,
+        depth
       }
     );
   }
@@ -217,7 +260,7 @@ export class PricingEngine {
         label: 'reliable',
         flags: ['hardcoded_numeraire']
       },
-      { source_count: 0, price_dispersion_bps: null }
+      { source_count: 0, price_dispersion_bps: null, depth: unknownDepth() }
     );
   }
 }

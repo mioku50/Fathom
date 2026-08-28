@@ -2,6 +2,11 @@ export interface PoolInfo {
   address: string;
   dex: string;
   fee?: number;
+  /**
+   * True for Aerodrome stable pools, which use the x3y+y3x curve rather than
+   * constant product. Depth math must not treat them as x*y=k.
+   */
+  stable?: boolean;
 }
 
 export interface RawPoolData {
