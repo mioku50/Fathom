@@ -25,14 +25,43 @@ const AERO = '0x940181a94A35A4569E4529A3CDfB74e38FD98631'.toLowerCase();
 /** Averaging window requested from pool oracles, in seconds. */
 const TWAP_WINDOW_SECONDS = 300;
 
+/** How many candidate pools may be tried before giving up on depth. */
+const MAX_DEPTH_CANDIDATES = 3;
+
+type MainPoolContext = {
+  pool: PoolInfo;
+  quoteToken: string;
+  quoteDecimals: number;
+  quoteUsdPrice: number;
+  /** True when the pool reports real balances; false for concentrated liquidity. */
+  hasRealReserves: boolean;
+  /** Present only when the pool is x*y=k and depth is solvable in closed form. */
+  constantProduct: {
+    reserveToken: number;
+    reserveQuote: number;
+    quoteUsdPrice: number;
+    fee: number;
+  } | null;
+};
+
 export class PricingEngine {
   /**
-   * Resolved once per engine instance. The engine is built once per request, so
-   * a 50-token batch now shares a single WETH/USD lookup instead of repeating
-   * it per token. The promise itself is memoized, not the value, so tokens
-   * priced concurrently share one in-flight resolution rather than racing.
+   * USD anchors for the quote assets we price against, resolved lazily and
+   * memoized per engine instance. The engine is built once per request, so a
+   * 50-token batch shares one lookup per quote asset instead of repeating it
+   * per token; the promise is memoized rather than the value, so tokens priced
+   * concurrently share one in-flight resolution rather than racing.
+   *
+   * Lazy matters: a token quoted only in USDC now pays for no anchor at all,
+   * where before every token paid for WETH whether it needed it or not.
    */
-  private wethAnchor?: Promise<number | null>;
+  private anchors = new Map<string, Promise<number | null>>();
+
+  /** Quote assets we can convert to USD, and the decimals they use. */
+  private static readonly QUOTE_ASSETS: Record<string, number> = {
+    [WETH]: 18,
+    [AERO]: 18
+  };
 
   constructor(
     private orchestrator: DEXOrchestrator,
@@ -40,15 +69,28 @@ export class PricingEngine {
     private chain: string
   ) {}
 
-  private getWethAnchorUsd(): Promise<number | null> {
-    if (!this.wethAnchor) {
-      this.wethAnchor = this.getBestPoolPrice(WETH, USDC, 18, 6).then(result =>
+  /**
+   * USD price of a quote asset. USDC is the numeraire; anything else is priced
+   * against it. Returns null for an asset we cannot anchor, which the caller
+   * must treat as "cannot price this pool" rather than substituting a value.
+   */
+  private getQuoteUsdPrice(quoteToken: string): Promise<number | null> {
+    const key = quoteToken.toLowerCase();
+    if (key === USDC) return Promise.resolve(1);
+
+    const decimals = PricingEngine.QUOTE_ASSETS[key];
+    if (decimals === undefined) return Promise.resolve(null);
+
+    let anchor = this.anchors.get(key);
+    if (!anchor) {
+      anchor = this.getBestPoolPrice(key, USDC, decimals, 6).then(result =>
         result && result.priceInQuote > 0 && Number.isFinite(result.priceInQuote)
           ? result.priceInQuote
           : null
       );
+      this.anchors.set(key, anchor);
     }
-    return this.wethAnchor;
+    return anchor;
   }
 
   async calculatePrice(token: string): Promise<PriceResponse | null> {
@@ -59,16 +101,9 @@ export class PricingEngine {
       return this.buildHardcodedResponse(token, 1.0, 100000000, 6);
     }
 
-    // 2. We need a WETH/USD anchor if any of this token's pools are WETH-quoted.
-    // If the anchor cannot be established we leave it null and skip those pools
-    // rather than substituting a placeholder: a wrong anchor rescales every
-    // WETH-quoted price by roughly the ETH price itself.
-    let wethPriceUsd: number | null = null;
-    if (lowerToken !== WETH) {
-      wethPriceUsd = await this.getWethAnchorUsd();
-    }
-
-    // 3. For the requested token, try pools.
+    // 2. Find the token's pools. Quote assets are anchored to USD lazily, as
+    // each pool needs one - a wrong anchor would rescale every price quoted in
+    // that asset, so a missing one skips the pool rather than guessing.
     const pools = await this.orchestrator.getAllPools(token);
     if (pools.length === 0) {
       return null;
@@ -86,21 +121,15 @@ export class PricingEngine {
     const samples: PriceSample[] = [];
     // Everything the depth math needs from whichever pool wins, captured as we
     // go so we do not have to re-derive or re-fetch it afterwards.
-    let mainPoolContext: {
-      pool: PoolInfo;
-      quoteToken: string;
-      quoteDecimals: number;
-      quoteUsdPrice: number;
-      /** True when the pool reports real balances; false for concentrated liquidity. */
-      hasRealReserves: boolean;
-      /** Present only when the pool is x*y=k and depth is solvable in closed form. */
-      constantProduct: {
-        reserveToken: number;
-        reserveQuote: number;
-        quoteUsdPrice: number;
-        fee: number;
-      } | null;
-    } | null = null;
+    type PoolCandidate = {
+      priceUsd: number;
+      liquidityUsd: number;
+      poolData: any;
+      context: MainPoolContext;
+    };
+    const candidates: PoolCandidate[] = [];
+
+    let mainPoolContext: MainPoolContext | null = null;
 
     const tokenDecimals = await this.rpcClient.getTokenDecimals(token);
 
@@ -120,29 +149,25 @@ export class PricingEngine {
         quoteDecimals
       );
 
-      let priceUsd = 0;
-      let liquidityUsd = 0;
+      // Pricing a quote asset against itself says nothing.
+      if (lowerQuote === lowerToken) continue;
 
-      if (lowerQuote === USDC) {
-        priceUsd = result.priceInQuote;
-        liquidityUsd = result.liquidityInQuote;
-      } else if (lowerQuote === WETH && lowerToken !== WETH) {
-        if (wethPriceUsd === null) {
-          poolsBlockedOnAnchor++;
-          continue;
-        }
-        priceUsd = result.priceInQuote * wethPriceUsd;
-        liquidityUsd = result.liquidityInQuote * wethPriceUsd;
-      } else {
-        // Skip unhandled quote tokens for now (e.g. AERO quote)
+      const quoteUsdPrice = await this.getQuoteUsdPrice(lowerQuote);
+      if (quoteUsdPrice === null) {
+        // Either an asset we cannot anchor at all, or one whose anchor failed.
+        // Both mean this pool cannot be converted to USD - never guess.
+        if (PricingEngine.QUOTE_ASSETS[lowerQuote] !== undefined) poolsBlockedOnAnchor++;
         continue;
       }
+
+      const priceUsd = result.priceInQuote * quoteUsdPrice;
+      const liquidityUsd = result.liquidityInQuote * quoteUsdPrice;
 
       if (priceUsd > 0 && Number.isFinite(priceUsd) && liquidityUsd > 0) {
         samples.push({ priceUsd, liquidityUsd });
       }
 
-      if (liquidityUsd > bestLiquidityUsd) {
+      {
         const raw = poolWithData.rawData;
         const reserveTokenRaw = isToken0 ? raw.reserve0 : raw.reserve1;
         const reserveQuoteRaw = isToken0 ? raw.reserve1 : raw.reserve0;
@@ -154,9 +179,7 @@ export class PricingEngine {
           reserveQuoteRaw !== undefined &&
           poolWithData.pool.stable !== true;
 
-        const quoteUsdPrice = lowerQuote === USDC ? 1 : (wethPriceUsd as number);
-
-        mainPoolContext = {
+        const context: MainPoolContext = {
           pool: poolWithData.pool,
           quoteToken,
           quoteDecimals,
@@ -172,10 +195,8 @@ export class PricingEngine {
             : null
         };
 
-        bestLiquidityUsd = liquidityUsd;
-        bestPriceUsd = priceUsd;
-        const poolHasRealReserves = reserveTokenRaw !== undefined && reserveQuoteRaw !== undefined;
-        mainPoolData = {
+        const poolHasRealReserves = context.hasRealReserves;
+        const poolData = {
           dex: poolWithData.pool.dex,
           address: poolWithData.pool.address,
           fee: poolWithData.pool.fee,
@@ -184,7 +205,22 @@ export class PricingEngine {
           liquidity_usd: poolHasRealReserves ? liquidityUsd : undefined,
           price_usd: priceUsd
         };
+
+        if (priceUsd > 0 && Number.isFinite(priceUsd) && liquidityUsd > 0) {
+          candidates.push({ priceUsd, liquidityUsd, poolData, context });
+        }
       }
+    }
+
+    // Rank by the liquidity figure we have, but do not trust it blindly: for
+    // concentrated liquidity it is derived from L * sqrtP, which is why the
+    // depth pass below is allowed to move on to the next candidate.
+    candidates.sort((a, b) => b.liquidityUsd - a.liquidityUsd);
+    if (candidates.length > 0) {
+      bestPriceUsd = candidates[0].priceUsd;
+      bestLiquidityUsd = candidates[0].liquidityUsd;
+      mainPoolData = candidates[0].poolData;
+      mainPoolContext = candidates[0].context;
     }
 
     // Guards
@@ -207,14 +243,28 @@ export class PricingEngine {
     const dispersion = computeDispersion(samples);
 
     // What an agent actually gets on the way out, rather than what is parked.
-    // Closed form where the curve allows it; otherwise ask the DEX itself.
-    let depth: DepthResult;
-    if (mainPoolContext?.constantProduct) {
-      depth = constantProductDepthProfile(mainPoolContext.constantProduct);
-    } else if (mainPoolContext) {
-      depth = await this.quoteDepth(token, tokenDecimals, bestPriceUsd, mainPoolContext);
-    } else {
-      depth = unknownDepth();
+    //
+    // The ranking above leans on a liquidity figure that, for concentrated
+    // liquidity, is derived from L * sqrtP - the very number we refuse to
+    // report. So the deepest-looking pool can turn out to be one that cannot
+    // fill the trade at all, while a sibling pool at another tick spacing can.
+    // Rather than trusting that ranking, walk the candidates until one answers.
+    let depth: DepthResult = unknownDepth();
+    for (const candidate of candidates.slice(0, MAX_DEPTH_CANDIDATES)) {
+      const ctx = candidate.context;
+      const attempt = ctx.constantProduct
+        ? constantProductDepthProfile(ctx.constantProduct)
+        : await this.quoteDepth(token, tokenDecimals, candidate.priceUsd, ctx);
+
+      if (!isDepthUnknown(attempt)) {
+        depth = attempt;
+        // The venue that can actually execute is the one worth reporting.
+        bestPriceUsd = candidate.priceUsd;
+        bestLiquidityUsd = candidate.liquidityUsd;
+        mainPoolData = candidate.poolData;
+        mainPoolContext = ctx;
+        break;
+      }
     }
 
     // The pool's own oracle, so spot can finally be compared against something.

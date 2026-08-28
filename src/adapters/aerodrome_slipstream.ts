@@ -20,7 +20,8 @@ export class AerodromeSlipstreamAdapter implements DEXAdapter {
 
   private quoteTokens: Address[] = [
     '0x4200000000000000000000000000000000000006', // WETH
-    '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'  // USDC
+    '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', // USDC
+    '0x940181a94a35a4569e4529a3cdfb74e38fd98631'  // AERO
   ];
 
   // Aerodrome FactoryRegistry on Base.

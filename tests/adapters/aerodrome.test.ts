@@ -55,9 +55,9 @@ describe('AerodromeAdapter', () => {
         stable: true
       });
 
-      // volatile + stable for WETH and USDC, batched into a single round trip
+      // volatile + stable across WETH, USDC and AERO, in a single round trip
       expect(mockMulticall).toHaveBeenCalledTimes(1);
-      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(4);
+      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(6);
     });
 
     it('should skip probes that revert', async () => {

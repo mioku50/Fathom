@@ -45,9 +45,9 @@ describe('UniswapV2Adapter', () => {
         fee: 0.003,
       });
 
-      // Both quote tokens probed in a single round trip
+      // All three quote tokens probed in a single round trip
       expect(mockMulticall).toHaveBeenCalledTimes(1);
-      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(2);
+      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(3);
     });
 
     it('should handle zero address gracefully', async () => {

@@ -53,9 +53,9 @@ describe('UniswapV3Adapter', () => {
         fee: 0.0005
       });
 
-      // 4 fee tiers x 2 quote tokens, now batched into a single round trip
+      // 4 fee tiers x 3 quote tokens (WETH, USDC, AERO), one round trip
       expect(mockMulticall).toHaveBeenCalledTimes(1);
-      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(8);
+      expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(12);
     });
 
     it('should skip probes that revert', async () => {

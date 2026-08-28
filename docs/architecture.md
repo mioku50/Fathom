@@ -136,6 +136,18 @@ sequenceDiagram
 
 3. Pricing engine
 - Orchestrates price discovery by querying DEX adapters.
+- **Quote graph**: pools quoted in USDC, WETH or AERO are all priced. USDC is
+  the numeraire; WETH and AERO are anchored to it on demand and memoized per
+  request, so a token quoted only in USDC resolves no anchor at all. An asset
+  whose anchor cannot be established raises `stale_anchor` rather than being
+  converted at a guessed rate.
+- **Main pool selection** ranks by the liquidity figure available, but does not
+  end there. For concentrated liquidity that figure comes from `L * sqrtP` - the
+  number the response refuses to report - so the deepest-*looking* pool can be
+  one that cannot fill the trade while a sibling at another tick spacing can.
+  The engine walks up to three candidates until one returns depth, and reports
+  the venue that can actually execute. Observed on cbBTC, where the top-ranked
+  pool quoted nothing and the next one filled $10k at 25 bps.
 - **Confidence Scoring**: Produces a 0-100 score from a weighted model:
 
   | Component | Weight | Status |

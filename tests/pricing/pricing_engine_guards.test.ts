@@ -5,6 +5,7 @@ import { PricingError } from '../../src/errors';
 const WETH = '0x4200000000000000000000000000000000000006';
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const TOKEN = '0x1111111111111111111111111111111111111111';
+const AERO = '0x940181a94A35A4569E4529A3CDfB74e38FD98631';
 
 const WETH_USDC_POOL = { address: '0xpoolwethusdc', dex: 'aerodrome', fee: 0.003 };
 const TOKEN_WETH_POOL = { address: '0xpooltokenweth', dex: 'aerodrome', fee: 0.003 };
@@ -68,6 +69,27 @@ const tokenUsdcV3Raw = {
   sqrtPriceX96: 79228162514264337593543950336n,
   liquidity: 5_000_000_000_000_000_000n,
   tick: 0,
+  updatedAt: 12345
+};
+
+const AERO_USDC_POOL = { address: '0xpoolaerousdc', dex: 'aerodrome', fee: 0.003 };
+const TOKEN_AERO_POOL = { address: '0xpooltokenaero', dex: 'aerodrome', fee: 0.003 };
+
+// 1000 AERO <-> 500 USDC => $0.50 per AERO
+const aeroUsdcRaw = {
+  token0: AERO,
+  token1: USDC,
+  reserve0: 1_000_000_000_000_000_000_000n,
+  reserve1: 500_000_000n,
+  updatedAt: 12345
+};
+
+// 1000 TOKEN <-> 4000 AERO => 4 AERO each => $2.00
+const tokenAeroRaw = {
+  token0: TOKEN,
+  token1: AERO,
+  reserve0: 1_000_000_000_000_000_000_000n,
+  reserve1: 4_000_000_000_000_000_000_000n,
   updatedAt: 12345
 };
 
@@ -602,5 +624,130 @@ describe('PricingEngine guards', () => {
 
     expect(res!.twap.window_seconds).toBe(1800);
     expect(res!.twap.spot_deviation_bps).toBeCloseTo(0, 6);
+  });
+  it('prices an AERO-quoted token by hopping AERO -> USDC', async () => {
+    const orchestrator = makeOrchestrator(
+      {
+        [AERO.toLowerCase()]: [AERO_USDC_POOL],
+        [TOKEN.toLowerCase()]: [TOKEN_AERO_POOL]
+      },
+      { [AERO_USDC_POOL.address]: aeroUsdcRaw, [TOKEN_AERO_POOL.address]: tokenAeroRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res).not.toBeNull();
+    // 4 AERO x $0.50
+    expect(res!.price_usd).toBeCloseTo(2.0, 8);
+  });
+
+  it('raises stale_anchor when the AERO anchor cannot be established', async () => {
+    const orchestrator = makeOrchestrator(
+      { [AERO.toLowerCase()]: [], [TOKEN.toLowerCase()]: [TOKEN_AERO_POOL] },
+      { [TOKEN_AERO_POOL.address]: tokenAeroRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+
+    await expect(engine.calculatePrice(TOKEN)).rejects.toMatchObject({ code: 'stale_anchor' });
+  });
+
+  it('resolves no anchor at all for a token quoted only in USDC', async () => {
+    const orchestrator = makeOrchestrator(
+      { [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [TOKEN_USDC_POOL.address]: tokenUsdcRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    await engine.calculatePrice(TOKEN);
+
+    // anchors are lazy: nothing but the token itself should have been looked up
+    const lookedUp = orchestrator.getAllPools.mock.calls.map(([t]: [string]) => t.toLowerCase());
+    expect(lookedUp).toEqual([TOKEN.toLowerCase()]);
+  });
+
+  it('resolves each quote anchor once, however many pools use it', async () => {
+    const orchestrator = makeOrchestrator(
+      {
+        [AERO.toLowerCase()]: [AERO_USDC_POOL],
+        [WETH.toLowerCase()]: [WETH_USDC_POOL],
+        [TOKEN.toLowerCase()]: [TOKEN_AERO_POOL, TOKEN_WETH_POOL, TOKEN_USDC_POOL]
+      },
+      {
+        [AERO_USDC_POOL.address]: aeroUsdcRaw,
+        [WETH_USDC_POOL.address]: wethUsdcRaw,
+        [TOKEN_AERO_POOL.address]: tokenAeroRaw,
+        [TOKEN_WETH_POOL.address]: tokenWethRaw,
+        [TOKEN_USDC_POOL.address]: tokenUsdcRaw
+      }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    await engine.calculatePrice(TOKEN);
+    await engine.calculatePrice(TOKEN);
+
+    const counts = (addr: string) =>
+      orchestrator.getAllPools.mock.calls.filter(([t]: [string]) => t.toLowerCase() === addr.toLowerCase()).length;
+
+    expect(counts(AERO)).toBe(1);
+    expect(counts(WETH)).toBe(1);
+    // three independent sources now that AERO-quoted pools are priced
+    const res = await engine.calculatePrice(TOKEN);
+    expect(res!.source_count).toBe(3);
+  });
+  it('moves to another pool when the deepest-looking one cannot fill the trade', async () => {
+    // Two concentrated-liquidity pools. The one that ranks highest by the
+    // L * sqrtP heuristic cannot quote; the other can. Ranking must not be the
+    // last word, because that heuristic is the number we refuse to report.
+    const DEEP_LOOKING = { address: '0xdeeplooking', dex: 'uniswap_v3', fee: 0.0001 };
+    const ACTUALLY_FILLABLE = { address: '0xfillable', dex: 'uniswap_v3', fee: 0.003 };
+
+    const orchestrator = makeOrchestrator(
+      {
+        [WETH.toLowerCase()]: [WETH_USDC_POOL],
+        [TOKEN.toLowerCase()]: [DEEP_LOOKING, ACTUALLY_FILLABLE]
+      },
+      {
+        [WETH_USDC_POOL.address]: wethUsdcRaw,
+        // bigger L, so it sorts first
+        [DEEP_LOOKING.address]: { ...tokenUsdcV3Raw, liquidity: 900_000_000_000_000_000_000n },
+        [ACTUALLY_FILLABLE.address]: tokenUsdcV3Raw
+      },
+      async ({ pool, amountsIn }: any) =>
+        pool.address === ACTUALLY_FILLABLE.address
+          ? amountsIn.map((_: bigint, i: number) => BigInt(Math.floor([980, 4900, 9800][i] * 1e6)))
+          : amountsIn.map(() => null)
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res).not.toBeNull();
+    expect(orchestrator.quoteSell).toHaveBeenCalledTimes(2);
+    // the venue that can execute is the one reported
+    expect(res!.main_pool.address).toBe(ACTUALLY_FILLABLE.address);
+    expect(res!.sell_quotes[2].proceeds_usd).toBe(9800);
+    expect(res!.flags).not.toContain('depth_unavailable');
+  });
+
+  it('stops after a bounded number of candidates', async () => {
+    const pools = Array.from({ length: 6 }, (_, i) => ({
+      address: `0xpool${i}`, dex: 'uniswap_v3', fee: 0.003
+    }));
+    const raw = Object.fromEntries(pools.map(p => [p.address, tokenUsdcV3Raw]));
+
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: pools },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, ...raw },
+      async () => null // nothing can be quoted
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    // six candidates, but we do not pay for six quoter round trips
+    expect(orchestrator.quoteSell).toHaveBeenCalledTimes(3);
+    expect(res!.flags).toContain('depth_unavailable');
   });
 });

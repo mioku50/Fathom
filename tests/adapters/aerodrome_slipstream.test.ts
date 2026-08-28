@@ -53,9 +53,9 @@ describe('AerodromeSlipstreamAdapter', () => {
 
       await adapter.getPools('0xToken');
 
-      // getPool probes: 1 CL factory x 2 tick spacings x 2 quote tokens = 4
+      // getPool probes: 1 CL factory x 2 tick spacings x 3 quote tokens = 6
       const probeCall = mockMulticall.mock.calls.find((c: any) => c[0].contracts[0]?.functionName === 'getPool');
-      expect(probeCall[0].contracts).toHaveLength(4);
+      expect(probeCall[0].contracts).toHaveLength(6);
       expect(probeCall[0].contracts.every((c: any) => c.address === CL_A)).toBe(true);
     });
 
