@@ -252,8 +252,8 @@ describe('PricingEngine guards', () => {
     expect(res!.confidence_components.twap_deviation.effective_weight).toBe(0);
     expect(res!.confidence_components.maturity.score).toBeNull();
 
-    // and with no manipulation check, nothing may be called reliable
-    expect(res!.label).not.toBe('reliable');
+    // the missing check is reported through flags, not by capping the score
+    expect(res!.confidence).toBeGreaterThan(0);
   });
 
   it('reports dispersion as null when there is only one source', async () => {

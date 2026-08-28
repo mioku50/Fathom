@@ -268,8 +268,9 @@ describe('Confidence Score Module', () => {
     expect(result.flags).toContain('sellability_unchecked');
   });
 
-  it('never reports reliable while the manipulation check is unavailable', () => {
-    // Perfect on every measurable axis.
+  it('can reach the top band on measured signals alone, but still flags the missing check', () => {
+    // Perfect on every measurable axis. The unavailable manipulation check no
+    // longer caps the score; it is reported through flags instead.
     const result = calculateConfidence({
       liquidity_usd: 10_000_000,
       max_deviation_percent: 0.0,
@@ -282,8 +283,11 @@ describe('Confidence Score Module', () => {
       is_unsellable: null,
     });
 
-    expect(result.confidence).toBeLessThanOrEqual(79);
-    expect(result.label).not.toBe('reliable');
+    expect(result.confidence).toBe(100);
+    expect(result.label).toBe('reliable');
+    expect(result.flags).toContain('twap_unavailable');
+    expect(result.components.twap_deviation.score).toBeNull();
+    expect(result.measured_weight).toBeCloseTo(0.7, 8);
   });
 
   it('scores 0 when nothing at all could be measured', () => {

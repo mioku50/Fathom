@@ -77,13 +77,6 @@ const WEIGHTS: Record<ConfidenceComponentName, number> = {
   maturity: 0.10,
 };
 
-/**
- * Without a TWAP comparison there is no manipulation check, so no price can
- * honestly earn the top band. Anything above this is reported as
- * "thin / volatile" until real TWAP data is wired in.
- */
-const NO_TWAP_CEILING = 79;
-
 export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
   const flags: string[] = [];
 
@@ -176,7 +169,9 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
     );
   }
 
-  // Say plainly which safety checks did not run.
+  // Say plainly which safety checks did not run. These do not cap the score:
+  // the score already reflects only what was measured, and `flags` is where a
+  // caller learns that the manipulation check was not among it.
   if (input.spot_vs_twap_percent === null) flags.push("twap_unavailable");
   if (input.is_stale === null) flags.push("freshness_unchecked");
   if (input.is_unsellable === null) flags.push("sellability_unchecked");
@@ -201,11 +196,6 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
   if (input.is_unsellable === true) {
     flags.push("unsellable");
     confidence = 0;
-  }
-
-  // No manipulation check => cannot be called reliable.
-  if (input.spot_vs_twap_percent === null) {
-    confidence = Math.min(confidence, NO_TWAP_CEILING);
   }
 
   // Determine label

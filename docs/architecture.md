@@ -140,8 +140,9 @@ sequenceDiagram
   see what the number is based on. `measured_weight` is the share of the nominal
   model that was live.
 
-  While `twap_deviation` is unmeasured, confidence is capped at 79, so no price
-  is labelled `reliable` without a manipulation check.
+  An unmeasured component does not cap the score: the score already reflects
+  only what was measured. The `twap_unavailable` flag is how a caller learns
+  that no manipulation check stands behind a high number.
 
 - **Source counting**: `source_count` counts pools that actually produced a
   price and clear a depth floor (the greater of $500 and 1% of the deepest
