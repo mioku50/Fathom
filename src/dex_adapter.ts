@@ -22,6 +22,24 @@ export interface RawPoolData {
   updatedAt: number;
 }
 
+/** A time-averaged price read from a pool's own oracle. */
+export interface TwapRequest {
+  pool: PoolInfo;
+  tokenIn: string;
+  tokenOut: string;
+  /** Size to price, in token-in raw units. */
+  amountIn: bigint;
+  /** Desired averaging window. Adapters report the window they actually used. */
+  windowSeconds: number;
+}
+
+export interface TwapResult {
+  /** Time-averaged output for `amountIn`, in token-out raw units. */
+  amountOut: bigint;
+  /** The window actually averaged over, which may differ from the request. */
+  windowSeconds: number;
+}
+
 /** One exact sell simulated on-chain: `amountOut` in quote-token raw units. */
 export interface SellQuoteRequest {
   pool: PoolInfo;
@@ -57,4 +75,14 @@ export interface DEXAdapter {
    * quoted (typically insufficient liquidity).
    */
   quoteSell?(request: SellQuoteRequest): Promise<(bigint | null)[]>;
+
+  /**
+   * Optional: read the pool's own time-weighted average price.
+   *
+   * Returns null when the pool cannot answer - most often because its
+   * observation cardinality is 1, which is the default for a freshly created
+   * pool and therefore common on exactly the long-tail tokens Fathom prices.
+   * That is a real "not available", not a reason to substitute spot.
+   */
+  getTwapAmountOut?(request: TwapRequest): Promise<TwapResult | null>;
 }

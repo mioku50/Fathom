@@ -143,7 +143,7 @@ sequenceDiagram
   | `liquidity` — parked balance of the main pool | 0.15 | measured, except on concentrated liquidity |
   | `execution_quality` — price impact on the $10k sale | 0.20 | measured wherever depth is |
   | `source_agreement` — max spread across independent pools | 0.20 | measured |
-  | `twap_deviation` — spot vs TWAP | 0.20 | **not yet measured** |
+  | `twap_deviation` — spot vs TWAP | 0.20 | measured wherever the pool has an oracle |
   | `volatility` — liquidity-weighted sigma/mu across pools | 0.15 | measured |
   | `maturity` — pool age and 24h volume | 0.10 | **not yet measured** |
 
@@ -204,7 +204,16 @@ sequenceDiagram
   interpolating between quoted sizes would be an estimate dressed as a
   measurement. A size the quoter cannot fill is reported as null, not zero.
   `depth_unavailable` is raised only when nothing at all could be established.
-- **TWAP** *(planned)*: historical ticks/reserves for a time-weighted average price.
+- **TWAP**: read from the main pool's own oracle, over a requested 300s window.
+  Concentrated-liquidity pools (Uniswap V3, Slipstream) answer through
+  `observe(uint32[])`; Aerodrome v2 pools through their built-in cumulative-price
+  oracle, whose window is its `periodSize` rather than our request - so the
+  response reports `twap.window_seconds` as actually averaged, never as asked.
+  Uniswap V2 has no single-call oracle and stays unmeasured.
+
+  A pool with observation cardinality 1 - the default for a freshly created pool,
+  and therefore common on long-tail tokens - simply cannot answer. That returns
+  null and `twap_unavailable`, never spot standing in for an average.
 - **Risk Flags**: Hard ceilings applied to the confidence score:
   - `thin_liquidity`: Liquidity below minimum threshold.
   - `possible_manipulation`: Large spot/TWAP deviation.

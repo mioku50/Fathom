@@ -12,6 +12,7 @@ const mockPriceResponse: PriceResponse = {
   liquidity_usd: 84200,
   source_count: 2,
   price_dispersion_bps: 120,
+  twap: { price_usd: null, window_seconds: null, spot_deviation_bps: null },
   sell_quotes: [],
   depth_1pct_usd: null,
   depth_5pct_usd: null,

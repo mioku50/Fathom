@@ -28,6 +28,16 @@ export type PriceResponse = {
   price_dispersion_bps: number | null;
   /** Per-component breakdown of the confidence score, incl. what was not measured. */
   confidence_components: ConfidenceComponents;
+  /**
+   * Time-weighted average price from the main pool's own oracle, with the
+   * window it actually averaged over. Null when the pool cannot answer -
+   * commonly a fresh pool whose observation cardinality is still 1.
+   */
+  twap: {
+    price_usd: number | null;
+    window_seconds: number | null;
+    spot_deviation_bps: number | null;
+  };
   /** What selling $1k / $5k / $10k of this token actually returns on the main pool. */
   sell_quotes: SellQuote[];
   /** Notional that moves the main pool's marginal price 1%; null when not computable. */
@@ -62,6 +72,7 @@ export function isPriceResponse(data: any): data is PriceResponse {
   if (typeof data.source_count !== 'number') return false;
   if (data.price_dispersion_bps !== null && typeof data.price_dispersion_bps !== 'number') return false;
   if (!data.confidence_components || typeof data.confidence_components !== 'object') return false;
+  if (!data.twap || typeof data.twap !== 'object') return false;
   if (!Array.isArray(data.sell_quotes)) return false;
   if (data.depth_1pct_usd !== null && typeof data.depth_1pct_usd !== 'number') return false;
   if (data.depth_5pct_usd !== null && typeof data.depth_5pct_usd !== 'number') return false;

@@ -1,4 +1,4 @@
-import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from './dex_adapter';
+import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest, TwapRequest, TwapResult } from './dex_adapter';
 
 export interface PoolWithRawData {
   pool: PoolInfo;
@@ -74,6 +74,22 @@ export class DEXOrchestrator {
       return await adapter.quoteSell(request);
     } catch (error) {
       console.error(`Error quoting sell on ${request.pool.dex} pool ${request.pool.address}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Asks the pool's own oracle for a time-weighted average price.
+   * null when that DEX has no oracle wired up, or the pool cannot answer.
+   */
+  async getTwapAmountOut(request: TwapRequest): Promise<TwapResult | null> {
+    const adapter = this.adapters.find(a => a.id === request.pool.dex);
+    if (!adapter?.getTwapAmountOut) return null;
+
+    try {
+      return await adapter.getTwapAmountOut(request);
+    } catch (error) {
+      console.error(`Error reading TWAP on ${request.pool.dex} pool ${request.pool.address}:`, error);
       return null;
     }
   }

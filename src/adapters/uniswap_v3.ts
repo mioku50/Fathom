@@ -1,5 +1,6 @@
 import { Address } from 'viem';
-import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from '../dex_adapter';
+import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest, TwapRequest, TwapResult } from '../dex_adapter';
+import { readConcentratedTwap } from './cl_twap';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
 
 export class UniswapV3Adapter implements DEXAdapter {
@@ -234,5 +235,9 @@ export class UniswapV3Adapter implements DEXAdapter {
     return results.map((r: any) =>
       r?.status === 'success' && typeof r.result?.[0] === 'bigint' ? r.result[0] : null
     );
+  }
+
+  getTwapAmountOut(request: TwapRequest): Promise<TwapResult | null> {
+    return readConcentratedTwap(this.client, request, this.pinBlock);
   }
 }

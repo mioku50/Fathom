@@ -35,7 +35,9 @@ vi.mock('../src/orchestrator', () => {
             token0: lastToken || '0x0000000000000000000000000000000000000000',
             token1: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' // USDC
           }
-        }])
+        }]),
+        quoteSell: vi.fn().mockResolvedValue(null),
+        getTwapAmountOut: vi.fn().mockResolvedValue(null)
       };
     })
   };
@@ -496,6 +498,7 @@ describe('Fathom API', () => {
       liquidity_usd: 200000,
       source_count: 2,
       price_dispersion_bps: 120,
+      twap: { price_usd: null, window_seconds: null, spot_deviation_bps: null },
       sell_quotes: [],
       depth_1pct_usd: null,
       depth_5pct_usd: null,

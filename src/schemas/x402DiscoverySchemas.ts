@@ -102,6 +102,16 @@ export const priceOutputSchema = {
     }
       }
     },
+    twap: {
+      type: "object",
+      description: "Time-weighted average price from the main pool's own oracle. Null when the pool cannot answer - commonly a fresh pool whose observation cardinality is still 1.",
+      properties: {
+        price_usd: { type: ["number", "null"] },
+        window_seconds: { type: ["number", "null"], description: "The window actually averaged over, which may differ per DEX." },
+        spot_deviation_bps: { type: ["number", "null"], description: "How far spot sits from the average, in basis points." }
+      },
+      required: ["price_usd", "window_seconds", "spot_deviation_bps"]
+    },
     sell_quotes: {
       type: "array",
       description: "What selling this notional actually returns on the main pool, fees and slippage included. Null fields mean the pool's curve needs a quoter we do not call yet.",
@@ -133,7 +143,7 @@ export const priceOutputSchema = {
         liquidity_usd: { type: "number" },
         price_usd: { type: "number" }
       },
-      required: ["dex", "address", "liquidity_usd", "price_usd"]
+      required: ["dex", "address", "price_usd"]
     },
     flags: {
       type: "array",

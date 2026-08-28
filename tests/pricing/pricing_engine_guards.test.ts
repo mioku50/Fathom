@@ -75,7 +75,9 @@ function makeOrchestrator(
   poolsByToken: Record<string, any[]>,
   rawByPool: Record<string, any>,
   // Default: no quoter wired up for this DEX, i.e. depth stays unknown.
-  quoteSell: (req: any) => Promise<(bigint | null)[] | null> = async () => null
+  quoteSell: (req: any) => Promise<(bigint | null)[] | null> = async () => null,
+  // Default: the pool has no usable oracle, i.e. TWAP stays unmeasured.
+  getTwapAmountOut: (req: any) => Promise<any> = async () => null
 ) {
   return {
     getAllPools: vi.fn(async (token: string) => poolsByToken[token.toLowerCase()] ?? []),
@@ -84,7 +86,8 @@ function makeOrchestrator(
         .filter(p => rawByPool[p.address])
         .map(p => ({ pool: p, rawData: rawByPool[p.address] }))
     ),
-    quoteSell: vi.fn(quoteSell)
+    quoteSell: vi.fn(quoteSell),
+    getTwapAmountOut: vi.fn(getTwapAmountOut)
   } as any;
 }
 
@@ -523,5 +526,81 @@ describe('PricingEngine guards', () => {
     expect(res!.flags).toContain('no_exit_liquidity');
     expect(res!.confidence).toBeLessThanOrEqual(39);
     expect(res!.confidence_components.execution_quality.score).toBe(0);
+  });
+  it('measures spot against the pool oracle and feeds it to confidence', async () => {
+    // Pool prices TOKEN at $5.00 spot; the oracle averages $5.10 => 196 bps apart
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_POOL.address]: tokenUsdcRaw },
+      async () => null,
+      async ({ amountIn }: any) => {
+        // one whole TOKEN in (18 dp) -> 5.10 USDC out (6 dp)
+        expect(amountIn).toBe(10n ** 18n);
+        return { amountOut: BigInt(5_100_000), windowSeconds: 300 };
+      }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res!.twap.price_usd).toBeCloseTo(5.1, 9);
+    expect(res!.twap.window_seconds).toBe(300);
+    // |5.00 - 5.10| / 5.10 = 1.96%
+    expect(res!.twap.spot_deviation_bps).toBeCloseTo(196.078, 2);
+
+    // the component is now measured rather than excluded
+    expect(res!.confidence_components.twap_deviation.score).not.toBeNull();
+    expect(res!.flags).not.toContain('twap_unavailable');
+  });
+
+  it('raises possible_manipulation when spot runs far from the oracle', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_POOL.address]: tokenUsdcRaw },
+      async () => null,
+      // oracle says $1.00 while spot is $5.00 - a 400% gap
+      async () => ({ amountOut: BigInt(1_000_000), windowSeconds: 300 })
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res!.flags).toContain('possible_manipulation');
+    expect(res!.confidence).toBeLessThanOrEqual(39);
+    expect(res!.confidence_components.twap_deviation.score).toBe(0);
+  });
+
+  it('leaves TWAP unmeasured when the pool oracle cannot answer', async () => {
+    // Cardinality 1 is the default for a fresh pool, so this is the common case
+    // on exactly the long-tail tokens Fathom prices.
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_POOL.address]: tokenUsdcRaw }
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res!.twap.price_usd).toBeNull();
+    expect(res!.twap.window_seconds).toBeNull();
+    expect(res!.twap.spot_deviation_bps).toBeNull();
+    expect(res!.flags).toContain('twap_unavailable');
+    expect(res!.confidence_components.twap_deviation.score).toBeNull();
+  });
+
+  it('reports the window the oracle actually used, not the one requested', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_POOL.address]: tokenUsdcRaw },
+      async () => null,
+      // Aerodrome v2 averages over its own periodSize, not our 300s request
+      async () => ({ amountOut: BigInt(5_000_000), windowSeconds: 1800 })
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res!.twap.window_seconds).toBe(1800);
+    expect(res!.twap.spot_deviation_bps).toBeCloseTo(0, 6);
   });
 });

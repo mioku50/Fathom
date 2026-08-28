@@ -2,7 +2,7 @@ import { Address } from 'viem';
 import { DEXOrchestrator } from './orchestrator';
 import { PriceCalculator } from './calculator';
 import { calculateConfidence } from './confidence';
-import { formatPriceResponse } from './utils';
+import { formatPriceResponse, NO_TWAP, type TwapReport } from './utils';
 import { PriceResponse } from './schema';
 import { PriceRpcClient } from './utils/price_rpc';
 import { PricingError } from './errors';
@@ -21,6 +21,9 @@ import type { PoolInfo } from './dex_adapter';
 const WETH = '0x4200000000000000000000000000000000000006'.toLowerCase();
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
 const AERO = '0x940181a94A35A4569E4529A3CDfB74e38FD98631'.toLowerCase();
+
+/** Averaging window requested from pool oracles, in seconds. */
+const TWAP_WINDOW_SECONDS = 300;
 
 export class PricingEngine {
   /**
@@ -171,11 +174,14 @@ export class PricingEngine {
 
         bestLiquidityUsd = liquidityUsd;
         bestPriceUsd = priceUsd;
+        const poolHasRealReserves = reserveTokenRaw !== undefined && reserveQuoteRaw !== undefined;
         mainPoolData = {
           dex: poolWithData.pool.dex,
           address: poolWithData.pool.address,
           fee: poolWithData.pool.fee,
-          liquidity_usd: liquidityUsd,
+          // Same rule as the top-level field: a concentrated-liquidity pool has
+          // no balance to report, so it reports none rather than L * sqrtP.
+          liquidity_usd: poolHasRealReserves ? liquidityUsd : undefined,
           price_usd: priceUsd
         };
       }
@@ -211,6 +217,11 @@ export class PricingEngine {
       depth = unknownDepth();
     }
 
+    // The pool's own oracle, so spot can finally be compared against something.
+    const twap = mainPoolContext
+      ? await this.readTwap(token, tokenDecimals, bestPriceUsd, mainPoolContext)
+      : NO_TWAP;
+
     const execution = headlineExecution(depth);
 
     const confResult = calculateConfidence({
@@ -223,9 +234,10 @@ export class PricingEngine {
       execution_fillable: execution.fillable,
       max_deviation_percent: dispersion.maxDeviation,
       sigma_over_mu_percent: dispersion.sigmaOverMu,
+      spot_vs_twap_percent:
+        twap.spot_deviation_bps === null ? null : twap.spot_deviation_bps / 10000,
       // Not yet measured. Passing null keeps these components out of the score
       // rather than crediting the token for checks that never ran.
-      spot_vs_twap_percent: null,
       pool_age_days: null,
       volume_24h_usd: null,
       // Sources that actually priced the token, not pools merely discovered:
@@ -254,9 +266,53 @@ export class PricingEngine {
         source_count: dispersion.sourceCount,
         price_dispersion_bps:
           dispersion.maxDeviation === null ? null : dispersion.maxDeviation * 10000,
-        depth
+        depth,
+        twap
       }
     );
+  }
+
+  /**
+   * Read the main pool's own time-weighted average price and compare spot to it.
+   * A large gap is the classic manipulation signature, which is why this feeds
+   * both the response and the confidence model.
+   */
+  private async readTwap(
+    token: string,
+    tokenDecimals: number,
+    spotPriceUsd: number,
+    ctx: {
+      pool: PoolInfo;
+      quoteToken: string;
+      quoteDecimals: number;
+      quoteUsdPrice: number;
+    }
+  ): Promise<TwapReport> {
+    if (!(spotPriceUsd > 0) || !Number.isFinite(spotPriceUsd) || !(ctx.quoteUsdPrice > 0)) {
+      return NO_TWAP;
+    }
+
+    // Price one whole token, so the averaged output converts straight to USD.
+    const amountIn = BigInt(Math.round(Math.pow(10, tokenDecimals)));
+
+    const result = await this.orchestrator.getTwapAmountOut({
+      pool: ctx.pool,
+      tokenIn: token,
+      tokenOut: ctx.quoteToken,
+      amountIn,
+      windowSeconds: TWAP_WINDOW_SECONDS
+    });
+    if (!result) return NO_TWAP;
+
+    const twapPriceUsd =
+      (Number(result.amountOut) / Math.pow(10, ctx.quoteDecimals)) * ctx.quoteUsdPrice;
+    if (!Number.isFinite(twapPriceUsd) || twapPriceUsd <= 0) return NO_TWAP;
+
+    return {
+      price_usd: twapPriceUsd,
+      window_seconds: result.windowSeconds,
+      spot_deviation_bps: (Math.abs(spotPriceUsd - twapPriceUsd) / twapPriceUsd) * 10000
+    };
   }
 
   /**
@@ -342,7 +398,7 @@ export class PricingEngine {
         label: 'reliable',
         flags: ['hardcoded_numeraire']
       },
-      { source_count: 0, price_dispersion_bps: null, depth: unknownDepth() }
+      { source_count: 0, price_dispersion_bps: null, depth: unknownDepth(), twap: NO_TWAP }
     );
   }
 }

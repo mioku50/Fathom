@@ -2,10 +2,23 @@ import type { PriceResponse, PoolData } from './schema';
 import type { ConfidenceComponents } from './confidence';
 import { unknownDepth, type DepthResult } from './depth';
 
+export type TwapReport = {
+  price_usd: number | null;
+  window_seconds: number | null;
+  spot_deviation_bps: number | null;
+};
+
+export const NO_TWAP: TwapReport = {
+  price_usd: null,
+  window_seconds: null,
+  spot_deviation_bps: null
+};
+
 export type PriceMetrics = {
   source_count: number;
   price_dispersion_bps: number | null;
   depth?: DepthResult;
+  twap?: TwapReport;
 };
 
 const UNMEASURED_COMPONENTS: ConfidenceComponents = {
@@ -37,6 +50,7 @@ export function generateDummyResponse(token: string, chain: string): PriceRespon
     source_count: 1,
     price_dispersion_bps: null,
     confidence_components: UNMEASURED_COMPONENTS,
+    twap: NO_TWAP,
     ...unknownDepth(),
     main_pool: {
       dex: "aerodrome",
@@ -96,6 +110,7 @@ export function formatPriceResponse(
     source_count: metrics.source_count,
     price_dispersion_bps: metrics.price_dispersion_bps,
     confidence_components: confResult.components ?? UNMEASURED_COMPONENTS,
+    twap: metrics.twap ?? NO_TWAP,
     ...(metrics.depth ?? unknownDepth()),
     main_pool: mainPoolData,
     flags: confResult.flags,

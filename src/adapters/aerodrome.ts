@@ -1,5 +1,5 @@
 import { Address } from 'viem';
-import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from '../dex_adapter';
+import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest, TwapRequest, TwapResult } from '../dex_adapter';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
 
 export class AerodromeAdapter implements DEXAdapter {
@@ -212,5 +212,66 @@ export class AerodromeAdapter implements DEXAdapter {
       const out = r.result[r.result.length - 1];
       return typeof out === 'bigint' && out > 0n ? out : null;
     });
+  }
+
+  /**
+   * Aerodrome v2 pools keep their own cumulative-price oracle. `quote` averages
+   * over `granularity` stored points, each one `periodSize` long, so the window
+   * is read from the pool rather than assumed.
+   */
+  async getTwapAmountOut(request: TwapRequest): Promise<TwapResult | null> {
+    const abi = [
+      {
+        inputs: [
+          { internalType: 'address', name: 'tokenIn', type: 'address' },
+          { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
+          { internalType: 'uint256', name: 'granularity', type: 'uint256' }
+        ],
+        name: 'quote',
+        outputs: [{ internalType: 'uint256', name: 'amountOut', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function'
+      },
+      {
+        inputs: [],
+        name: 'periodSize',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function'
+      }
+    ] as const;
+
+    // Cover at least the requested window, one stored period at a time.
+    const results = await this.client.multicall({
+      contracts: [
+        {
+          address: request.pool.address as Address,
+          abi,
+          functionName: 'periodSize'
+        },
+        {
+          address: request.pool.address as Address,
+          abi,
+          functionName: 'quote',
+          args: [request.tokenIn as Address, request.amountIn, 1n]
+        }
+      ],
+      allowFailure: true,
+      blockNumber: this.pinBlock
+    });
+
+    const periodSize: any = results[0];
+    const quoted: any = results[1];
+    if (quoted?.status !== 'success' || typeof quoted.result !== 'bigint' || quoted.result <= 0n) {
+      return null;
+    }
+    // Without periodSize we cannot say what window this averages over, and an
+    // unlabelled TWAP is not a TWAP a caller can reason about.
+    if (periodSize?.status !== 'success') return null;
+
+    const windowSeconds = Number(periodSize.result);
+    if (!Number.isFinite(windowSeconds) || windowSeconds <= 0) return null;
+
+    return { amountOut: quoted.result, windowSeconds };
   }
 }
