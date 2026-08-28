@@ -9,6 +9,19 @@ export interface PoolInfo {
   stable?: boolean;
   /** Slipstream pools are keyed by tick spacing rather than a fee tier. */
   tickSpacing?: number;
+  /**
+   * Uniswap v4 pools live inside one singleton and have no address of their
+   * own, only a PoolId derived from this key. `address` carries the PoolId, and
+   * the key is kept because keccak cannot be reversed - and because PoolInfo is
+   * cached, so it must survive a round trip through storage.
+   */
+  v4Key?: {
+    currency0: string;
+    currency1: string;
+    fee: number;
+    tickSpacing: number;
+    hooks: string;
+  };
 }
 
 export interface RawPoolData {
@@ -61,10 +74,11 @@ export interface DEXAdapter {
 
   /**
    * Fetch reserves, ticks, or state for price/liquidity calculation.
-   * @param poolAddress The address of the pool contract.
-   * @returns A promise that resolves to the raw data of the pool.
+   * @param poolAddress The pool contract's address, or its PoolId on Uniswap v4.
+   * @param pool The PoolInfo it came from. Uniswap v4 pools have no per-pool
+   *   contract to query for their currencies, so the key travels with them.
    */
-  getRawData(poolAddress: string): Promise<RawPoolData>;
+  getRawData(poolAddress: string, pool?: PoolInfo): Promise<RawPoolData>;
 
   /**
    * Optional: ask the DEX itself what a sell would return, so curves we cannot

@@ -21,6 +21,8 @@ import type { PoolInfo } from './dex_adapter';
 const WETH = '0x4200000000000000000000000000000000000006'.toLowerCase();
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
 const AERO = '0x940181a94A35A4569E4529A3CDfB74e38FD98631'.toLowerCase();
+/** Uniswap v4 denominates native ETH as address(0). */
+const NATIVE_ETH = '0x0000000000000000000000000000000000000000';
 
 /** Averaging window requested from pool oracles, in seconds. */
 const TWAP_WINDOW_SECONDS = 300;
@@ -60,7 +62,10 @@ export class PricingEngine {
   /** Quote assets we can convert to USD, and the decimals they use. */
   private static readonly QUOTE_ASSETS: Record<string, number> = {
     [WETH]: 18,
-    [AERO]: 18
+    [AERO]: 18,
+    // Native ETH is worth exactly one WETH by definition of wrapping, so it
+    // shares that anchor rather than being priced separately.
+    [NATIVE_ETH]: 18
   };
 
   constructor(
@@ -80,6 +85,9 @@ export class PricingEngine {
 
     const decimals = PricingEngine.QUOTE_ASSETS[key];
     if (decimals === undefined) return Promise.resolve(null);
+
+    // Wrapping is 1:1, so native ETH resolves through the WETH anchor.
+    if (key === NATIVE_ETH) return this.getQuoteUsdPrice(WETH);
 
     let anchor = this.anchors.get(key);
     if (!anchor) {

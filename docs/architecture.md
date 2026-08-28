@@ -121,7 +121,15 @@ sequenceDiagram
   - `getRawData(poolAddress)`: Fetch reserves, ticks, or state for price/liquidity calculation.
 - Discovery logic uses Factory and Registry contracts to locate pools programmatically.
 - **Coverage**: Aerodrome v2 (volatile + stable), Aerodrome Slipstream,
-  Uniswap V2, Uniswap V3.
+  Uniswap V2, Uniswap V3, Uniswap v4.
+- **Uniswap v4** pools live inside one PoolManager singleton and have no address
+  of their own, only a PoolId derived from their PoolKey, so there is no factory
+  to enumerate. The adapter probes the canonical hookless keys - the standard
+  fee/tick-spacing pairs against each quote asset - derives the PoolId off-chain
+  and keeps the ones StateView reports as initialised. Native ETH (`address(0)`)
+  is probed alongside WETH, because on Base the deepest v4 pools are ETH-quoted.
+  **Pools behind custom hooks are not discovered**; that is a stated limit, and
+  they simply do not contribute to `source_count`.
 - **Slipstream** pools are keyed by tick spacing rather than a fee tier, and
   more than one CL factory is live at once, so factories are read from the
   **FactoryRegistry** (`0x5C3F18F06CC09CA1910767A34a20F771039E37C0`) rather than

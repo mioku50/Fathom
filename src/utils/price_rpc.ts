@@ -102,6 +102,9 @@ export class PriceRpcClient {
 
   private async readTokenDecimals(tokenAddress: string, pinBlock?: bigint): Promise<number> {
     const canonical: Record<string, number> = {
+      // Uniswap v4 denominates native ETH as address(0). It has no decimals()
+      // to call, so it must be known rather than read.
+      '0x0000000000000000000000000000000000000000': 18, // native ETH
       '0x4200000000000000000000000000000000000006': 18, // WETH
       '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913': 6,  // USDC
       '0x940181a94A35A4569E4529A3CDfB74e38FD98631': 18  // AERO

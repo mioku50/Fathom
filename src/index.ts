@@ -12,6 +12,7 @@ import { AerodromeAdapter } from './adapters/aerodrome'
 import { AerodromeSlipstreamAdapter } from './adapters/aerodrome_slipstream'
 import { UniswapV2Adapter } from './adapters/uniswap_v2'
 import { UniswapV3Adapter } from './adapters/uniswap_v3'
+import { UniswapV4Adapter } from './adapters/uniswap_v4'
 import { PricingEngine } from './pricing_engine'
 import { PriceRpcClient } from './utils/price_rpc'
 import { parseTokensParam } from './utils'
@@ -56,7 +57,8 @@ function buildPricingEngine(env: ExtendedEnv, chain: string, defaultTTL: number)
     new AerodromeAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new AerodromeSlipstreamAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new UniswapV2Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
-    new UniswapV3Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient)
+    new UniswapV3Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
+    new UniswapV4Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient)
   ]
   const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(env.FATHOM_KV, defaultTTL))
   return new PricingEngine(orchestrator, rpcClient, chain)

@@ -116,7 +116,7 @@ export class DEXOrchestrator {
          console.warn(`No adapter found for DEX: ${pool.dex}`);
          throw new Error(`No adapter found for DEX: ${pool.dex}`);
       }
-      const rawData = await adapter.getRawData(pool.address);
+      const rawData = await adapter.getRawData(pool.address, pool);
 
       if (this.cache) {
         await this.cache.set(cacheKey, rawData, 60); // Cache for 60 seconds
