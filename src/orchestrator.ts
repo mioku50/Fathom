@@ -1,4 +1,15 @@
 import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest, TwapRequest, TwapResult } from './dex_adapter';
+import { mapWithConcurrency } from './concurrency';
+
+/**
+ * How many pools may be read at once.
+ *
+ * A single token can now sit in 30+ pools across five DEXes, and firing one
+ * multicall per pool simultaneously gets nearly all of them rate-limited - which
+ * looks like "no liquidity" rather than like a failure. Reads are bounded so a
+ * well-covered token does not defeat its own discovery.
+ */
+const RAW_DATA_CONCURRENCY = 6;
 
 export interface PoolWithRawData {
   pool: PoolInfo;
@@ -101,41 +112,38 @@ export class DEXOrchestrator {
    * @returns A promise that resolves to an array of objects containing both pool info and its raw data.
    */
   async getAllRawData(pools: PoolInfo[]): Promise<PoolWithRawData[]> {
-    const promises = pools.map(async (pool) => {
-      const cacheKey = `orchestrator:raw:${pool.address.toLowerCase()}`;
-      if (this.cache) {
-        const cachedRawData = await this.cache.get(cacheKey);
-        if (cachedRawData) {
-          return { pool, rawData: cachedRawData as RawPoolData };
+    const results = await mapWithConcurrency(pools, RAW_DATA_CONCURRENCY, async (pool): Promise<PoolWithRawData | null> => {
+      try {
+        const cacheKey = `orchestrator:raw:${pool.address.toLowerCase()}`;
+        if (this.cache) {
+          const cachedRawData = await this.cache.get(cacheKey);
+          if (cachedRawData) {
+            return { pool, rawData: cachedRawData as RawPoolData };
+          }
         }
-      }
 
-      // Find the adapter responsible for this DEX
-      const adapter = this.adapters.find(a => a.id === pool.dex);
-      if (!adapter) {
-         console.warn(`No adapter found for DEX: ${pool.dex}`);
-         throw new Error(`No adapter found for DEX: ${pool.dex}`);
-      }
-      const rawData = await adapter.getRawData(pool.address, pool);
+        // Find the adapter responsible for this DEX
+        const adapter = this.adapters.find(a => a.id === pool.dex);
+        if (!adapter) {
+          // A pool we cannot read is reported the same way whatever the cause;
+          // the warning explains why this particular one is unreadable.
+          console.warn(`No adapter found for DEX: ${pool.dex}`);
+          throw new Error(`No adapter found for DEX: ${pool.dex}`);
+        }
+        const rawData = await adapter.getRawData(pool.address, pool);
 
-      if (this.cache) {
-        await this.cache.set(cacheKey, rawData, 60); // Cache for 60 seconds
-      }
+        if (this.cache) {
+          await this.cache.set(cacheKey, rawData, 60); // Cache for 60 seconds
+        }
 
-      return { pool, rawData };
+        return { pool, rawData };
+      } catch (error) {
+        // One unreadable pool must not remove the others from consideration.
+        console.error('Error fetching raw data for a pool:', error);
+        return null;
+      }
     });
 
-    const results = await Promise.allSettled(promises);
-
-    const allData: PoolWithRawData[] = [];
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        allData.push(result.value);
-      } else {
-         console.error('Error fetching raw data for a pool:', result.reason);
-      }
-    }
-
-    return allData;
+    return results.filter((r): r is PoolWithRawData => r !== null);
   }
 }

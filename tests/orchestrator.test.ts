@@ -241,3 +241,54 @@ describe('DEXOrchestrator', () => {
     consoleErrorSpy.mockRestore();
   });
 });
+
+describe('DEXOrchestrator read concurrency', () => {
+  it('bounds how many pools are read at once', async () => {
+    let inFlight = 0;
+    let peak = 0;
+
+    const adapter = {
+      id: 'test_dex',
+      getPools: vi.fn(async () => []),
+      getRawData: vi.fn(async () => {
+        inFlight++;
+        peak = Math.max(peak, inFlight);
+        await new Promise(r => setTimeout(r, 2));
+        inFlight--;
+        return { reserve0: 1n, reserve1: 2n, updatedAt: 1 };
+      })
+    } as any;
+
+    const orchestrator = new DEXOrchestrator([adapter]);
+    const pools = Array.from({ length: 30 }, (_, i) => ({ address: `0x${i}`, dex: 'test_dex' }));
+
+    const data = await orchestrator.getAllRawData(pools);
+
+    // A well-covered token can sit in 30+ pools; firing them all at once is what
+    // got them rate-limited into looking like "no liquidity".
+    expect(data).toHaveLength(30);
+    expect(peak).toBeLessThanOrEqual(6);
+    expect(peak).toBeGreaterThan(1);
+  });
+
+  it('keeps the readable pools when some fail', async () => {
+    const adapter = {
+      id: 'test_dex',
+      getPools: vi.fn(async () => []),
+      getRawData: vi.fn(async (address: string) => {
+        if (address.endsWith('bad')) throw new Error('rate limit exceeded');
+        return { reserve0: 1n, reserve1: 2n, updatedAt: 1 };
+      })
+    } as any;
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const data = await new DEXOrchestrator([adapter]).getAllRawData([
+      { address: '0xgood1', dex: 'test_dex' },
+      { address: '0xbad', dex: 'test_dex' },
+      { address: '0xgood2', dex: 'test_dex' }
+    ]);
+    spy.mockRestore();
+
+    expect(data.map(d => d.pool.address)).toEqual(['0xgood1', '0xgood2']);
+  });
+});

@@ -256,6 +256,10 @@ sequenceDiagram
   unbounded parallelism would fan out 50 tokens' RPC calls at once and invite
   provider rate limiting. Results keep request order regardless of completion
   order.
+- **Bounded pool reads.** A well-covered token now sits in 30+ pools across five
+  DEXes. Reading them all at once got nearly every read rate-limited, which the
+  engine could only see as "no pools" - a silent, wrong answer rather than a
+  visible failure. Pool reads run 6 at a time.
 - **Batched reads.** Every adapter issues one `multicall` per operation instead
   of one `eth_call` per probe: V3 pool discovery went from 8 sequential round
   trips per token to 1, Aerodrome from 4 to 1, and each `getRawData` from 3-4
