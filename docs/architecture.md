@@ -44,9 +44,18 @@ Fathom provides a RESTful API for fetching token prices and liquidity data. It f
   "confidence": 73,
   "label": "thin",
   "liquidity_usd": 84200,
+  "source_count": 2,
+  "price_dispersion_bps": 118,
+  "confidence_components": {
+    "liquidity": { "score": 0.774, "weight": 0.35, "effective_weight": 0.5 },
+    "source_agreement": { "score": 0.764, "weight": 0.20, "effective_weight": 0.286 },
+    "twap_deviation": { "score": null, "weight": 0.20, "effective_weight": 0 },
+    "volatility": { "score": 0.662, "weight": 0.15, "effective_weight": 0.214 },
+    "maturity": { "score": null, "weight": 0.10, "effective_weight": 0 }
+  },
   "main_pool": { "dex": "aerodrome", "address": "0x...", "fee": 0.003 },
   "pools": [...],
-  "flags": ["thin_liquidity"],
+  "flags": ["thin_liquidity", "twap_unavailable", "freshness_unchecked", "sellability_unchecked"],
   "updated_at": "2026-06-08T14:50:00Z"
 }
 ```
@@ -114,20 +123,43 @@ sequenceDiagram
 
 3. Pricing engine
 - Orchestrates price discovery by querying DEX adapters.
-- **Liquidity Depth**: Calculates TVL and slippage depth (how much $ moves price by 1%).
-- **TWAP**: Uses historical ticks/reserves to calculate time-weighted average price (default 5m window).
-- **Confidence Scoring**: Produces a 0-100 score based on a weighted formula:
-  - `0.35 * S_liq` (Liquidity depth)
-  - `0.20 * S_src` (Price consistency across sources)
-  - `0.20 * S_twap` (Spot vs TWAP deviation)
-  - `0.15 * S_sigma` (Price volatility/uncertainty)
-  - `0.10 * S_mat` (Market maturity: age and volume)
-- **Risk Flags**: Hard ceilings applied to confidence score:
+- **Confidence Scoring**: Produces a 0-100 score from a weighted model:
+
+  | Component | Weight | Status |
+  |---|---|---|
+  | `liquidity` — depth of the deepest pool | 0.35 | measured |
+  | `source_agreement` — max spread across independent pools | 0.20 | measured |
+  | `twap_deviation` — spot vs TWAP | 0.20 | **not yet measured** |
+  | `volatility` — liquidity-weighted sigma/mu across pools | 0.15 | measured |
+  | `maturity` — pool age and 24h volume | 0.10 | **not yet measured** |
+
+  **A component whose input is unavailable is excluded from the score and its
+  weight is redistributed across the measured components.** It is never scored
+  as if it were healthy. `confidence_components` in the response reports the
+  per-component score and the effective weight actually applied, so a caller can
+  see what the number is based on. `measured_weight` is the share of the nominal
+  model that was live.
+
+  While `twap_deviation` is unmeasured, confidence is capped at 79, so no price
+  is labelled `reliable` without a manipulation check.
+
+- **Source counting**: `source_count` counts pools that actually produced a
+  price and clear a depth floor (the greater of $500 and 1% of the deepest
+  pool), not pools merely discovered. Empty fee tiers therefore no longer
+  suppress the `single_pool` ceiling, and a dust pool cannot fake a dispersion
+  spike.
+- **Liquidity Depth** *(planned)*: TVL and slippage depth (how much $ moves the price by 1%).
+- **TWAP** *(planned)*: historical ticks/reserves for a time-weighted average price.
+- **Risk Flags**: Hard ceilings applied to the confidence score:
   - `thin_liquidity`: Liquidity below minimum threshold.
   - `possible_manipulation`: Large spot/TWAP deviation.
   - `single_pool`: Only one liquidity source found.
   - `stale`: Data is outdated or RPC is failing.
   - `unsellable`: Sell simulation reverts (honeypot check).
+  - `hardcoded_numeraire`: Value is defined, not measured (USDC).
+- **Transparency flags**: name checks that did *not* run, so their absence is
+  never mistaken for a pass:
+  - `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked`.
 
 4. Cache
 - **Storage**: Uses Cloudflare KV or Upstash Redis for fast lookups.

@@ -222,4 +222,102 @@ describe('Confidence Score Module', () => {
     expect(result.confidence).toBeGreaterThanOrEqual(80);
     expect(result.label).toBe('reliable');
   });
+  it('excludes unmeasured components instead of scoring them as healthy', () => {
+    const base = {
+      liquidity_usd: 300000,
+      max_deviation_percent: 0.0,
+      sigma_over_mu_percent: 0.0,
+      num_pools: 3,
+      is_stale: null,
+      is_unsellable: null,
+    };
+
+    const result = calculateConfidence({
+      ...base,
+      spot_vs_twap_percent: null,
+      pool_age_days: null,
+      volume_24h_usd: null,
+    } as ConfidenceInput);
+
+    // liquidity .35 + source_agreement .20 + volatility .15 = .70 of the model
+    expect(result.measured_weight).toBeCloseTo(0.7, 8);
+    expect(result.components.twap_deviation.score).toBeNull();
+    expect(result.components.twap_deviation.effective_weight).toBe(0);
+    expect(result.components.maturity.score).toBeNull();
+    // the measured components share the full weight between them
+    expect(result.components.liquidity.effective_weight).toBeCloseTo(0.35 / 0.7, 8);
+    expect(result.components.source_agreement.effective_weight).toBeCloseTo(0.2 / 0.7, 8);
+    expect(result.components.volatility.effective_weight).toBeCloseTo(0.15 / 0.7, 8);
+  });
+
+  it('names the checks that did not run', () => {
+    const result = calculateConfidence({
+      liquidity_usd: 300000,
+      max_deviation_percent: 0.0,
+      spot_vs_twap_percent: null,
+      sigma_over_mu_percent: 0.0,
+      pool_age_days: null,
+      volume_24h_usd: null,
+      num_pools: 3,
+      is_stale: null,
+      is_unsellable: null,
+    });
+
+    expect(result.flags).toContain('twap_unavailable');
+    expect(result.flags).toContain('freshness_unchecked');
+    expect(result.flags).toContain('sellability_unchecked');
+  });
+
+  it('never reports reliable while the manipulation check is unavailable', () => {
+    // Perfect on every measurable axis.
+    const result = calculateConfidence({
+      liquidity_usd: 10_000_000,
+      max_deviation_percent: 0.0,
+      spot_vs_twap_percent: null,
+      sigma_over_mu_percent: 0.0,
+      pool_age_days: null,
+      volume_24h_usd: null,
+      num_pools: 5,
+      is_stale: null,
+      is_unsellable: null,
+    });
+
+    expect(result.confidence).toBeLessThanOrEqual(79);
+    expect(result.label).not.toBe('reliable');
+  });
+
+  it('scores 0 when nothing at all could be measured', () => {
+    const result = calculateConfidence({
+      liquidity_usd: 0,
+      max_deviation_percent: null,
+      spot_vs_twap_percent: null,
+      sigma_over_mu_percent: null,
+      pool_age_days: null,
+      volume_24h_usd: null,
+      num_pools: 0,
+      is_stale: null,
+      is_unsellable: null,
+    });
+
+    expect(result.measured_weight).toBeCloseTo(0.35, 8);
+    expect(result.confidence).toBe(0);
+    expect(result.label).toBe('unreliable');
+  });
+
+  it('still measures maturity when only one of age or volume is known', () => {
+    const withAgeOnly = calculateConfidence({
+      liquidity_usd: 300000,
+      max_deviation_percent: 0.0,
+      spot_vs_twap_percent: 0.0,
+      sigma_over_mu_percent: 0.0,
+      pool_age_days: 30,
+      volume_24h_usd: null,
+      num_pools: 3,
+      is_stale: false,
+      is_unsellable: false,
+    });
+
+    expect(withAgeOnly.components.maturity.score).toBe(1);
+    expect(withAgeOnly.measured_weight).toBeCloseTo(1.0, 8);
+  });
 });

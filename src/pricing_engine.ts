@@ -6,6 +6,7 @@ import { formatPriceResponse } from './utils';
 import { PriceResponse } from './schema';
 import { PriceRpcClient } from './utils/price_rpc';
 import { PricingError } from './errors';
+import { computeDispersion, type PriceSample } from './dispersion';
 
 const WETH = '0x4200000000000000000000000000000000000006'.toLowerCase();
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
@@ -51,6 +52,9 @@ export class PricingEngine {
     let mainPoolData = null;
     // Pools we could have priced if the WETH/USD anchor had been available.
     let poolsBlockedOnAnchor = 0;
+    // Every successfully priced pool is an independent observation of the same
+    // token. Kept so source agreement can be measured instead of assumed.
+    const samples: PriceSample[] = [];
 
     const tokenDecimals = await this.rpcClient.getTokenDecimals(token);
 
@@ -88,6 +92,10 @@ export class PricingEngine {
         continue;
       }
 
+      if (priceUsd > 0 && Number.isFinite(priceUsd) && liquidityUsd > 0) {
+        samples.push({ priceUsd, liquidityUsd });
+      }
+
       if (liquidityUsd > bestLiquidityUsd) {
         bestLiquidityUsd = liquidityUsd;
         bestPriceUsd = priceUsd;
@@ -117,16 +125,23 @@ export class PricingEngine {
       return null;
     }
 
+    // Measured from the pool prices we already computed - no extra RPC calls.
+    const dispersion = computeDispersion(samples);
+
     const confResult = calculateConfidence({
       liquidity_usd: bestLiquidityUsd,
-      max_deviation_percent: 0.01,
-      spot_vs_twap_percent: 0.01,
-      sigma_over_mu_percent: 0.02,
-      pool_age_days: 10,
-      volume_24h_usd: bestLiquidityUsd * 0.1,
-      num_pools: pools.length,
-      is_stale: false,
-      is_unsellable: false
+      max_deviation_percent: dispersion.maxDeviation,
+      sigma_over_mu_percent: dispersion.sigmaOverMu,
+      // Not yet measured. Passing null keeps these components out of the score
+      // rather than crediting the token for checks that never ran.
+      spot_vs_twap_percent: null,
+      pool_age_days: null,
+      volume_24h_usd: null,
+      // Sources that actually priced the token, not pools merely discovered:
+      // empty fee tiers used to suppress the single_pool ceiling.
+      num_pools: dispersion.sourceCount,
+      is_stale: null,
+      is_unsellable: null
     });
 
     return formatPriceResponse(
@@ -135,7 +150,12 @@ export class PricingEngine {
       bestPriceUsd,
       bestLiquidityUsd,
       mainPoolData,
-      confResult
+      confResult,
+      {
+        source_count: dispersion.sourceCount,
+        price_dispersion_bps:
+          dispersion.maxDeviation === null ? null : dispersion.maxDeviation * 10000
+      }
     );
   }
 
@@ -175,11 +195,13 @@ export class PricingEngine {
       {
         // Same 0-100 scale as calculateConfidence(). USDC is the numeraire this
         // engine prices everything else against, so its value is defined rather
-        // than measured - the flag says so explicitly.
+        // than measured - the flag says so explicitly, and no component of the
+        // confidence model was evaluated to produce it.
         confidence: 100,
         label: 'reliable',
         flags: ['hardcoded_numeraire']
-      }
+      },
+      { source_count: 0, price_dispersion_bps: null }
     );
   }
 }

@@ -1,3 +1,5 @@
+import type { ConfidenceComponents } from './confidence';
+
 export type PoolData = {
   dex: string;
   address: string;
@@ -14,6 +16,12 @@ export type PriceResponse = {
   confidence: number;
   label: string;
   liquidity_usd: number;
+  /** Pools deep enough to count as an independent price source. */
+  source_count: number;
+  /** Spread between independent sources, in basis points; null with <2 sources. */
+  price_dispersion_bps: number | null;
+  /** Per-component breakdown of the confidence score, incl. what was not measured. */
+  confidence_components: ConfidenceComponents;
   main_pool: PoolData;
   pools?: PoolData[];
   flags: string[];
@@ -39,6 +47,9 @@ export function isPriceResponse(data: any): data is PriceResponse {
   if (typeof data.confidence !== 'number') return false;
   if (typeof data.label !== 'string') return false;
   if (typeof data.liquidity_usd !== 'number') return false;
+  if (typeof data.source_count !== 'number') return false;
+  if (data.price_dispersion_bps !== null && typeof data.price_dispersion_bps !== 'number') return false;
+  if (!data.confidence_components || typeof data.confidence_components !== 'object') return false;
   if (!isPoolData(data.main_pool)) return false;
   if (data.pools !== undefined) {
     if (!Array.isArray(data.pools)) return false;

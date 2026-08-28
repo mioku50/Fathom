@@ -200,8 +200,17 @@ liq > L_min, один пул? нет -> потолков нет -> confidence = 
   "confidence": 73,
   "label": "thin",
   "liquidity_usd": 84200,
+  "source_count": 2,
+  "price_dispersion_bps": 118,
+  "confidence_components": {
+    "liquidity": { "score": 0.774, "weight": 0.35, "effective_weight": 0.5 },
+    "source_agreement": { "score": 0.764, "weight": 0.20, "effective_weight": 0.286 },
+    "twap_deviation": { "score": null, "weight": 0.20, "effective_weight": 0 },
+    "volatility": { "score": 0.662, "weight": 0.15, "effective_weight": 0.214 },
+    "maturity": { "score": null, "weight": 0.10, "effective_weight": 0 }
+  },
   "main_pool": { "dex": "aerodrome", "address": "0x...", "fee": 0.003 },
-  "flags": ["thin_liquidity"],
+  "flags": ["thin_liquidity", "twap_unavailable"],
   "updated_at": "2026-06-08T14:50:00Z"
 }
 ```

@@ -51,6 +51,15 @@ describe('schema validation', () => {
         confidence: 0.9,
         label: 'high_confidence',
         liquidity_usd: 10000,
+        source_count: 2,
+        price_dispersion_bps: 120,
+        confidence_components: {
+          liquidity: { score: 0.77, weight: 0.35, effective_weight: 0.5 },
+          source_agreement: { score: 0.76, weight: 0.20, effective_weight: 0.286 },
+          twap_deviation: { score: null, weight: 0.20, effective_weight: 0 },
+          volatility: { score: 0.66, weight: 0.15, effective_weight: 0.214 },
+          maturity: { score: null, weight: 0.10, effective_weight: 0 }
+        },
         main_pool: {
           dex: 'uniswap_v3',
           address: '0x123'
@@ -79,6 +88,15 @@ describe('schema validation', () => {
         confidence: 0.9,
         label: 'high_confidence',
         liquidity_usd: 10000,
+        source_count: 2,
+        price_dispersion_bps: 120,
+        confidence_components: {
+          liquidity: { score: 0.77, weight: 0.35, effective_weight: 0.5 },
+          source_agreement: { score: 0.76, weight: 0.20, effective_weight: 0.286 },
+          twap_deviation: { score: null, weight: 0.20, effective_weight: 0 },
+          volatility: { score: 0.66, weight: 0.15, effective_weight: 0.214 },
+          maturity: { score: null, weight: 0.10, effective_weight: 0 }
+        },
         main_pool: {
           dex: 'uniswap_v3' // missing address
         },

@@ -1,4 +1,18 @@
 import type { PriceResponse, PoolData } from './schema';
+import type { ConfidenceComponents } from './confidence';
+
+export type PriceMetrics = {
+  source_count: number;
+  price_dispersion_bps: number | null;
+};
+
+const UNMEASURED_COMPONENTS: ConfidenceComponents = {
+  liquidity: { score: null, weight: 0.35, effective_weight: 0 },
+  source_agreement: { score: null, weight: 0.20, effective_weight: 0 },
+  twap_deviation: { score: null, weight: 0.20, effective_weight: 0 },
+  volatility: { score: null, weight: 0.15, effective_weight: 0 },
+  maturity: { score: null, weight: 0.10, effective_weight: 0 }
+};
 
 /**
  * Generates a dummy price response for a given token and chain.
@@ -17,6 +31,9 @@ export function generateDummyResponse(token: string, chain: string): PriceRespon
     confidence: 85,
     label: "reliable",
     liquidity_usd: 100000,
+    source_count: 1,
+    price_dispersion_bps: null,
+    confidence_components: UNMEASURED_COMPONENTS,
     main_pool: {
       dex: "aerodrome",
       address: "0x123",
@@ -61,7 +78,8 @@ export function formatPriceResponse(
   bestPrice: number,
   bestLiquidity: number,
   mainPoolData: PoolData,
-  confResult: { confidence: number; label: string; flags: string[] }
+  confResult: { confidence: number; label: string; flags: string[]; components?: ConfidenceComponents },
+  metrics: PriceMetrics = { source_count: 0, price_dispersion_bps: null }
 ): PriceResponse {
   return {
     token,
@@ -71,6 +89,9 @@ export function formatPriceResponse(
     confidence: confResult.confidence,
     label: confResult.label,
     liquidity_usd: bestLiquidity,
+    source_count: metrics.source_count,
+    price_dispersion_bps: metrics.price_dispersion_bps,
+    confidence_components: confResult.components ?? UNMEASURED_COMPONENTS,
     main_pool: mainPoolData,
     flags: confResult.flags,
     updated_at: new Date().toISOString()

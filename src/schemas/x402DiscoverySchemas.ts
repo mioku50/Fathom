@@ -31,6 +31,65 @@ export const priceOutputSchema = {
     },
     label: { type: "string", enum: ["reliable", "thin / volatile", "unreliable"] },
     liquidity_usd: { type: "number" },
+    source_count: {
+      type: "number",
+      description: "Independent pools deep enough to count as a price source. 1 means single-venue."
+    },
+    price_dispersion_bps: {
+      type: ["number", "null"],
+      description: "Spread between independent sources in basis points; null when there are fewer than 2 sources."
+    },
+    confidence_components: {
+      type: "object",
+      description: "Per-component breakdown of `confidence`. A component with score null was not measured and its weight was redistributed.",
+      properties: {
+        liquidity: {
+      type: "object",
+      properties: {
+        score: { type: ["number", "null"], minimum: 0, maximum: 1 },
+        weight: { type: "number" },
+        effective_weight: { type: "number" }
+      },
+      required: ["score", "weight", "effective_weight"]
+    },
+        source_agreement: {
+      type: "object",
+      properties: {
+        score: { type: ["number", "null"], minimum: 0, maximum: 1 },
+        weight: { type: "number" },
+        effective_weight: { type: "number" }
+      },
+      required: ["score", "weight", "effective_weight"]
+    },
+        twap_deviation: {
+      type: "object",
+      properties: {
+        score: { type: ["number", "null"], minimum: 0, maximum: 1 },
+        weight: { type: "number" },
+        effective_weight: { type: "number" }
+      },
+      required: ["score", "weight", "effective_weight"]
+    },
+        volatility: {
+      type: "object",
+      properties: {
+        score: { type: ["number", "null"], minimum: 0, maximum: 1 },
+        weight: { type: "number" },
+        effective_weight: { type: "number" }
+      },
+      required: ["score", "weight", "effective_weight"]
+    },
+        maturity: {
+      type: "object",
+      properties: {
+        score: { type: ["number", "null"], minimum: 0, maximum: 1 },
+        weight: { type: "number" },
+        effective_weight: { type: "number" }
+      },
+      required: ["score", "weight", "effective_weight"]
+    }
+      }
+    },
     main_pool: {
       type: "object",
       properties: {
@@ -44,7 +103,8 @@ export const priceOutputSchema = {
     },
     flags: {
       type: "array",
-      items: { type: "string" }
+      items: { type: "string" },
+      description: "Risk markers. `twap_unavailable`, `freshness_unchecked` and `sellability_unchecked` mean the corresponding check did not run."
     },
     updated_at: { type: "string", format: "date-time" },
     status: { type: "string", enum: ["ok", "not_found", "no_liquidity", "rpc_error", "unpriceable", "stale_anchor", "unknown_decimals"] },
