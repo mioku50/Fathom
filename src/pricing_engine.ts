@@ -5,6 +5,7 @@ import { calculateConfidence } from './confidence';
 import { formatPriceResponse } from './utils';
 import { PriceResponse } from './schema';
 import { PriceRpcClient } from './utils/price_rpc';
+import { PricingError } from './errors';
 
 const WETH = '0x4200000000000000000000000000000000000006'.toLowerCase();
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
@@ -25,12 +26,14 @@ export class PricingEngine {
       return this.buildHardcodedResponse(token, 1.0, 100000000, 6);
     }
 
-    // 2. We need WETH price if the quote token is WETH.
-    // Let's get the WETH price first, unless the requested token IS WETH, in which case we just get it against USDC.
-    let wethPriceUsd = 1.0; // dummy fallback
+    // 2. We need a WETH/USD anchor if any of this token's pools are WETH-quoted.
+    // If the anchor cannot be established we leave it null and skip those pools
+    // rather than substituting a placeholder: a wrong anchor rescales every
+    // WETH-quoted price by roughly the ETH price itself.
+    let wethPriceUsd: number | null = null;
     if (lowerToken !== WETH) {
       const wethResult = await this.getBestPoolPrice(WETH, USDC, 18, 6);
-      if (wethResult) {
+      if (wethResult && wethResult.priceInQuote > 0 && Number.isFinite(wethResult.priceInQuote)) {
         wethPriceUsd = wethResult.priceInQuote;
       }
     }
@@ -46,6 +49,8 @@ export class PricingEngine {
     let bestPriceUsd = 0;
     let bestLiquidityUsd = 0;
     let mainPoolData = null;
+    // Pools we could have priced if the WETH/USD anchor had been available.
+    let poolsBlockedOnAnchor = 0;
 
     const tokenDecimals = await this.rpcClient.getTokenDecimals(token);
 
@@ -72,6 +77,10 @@ export class PricingEngine {
         priceUsd = result.priceInQuote;
         liquidityUsd = result.liquidityInQuote;
       } else if (lowerQuote === WETH && lowerToken !== WETH) {
+        if (wethPriceUsd === null) {
+          poolsBlockedOnAnchor++;
+          continue;
+        }
         priceUsd = result.priceInQuote * wethPriceUsd;
         liquidityUsd = result.liquidityInQuote * wethPriceUsd;
       } else {
@@ -94,6 +103,14 @@ export class PricingEngine {
 
     // Guards
     if (!mainPoolData || bestPriceUsd <= 0 || !Number.isFinite(bestPriceUsd)) {
+      // Distinguish "this token has no usable liquidity" from "we could not
+      // price its liquidity because our USD anchor was unavailable".
+      if (poolsBlockedOnAnchor > 0) {
+        throw new PricingError(
+          'stale_anchor',
+          'WETH/USD anchor unavailable; WETH-quoted pools could not be converted to USD'
+        );
+      }
       return null;
     }
     if (lowerToken === WETH && (bestPriceUsd < 100 || bestPriceUsd > 20000)) {
@@ -156,9 +173,12 @@ export class PricingEngine {
         price_usd: priceUsd
       },
       {
-        confidence: 1.0,
-        label: 'High Confidence',
-        flags: []
+        // Same 0-100 scale as calculateConfidence(). USDC is the numeraire this
+        // engine prices everything else against, so its value is defined rather
+        // than measured - the flag says so explicitly.
+        confidence: 100,
+        label: 'reliable',
+        flags: ['hardcoded_numeraire']
       }
     );
   }

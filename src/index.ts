@@ -16,6 +16,7 @@ import { PriceRpcClient } from './utils/price_rpc'
 import { calculateConfidence } from './confidence'
 import { parseTokensParam, formatPriceResponse } from './utils'
 import { validateEnv } from './utils/env'
+import { isPricingError } from './errors'
 
 class OrchestratorCacheAdapter implements CacheLayer {
   constructor(private kv?: KVNamespace, private defaultTTL: number = 60) {}
@@ -296,7 +297,7 @@ app.get('/v1/cache/stats', (c) => {
   return c.json(getCacheStats())
 })
 
-app.get('/v1/cache/metrics', async (c) => {
+app.get('/v1/cache/metrics', adminAuthMiddleware, async (c) => {
   if (!c.env?.FATHOM_KV) {
     return c.json({ error: 'internal_error', message: 'KV not configured' }, 500)
   }
@@ -356,7 +357,17 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
   const rpcClient = new PriceRpcClient(c.env.PRICE_RPC_URL, c.env.PRICE_RPC_FALLBACK_URLS);
   const engine = new PricingEngine(orchestrator, rpcClient, chain);
 
-  const finalResponse = await engine.calculatePrice(token);
+  let finalResponse
+  try {
+    finalResponse = await engine.calculatePrice(token);
+  } catch (error) {
+    if (isPricingError(error)) {
+      // We could not establish an input we depend on. Refuse rather than
+      // returning a number we cannot stand behind.
+      return c.json({ error: error.code, message: error.message }, 503);
+    }
+    throw error;
+  }
 
   if (!finalResponse) {
      return c.json({ error: 'not_found', message: 'No pools found or un-priceable' }, 404);
@@ -433,7 +444,11 @@ app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => 
       priced++;
     } catch (error) {
       console.error(`Error pricing token ${token}:`, error);
-      results.push({ token, status: "rpc_error", error: { code: "rpc_error", message: "RPC or provider failure" } });
+      if (isPricingError(error)) {
+        results.push({ token, status: error.code, error: { code: error.code, message: error.message } });
+      } else {
+        results.push({ token, status: "rpc_error", error: { code: "rpc_error", message: "RPC or provider failure" } });
+      }
       failed++;
     }
   }

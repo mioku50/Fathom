@@ -1,5 +1,6 @@
 import { createPublicClient, http, fallback, PublicClient, Transport } from 'viem';
 import { base } from 'viem/chains';
+import { PricingError } from '../errors';
 
 export function parseFallbackUrls(fallbackStr?: string): string[] {
   if (!fallbackStr) return [];
@@ -111,10 +112,22 @@ export class PriceRpcClient {
         functionName: 'decimals',
         blockNumber: pinBlock
       });
-      return Number(dec);
+      const parsed = Number(dec);
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 77) {
+        throw new PricingError(
+          'unknown_decimals',
+          `Token ${tokenAddress} returned an out-of-range decimals value`
+        );
+      }
+      return parsed;
     } catch (e) {
-      // Default to 18 if call fails
-      return 18;
+      if (e instanceof PricingError) throw e;
+      // Never guess. A wrong decimals value silently rescales the price by
+      // orders of magnitude, which is worse than returning no price at all.
+      throw new PricingError(
+        'unknown_decimals',
+        `Could not read decimals() for token ${tokenAddress}`
+      );
     }
   }
 }

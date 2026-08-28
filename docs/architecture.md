@@ -31,15 +31,16 @@ Fathom provides a RESTful API for fetching token prices and liquidity data. It f
 
 #### Success Response (`200 OK`)
 
+> **Not currently returned:** `twap_5m`, `price_low`, `price_high`. They are withheld from
+> the live response until they are actually measured — they previously echoed the spot price
+> back with a fixed ±1% band. They return with real TWAP and cross-source dispersion.
+
 ```json
 {
   "token": "0xABC...",
   "chain": "base",
   "symbol": "PEPECOIN",
   "price_usd": 0.00004217,
-  "price_low": 0.00004102,
-  "price_high": 0.00004331,
-  "twap_5m": 0.00004198,
   "confidence": 73,
   "label": "thin",
   "liquidity_usd": 84200,

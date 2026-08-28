@@ -12,6 +12,7 @@ const VALID_ENV = {
   PRICE_RPC_URL: 'http://localhost:8545',
   PRICE_CHAIN_ID: '8453'
 };
+import { PriceRpcClient } from '../src/utils/price_rpc'
 import { isPriceResponse, type PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 
@@ -107,6 +108,14 @@ vi.mock('../src/api/metadata', () => ({
     }))
   })
 }))
+
+// Deterministic decimals for these route-level tests. Previously they passed only
+// because getTokenDecimals() silently fell back to 18 when the RPC was unreachable;
+// that fallback is gone, so the stub now states the assumption explicitly.
+vi.spyOn(PriceRpcClient.prototype, 'getTokenDecimals').mockImplementation(
+  async (tokenAddress: string) =>
+    tokenAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' ? 6 : 18
+)
 
 describe('Fathom API', () => {
   global.fetch = vi.fn().mockImplementation((url: any) => {
@@ -250,10 +259,12 @@ describe('Fathom API', () => {
     expect(body.chain).toBe('base')
     expect(body.symbol).toBeDefined()
     expect(body.price_usd).toBeDefined()
-    expect(body.price_low).toBeDefined()
-    expect(body.price_high).toBeDefined()
-    expect(body.twap_5m).toBeDefined()
     expect(body.confidence).toBeDefined()
+    // Fabricated TWAP / uncertainty band fields must not reappear in the paid
+    // response until they are actually computed.
+    expect('twap_5m' in body).toBe(false)
+    expect('price_low' in body).toBe(false)
+    expect('price_high' in body).toBe(false)
     expect(body.label).toBeDefined()
     expect(body.liquidity_usd).toBeDefined()
     expect(body.main_pool).toBeDefined()
@@ -438,9 +449,6 @@ describe('Fathom API', () => {
       chain: 'base',
       symbol: 'CACHED',
       price_usd: 2.0,
-      price_low: 1.9,
-      price_high: 2.1,
-      twap_5m: 2.0,
       confidence: 90,
       label: 'reliable',
       liquidity_usd: 200000,

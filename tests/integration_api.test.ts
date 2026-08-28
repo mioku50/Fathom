@@ -12,6 +12,7 @@ const VALID_ENV = {
   PRICE_RPC_URL: 'http://localhost:8545',
   PRICE_CHAIN_ID: '8453'
 };
+import { PriceRpcClient } from '../src/utils/price_rpc'
 import type { PriceResponse } from '../src/schema'
 import type { FathomEnv } from '../src/cache'
 import { resetCacheStats } from '../src/cache'
@@ -57,6 +58,14 @@ vi.mock('../src/api/metadata', () => ({
   })
 }))
 
+
+// Deterministic decimals for these route-level tests. Previously they passed only
+// because getTokenDecimals() silently fell back to 18 when the RPC was unreachable;
+// that fallback is gone, so the stub now states the assumption explicitly.
+vi.spyOn(PriceRpcClient.prototype, 'getTokenDecimals').mockImplementation(
+  async (tokenAddress: string) =>
+    tokenAddress.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' ? 6 : 18
+)
 
 describe('Fathom API Integration Test', () => {
   beforeEach(() => {
@@ -673,7 +682,9 @@ describe('Fathom API Integration Test', () => {
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
-    const req = new Request('http://localhost/v1/cache/metrics')
+    const req = new Request('http://localhost/v1/cache/metrics', {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
@@ -686,9 +697,24 @@ describe('Fathom API Integration Test', () => {
     expect(mockList).toHaveBeenNthCalledWith(2, { cursor: 'cursor1' })
   })
 
+  it('Should fail /v1/cache/metrics without admin auth', async () => {
+    const mockList = vi.fn()
+    const mockKV = { list: mockList } as unknown as KVNamespace
+    const req = new Request('http://localhost/v1/cache/metrics')
+
+    const res = await app.fetch(req, { ...VALID_ENV, FATHOM_KV: mockKV }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
+    expect(res.status).toBe(401)
+    const body = await res.json() as any
+    expect(body.error).toBe('unauthorized')
+    // must not enumerate the namespace for an unauthenticated caller
+    expect(mockList).not.toHaveBeenCalled()
+  })
+
   it('Should fail /v1/cache/metrics if KV not configured', async () => {
     const env: FathomEnv = {}
-    const req = new Request('http://localhost/v1/cache/metrics')
+    const req = new Request('http://localhost/v1/cache/metrics', {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
@@ -704,7 +730,9 @@ describe('Fathom API Integration Test', () => {
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
-    const req = new Request('http://localhost/v1/cache/metrics')
+    const req = new Request('http://localhost/v1/cache/metrics', {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
@@ -735,7 +763,9 @@ describe('Fathom API Integration Test', () => {
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
-    const req = new Request('http://localhost/v1/cache/metrics')
+    const req = new Request('http://localhost/v1/cache/metrics', {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(200)
@@ -760,7 +790,9 @@ describe('Fathom API Integration Test', () => {
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
-    const req = new Request('http://localhost/v1/cache/metrics')
+    const req = new Request('http://localhost/v1/cache/metrics', {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
@@ -774,7 +806,9 @@ describe('Fathom API Integration Test', () => {
 
   it('Should handle missing env object completely gracefully on /v1/cache/metrics', async () => {
     const env: any = undefined
-    const req = new Request('http://localhost/v1/cache/metrics')
+    const req = new Request('http://localhost/v1/cache/metrics', {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)
@@ -792,7 +826,9 @@ describe('Fathom API Integration Test', () => {
 
     const env: FathomEnv = { FATHOM_KV: mockKV }
 
-    const req = new Request('http://localhost/v1/cache/metrics')
+    const req = new Request('http://localhost/v1/cache/metrics', {
+      headers: { 'Authorization': `Bearer ${VALID_ENV.ADMIN_AUTH_TOKEN}` }
+    })
 
     const res = await app.fetch(req, { ...VALID_ENV, ...env }, { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as unknown as ExecutionContext)
     expect(res.status).toBe(500)

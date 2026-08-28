@@ -14,9 +14,6 @@ export function generateDummyResponse(token: string, chain: string): PriceRespon
     chain,
     symbol: "DUMMY",
     price_usd: 1.0,
-    price_low: 0.95,
-    price_high: 1.05,
-    twap_5m: 1.01,
     confidence: 85,
     label: "reliable",
     liquidity_usd: 100000,
@@ -45,6 +42,11 @@ export function parseTokensParam(tokensParam: string): string[] {
 /**
  * Formats data from various sources into a standardized `PriceResponse`.
  *
+ * Note: this response deliberately carries no `twap_5m` / `price_low` / `price_high`.
+ * Those fields previously echoed the spot price back with a fixed +/-1% band, which
+ * misrepresented a spot reading as a time-weighted average and a measured uncertainty
+ * interval. They return once they are actually computed.
+ *
  * @param token - The token symbol or address.
  * @param chain - The blockchain network.
  * @param bestPrice - The resolved best price in USD.
@@ -66,9 +68,6 @@ export function formatPriceResponse(
     chain,
     symbol: 'TBD', // This could be fetched from metadata
     price_usd: bestPrice,
-    price_low: bestPrice * 0.99,
-    price_high: bestPrice * 1.01,
-    twap_5m: bestPrice,
     confidence: confResult.confidence,
     label: confResult.label,
     liquidity_usd: bestLiquidity,

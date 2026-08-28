@@ -23,11 +23,13 @@ export const priceOutputSchema = {
     chain: { type: "string" },
     symbol: { type: "string" },
     price_usd: { type: "number" },
-    price_low: { type: "number" },
-    price_high: { type: "number" },
-    twap_5m: { type: "number" },
-    confidence: { type: "number" },
-    label: { type: "string" },
+    confidence: {
+      type: "number",
+      minimum: 0,
+      maximum: 100,
+      description: "How much this price can be trusted, 0-100. See `flags` for the reasons behind a low score."
+    },
+    label: { type: "string", enum: ["reliable", "thin / volatile", "unreliable"] },
     liquidity_usd: { type: "number" },
     main_pool: {
       type: "object",
@@ -45,7 +47,7 @@ export const priceOutputSchema = {
       items: { type: "string" }
     },
     updated_at: { type: "string", format: "date-time" },
-    status: { type: "string", enum: ["ok", "not_found", "no_liquidity", "rpc_error", "unpriceable"] },
+    status: { type: "string", enum: ["ok", "not_found", "no_liquidity", "rpc_error", "unpriceable", "stale_anchor", "unknown_decimals"] },
     error: {
       type: "object",
       properties: {

@@ -10,9 +10,6 @@ describe('generateDummyResponse', () => {
             chain: 'base',
             symbol: 'DUMMY',
             price_usd: 1.0,
-            price_low: 0.95,
-            price_high: 1.05,
-            twap_5m: 1.01,
             confidence: 85,
             label: 'reliable',
             liquidity_usd: 100000,
@@ -139,9 +136,6 @@ describe('generateDummyResponse', () => {
         expect(typeof response.chain).toBe('string');
         expect(typeof response.symbol).toBe('string');
         expect(typeof response.price_usd).toBe('number');
-        expect(typeof response.price_low).toBe('number');
-        expect(typeof response.price_high).toBe('number');
-        expect(typeof response.twap_5m).toBe('number');
         expect(typeof response.confidence).toBe('number');
         expect(typeof response.label).toBe('string');
         expect(typeof response.liquidity_usd).toBe('number');
@@ -286,12 +280,6 @@ describe('generateDummyResponse', () => {
         expect(response.main_pool.dex).toBeUndefined();
     });
 
-    it('generates a valid PriceResponse with unusual twap_5m', () => {
-        const response = generateDummyResponse('tok', 'chain');
-        response.twap_5m = 0;
-        expect(response.twap_5m).toBe(0);
-    });
-
     it('generates a valid PriceResponse with negative price_usd', () => {
         const response = generateDummyResponse('tok', 'chain');
         response.price_usd = -1;
@@ -344,12 +332,6 @@ describe('generateDummyResponse', () => {
         const response = generateDummyResponse('tok', 'chain');
         response.flags = {} as any;
         expect(response.flags).toEqual({});
-    });
-
-    it('generates a valid PriceResponse with negative price_low (manual override)', () => {
-        const response = generateDummyResponse('tok', 'chain');
-        response.price_low = -100;
-        expect(response.price_low).toBe(-100);
     });
 
     it('generates a valid PriceResponse with extremely large timestamp (manual override)', () => {
@@ -416,12 +398,6 @@ describe('generateDummyResponse', () => {
         const response = generateDummyResponse('tok', 'chain');
         response.price_usd = -10.5;
         expect(response.price_usd).toBe(-10.5);
-    });
-
-    it('generates a valid PriceResponse and allows setting twap_5m to 0', () => {
-        const response = generateDummyResponse('tok', 'chain');
-        response.twap_5m = 0;
-        expect(response.twap_5m).toBe(0);
     });
 
     it('generates a valid PriceResponse and allows setting confidence to 0', () => {
@@ -585,9 +561,6 @@ describe('generateDummyResponse', () => {
     it('generateDummyResponse creates a response with expected numeric values batch 24', () => {
         const response = generateDummyResponse("TOKEN", "CHAIN");
         expect(response.price_usd).toBe(1.0);
-        expect(response.price_low).toBe(0.95);
-        expect(response.price_high).toBe(1.05);
-        expect(response.twap_5m).toBe(1.01);
         expect(response.confidence).toBe(85);
         expect(response.liquidity_usd).toBe(100000);
         expect(response.main_pool.fee).toBe(0.003);

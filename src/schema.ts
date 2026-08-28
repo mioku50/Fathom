@@ -11,9 +11,6 @@ export type PriceResponse = {
   chain: string;
   symbol: string;
   price_usd: number;
-  price_low: number;
-  price_high: number;
-  twap_5m: number;
   confidence: number;
   label: string;
   liquidity_usd: number;
@@ -39,9 +36,6 @@ export function isPriceResponse(data: any): data is PriceResponse {
   if (typeof data.chain !== 'string') return false;
   if (typeof data.symbol !== 'string') return false;
   if (typeof data.price_usd !== 'number') return false;
-  if (typeof data.price_low !== 'number') return false;
-  if (typeof data.price_high !== 'number') return false;
-  if (typeof data.twap_5m !== 'number') return false;
   if (typeof data.confidence !== 'number') return false;
   if (typeof data.label !== 'string') return false;
   if (typeof data.liquidity_usd !== 'number') return false;
@@ -57,7 +51,7 @@ export function isPriceResponse(data: any): data is PriceResponse {
 
 export type BatchPriceResult = 
   | (PriceResponse & { status: "ok" })
-  | { token: string; status: "not_found" | "no_liquidity" | "rpc_error"; error: { code: string; message: string } }
+  | { token: string; status: "not_found" | "no_liquidity" | "rpc_error" | "stale_anchor" | "unknown_decimals"; error: { code: string; message: string } }
 
 export type BatchPriceResponse = {
   chain: string;

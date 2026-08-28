@@ -6,15 +6,16 @@ This document details the exact JSON structure returned by the core price endpoi
 
 When a token price is successfully fetched, the API returns a JSON object representing the price, confidence, and liquidity details.
 
+> **Not currently returned:** `twap_5m`, `price_low`, `price_high`. They are withheld from the
+> live response until they are actually measured — they previously echoed the spot price back
+> with a fixed ±1% band. They return with real TWAP and cross-source dispersion.
+
 ```json
 {
   "token": "0x0000000000000000000000000000000000000000",
   "chain": "base",
   "symbol": "PEPECOIN",
   "price_usd": 0.00004217,
-  "price_low": 0.00004102,
-  "price_high": 0.00004331,
-  "twap_5m": 0.00004198,
   "confidence": 73,
   "label": "thin",
   "liquidity_usd": 84200,
