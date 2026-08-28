@@ -71,14 +71,20 @@ const tokenUsdcV3Raw = {
   updatedAt: 12345
 };
 
-function makeOrchestrator(poolsByToken: Record<string, any[]>, rawByPool: Record<string, any>) {
+function makeOrchestrator(
+  poolsByToken: Record<string, any[]>,
+  rawByPool: Record<string, any>,
+  // Default: no quoter wired up for this DEX, i.e. depth stays unknown.
+  quoteSell: (req: any) => Promise<(bigint | null)[] | null> = async () => null
+) {
   return {
     getAllPools: vi.fn(async (token: string) => poolsByToken[token.toLowerCase()] ?? []),
     getAllRawData: vi.fn(async (pools: any[]) =>
       pools
         .filter(p => rawByPool[p.address])
         .map(p => ({ pool: p, rawData: rawByPool[p.address] }))
-    )
+    ),
+    quoteSell: vi.fn(quoteSell)
   } as any;
 }
 
@@ -355,7 +361,60 @@ describe('PricingEngine guards', () => {
     expect(res!.flags).not.toContain('depth_unavailable');
   });
 
-  it('refuses to invent depth for a concentrated-liquidity main pool', async () => {
+  it('quotes a concentrated-liquidity pool through the DEX quoter', async () => {
+    // QuoterV2 simulates the swap for real, so tick crossing is accounted for.
+    // Return 4%, 4.5% and 6% shortfalls against the $1k/$5k/$10k notionals.
+    const shortfalls = [0.96, 0.955, 0.94];
+    let call = 0;
+
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_V3_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_V3_POOL.address]: tokenUsdcV3Raw },
+      async ({ amountsIn }: any) =>
+        amountsIn.map((_: bigint, i: number) => {
+          call++;
+          // USDC has 6 decimals; proceeds = size * shortfall
+          return BigInt(Math.floor([1000, 5000, 10000][i] * shortfalls[i] * 1e6));
+        })
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res).not.toBeNull();
+    expect(orchestrator.quoteSell).toHaveBeenCalledTimes(1);
+    expect(call).toBe(3);
+
+    expect(res!.sell_quotes.map(q => q.proceeds_usd)).toEqual([960, 4775, 9400]);
+    // impact grows with size and matches the quoted shortfall
+    expect(res!.sell_quotes[0].price_impact_bps).toBeCloseTo(400, 6);
+    expect(res!.sell_quotes[2].price_impact_bps).toBeCloseTo(600, 6);
+    expect(res!.flags).not.toContain('depth_unavailable');
+
+    // the router cannot be cheaply inverted for these, so they stay null
+    expect(res!.depth_1pct_usd).toBeNull();
+    expect(res!.depth_5pct_usd).toBeNull();
+  });
+
+  it('reports a size the quoter could not fill as null rather than zero', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_V3_POOL] },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_V3_POOL.address]: tokenUsdcV3Raw },
+      // $1k fills, larger sizes revert for want of liquidity
+      async () => [BigInt(960 * 1e6), null, null]
+    );
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+    const res = await engine.calculatePrice(TOKEN);
+
+    expect(res!.sell_quotes[0].proceeds_usd).toBe(960);
+    expect(res!.sell_quotes[1].proceeds_usd).toBeNull();
+    expect(res!.sell_quotes[2].proceeds_usd).toBeNull();
+    // partial information is still information
+    expect(res!.flags).not.toContain('depth_unavailable');
+  });
+
+  it('refuses to invent depth when no quoter answers', async () => {
     const orchestrator = makeOrchestrator(
       { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_V3_POOL] },
       { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_V3_POOL.address]: tokenUsdcV3Raw }
@@ -372,19 +431,24 @@ describe('PricingEngine guards', () => {
     expect(res!.flags).toContain('depth_unavailable');
   });
 
-  it('refuses to apply x*y=k to an Aerodrome stable pool', async () => {
+  it('routes an Aerodrome stable pool to the router instead of applying x*y=k', async () => {
     const orchestrator = makeOrchestrator(
       { [WETH.toLowerCase()]: [WETH_USDC_POOL], [TOKEN.toLowerCase()]: [TOKEN_USDC_STABLE_POOL] },
-      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_STABLE_POOL.address]: tokenUsdcRaw }
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_USDC_STABLE_POOL.address]: tokenUsdcRaw },
+      async ({ amountsIn }: any) => amountsIn.map(() => BigInt(999 * 1e6))
     );
 
     const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
     const res = await engine.calculatePrice(TOKEN);
 
     expect(res).not.toBeNull();
-    // reserves are present, but the curve is x3y+y3x - constant product would lie
+    // reserves are present, but the curve is x3y+y3x - constant product would lie,
+    // so the quoter is consulted even though reserves were available
+    expect(orchestrator.quoteSell).toHaveBeenCalledTimes(1);
+    expect(orchestrator.quoteSell.mock.calls[0][0].pool.stable).toBe(true);
+    expect(res!.sell_quotes[0].proceeds_usd).toBe(999);
+    // closed-form depth still does not apply to this curve
     expect(res!.depth_1pct_usd).toBeNull();
-    expect(res!.flags).toContain('depth_unavailable');
   });
 
   it('converts depth through the WETH anchor for a WETH-quoted pool', async () => {

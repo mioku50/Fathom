@@ -129,3 +129,57 @@ describe('UniswapV3Adapter', () => {
     });
   });
 });
+
+describe('UniswapV3Adapter quoteSell', () => {
+  let adapter: UniswapV3Adapter;
+  let mockMulticall: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMulticall = vi.fn(async ({ contracts }: any) =>
+      contracts.map((_: any, i: number) => ({
+        status: 'success',
+        // [amountOut, sqrtPriceX96After, ticksCrossed, gasEstimate]
+        result: [BigInt(1000 + i), 0n, 1, 0n]
+      }))
+    );
+    (createPublicClient as any).mockReturnValue({ multicall: mockMulticall });
+    adapter = new UniswapV3Adapter('http://localhost:8545');
+  });
+
+  it('quotes every size in one call against QuoterV2', async () => {
+    const out = await adapter.quoteSell({
+      pool: { address: '0xpool', dex: 'uniswap_v3', fee: 0.0005 },
+      tokenIn: '0xTokenIn',
+      tokenOut: '0xTokenOut',
+      amountsIn: [1n, 2n, 3n]
+    });
+
+    expect(out).toEqual([1000n, 1001n, 1002n]);
+    expect(mockMulticall).toHaveBeenCalledTimes(1);
+
+    const { contracts } = mockMulticall.mock.calls[0][0];
+    expect(contracts).toHaveLength(3);
+    expect(contracts[0].address).toBe('0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a');
+    expect(contracts[0].functionName).toBe('quoteExactInputSingle');
+    // PoolInfo stores the fee as a decimal; the quoter takes uint24
+    expect(contracts[0].args[0].fee).toBe(500);
+    expect(contracts[0].args[0].sqrtPriceLimitX96).toBe(0n);
+  });
+
+  it('reports a reverting size as null rather than zero', async () => {
+    mockMulticall.mockResolvedValueOnce([
+      { status: 'success', result: [500n, 0n, 1, 0n] },
+      { status: 'failure', error: new Error('SPL') }
+    ]);
+
+    const out = await adapter.quoteSell({
+      pool: { address: '0xpool', dex: 'uniswap_v3', fee: 0.003 },
+      tokenIn: '0xTokenIn',
+      tokenOut: '0xTokenOut',
+      amountsIn: [1n, 2n]
+    });
+
+    expect(out).toEqual([500n, null]);
+  });
+});

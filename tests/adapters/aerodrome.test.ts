@@ -120,3 +120,66 @@ describe('AerodromeAdapter', () => {
     });
   });
 });
+
+describe('AerodromeAdapter quoteSell', () => {
+  let adapter: AerodromeAdapter;
+  let mockMulticall: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMulticall = vi.fn(async ({ contracts }: any) =>
+      // getAmountsOut returns one amount per hop boundary; last is the output
+      contracts.map(() => ({ status: 'success', result: [10n, 42n] }))
+    );
+    (createPublicClient as any).mockReturnValue({ multicall: mockMulticall });
+    adapter = new AerodromeAdapter('http://localhost:8545');
+  });
+
+  it('routes through the Aerodrome router with the pool curve flag', async () => {
+    const out = await adapter.quoteSell({
+      pool: { address: '0xpool', dex: 'aerodrome', fee: 0.0005, stable: true },
+      tokenIn: '0xTokenIn',
+      tokenOut: '0xTokenOut',
+      amountsIn: [1n, 2n]
+    });
+
+    expect(out).toEqual([42n, 42n]);
+    expect(mockMulticall).toHaveBeenCalledTimes(1);
+
+    const { contracts } = mockMulticall.mock.calls[0][0];
+    expect(contracts[0].address).toBe('0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43');
+    expect(contracts[0].functionName).toBe('getAmountsOut');
+
+    const route = contracts[0].args[1][0];
+    expect(route.stable).toBe(true);
+    expect(route.factory).toBe('0x420dd381b31aef6683db6b902084cb0ffece40da');
+  });
+
+  it('marks a volatile pool as such on the route', async () => {
+    await adapter.quoteSell({
+      pool: { address: '0xpool', dex: 'aerodrome', fee: 0.003, stable: false },
+      tokenIn: '0xA',
+      tokenOut: '0xB',
+      amountsIn: [1n]
+    });
+
+    expect(mockMulticall.mock.calls[0][0].contracts[0].args[1][0].stable).toBe(false);
+  });
+
+  it('treats an empty or failed amounts array as unquotable', async () => {
+    mockMulticall.mockResolvedValueOnce([
+      { status: 'success', result: [] },
+      { status: 'failure', error: new Error('no route') },
+      { status: 'success', result: [10n, 0n] }
+    ]);
+
+    const out = await adapter.quoteSell({
+      pool: { address: '0xpool', dex: 'aerodrome', fee: 0.003 },
+      tokenIn: '0xA',
+      tokenOut: '0xB',
+      amountsIn: [1n, 2n, 3n]
+    });
+
+    expect(out).toEqual([null, null, null]);
+  });
+});

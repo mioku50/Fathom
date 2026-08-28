@@ -1,4 +1,4 @@
-import { DEXAdapter, PoolInfo, RawPoolData } from './dex_adapter';
+import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from './dex_adapter';
 
 export interface PoolWithRawData {
   pool: PoolInfo;
@@ -59,6 +59,23 @@ export class DEXOrchestrator {
     }
 
     return allPools;
+  }
+
+  /**
+   * Asks the adapter that owns `pool` to quote sells on-chain.
+   * Returns null when that DEX has no quoter wired up, which the caller must
+   * report as unknown rather than substitute with an estimate.
+   */
+  async quoteSell(request: SellQuoteRequest): Promise<(bigint | null)[] | null> {
+    const adapter = this.adapters.find(a => a.id === request.pool.dex);
+    if (!adapter?.quoteSell) return null;
+
+    try {
+      return await adapter.quoteSell(request);
+    } catch (error) {
+      console.error(`Error quoting sell on ${request.pool.dex} pool ${request.pool.address}:`, error);
+      return null;
+    }
   }
 
   /**

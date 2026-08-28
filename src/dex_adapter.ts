@@ -20,6 +20,15 @@ export interface RawPoolData {
   updatedAt: number;
 }
 
+/** One exact sell simulated on-chain: `amountOut` in quote-token raw units. */
+export interface SellQuoteRequest {
+  pool: PoolInfo;
+  tokenIn: string;
+  tokenOut: string;
+  /** Sizes to quote, in token-in raw units. */
+  amountsIn: bigint[];
+}
+
 export interface DEXAdapter {
   readonly id: string;
 
@@ -36,4 +45,14 @@ export interface DEXAdapter {
    * @returns A promise that resolves to the raw data of the pool.
    */
   getRawData(poolAddress: string): Promise<RawPoolData>;
+
+  /**
+   * Optional: ask the DEX itself what a sell would return, so curves we cannot
+   * solve in closed form (concentrated liquidity, Aerodrome's stable curve) are
+   * quoted exactly instead of approximated.
+   *
+   * Returns one entry per requested size, `null` where that size could not be
+   * quoted (typically insufficient liquidity).
+   */
+  quoteSell?(request: SellQuoteRequest): Promise<(bigint | null)[]>;
 }

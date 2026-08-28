@@ -159,11 +159,25 @@ sequenceDiagram
   Aerodrome volatile) from reserves already fetched, so it costs no extra RPC:
   `dy = y*dx'/(x + dx')` for the fill, and `dx' = x*(1/sqrt(1-drop) - 1)` for depth.
 
-  **Not approximated for other curves.** Concentrated liquidity (Uniswap V3) and
-  Aerodrome stable pools (x3y+y3x) return null fields and a `depth_unavailable`
-  flag. For V3 the active range cannot be recovered from `slot0` + `L` alone, so
-  a within-range figure would be a plausible number with nothing behind it.
-  Both need a real quoter (QuoterV2 / Aerodrome Router), which is the next step.
+  **Other curves are quoted, not approximated.** Concentrated liquidity
+  (Uniswap V3) and Aerodrome stable pools (x3y+y3x) cannot be solved in closed
+  form from the state we hold, so the DEX is asked directly:
+
+  | Pool | Quoter | Address |
+  |---|---|---|
+  | Uniswap V3 | `QuoterV2.quoteExactInputSingle` | `0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a` |
+  | Aerodrome (both curves) | `Router.getAmountsOut` | `0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43` |
+
+  All sizes for a pool go out in one multicall, and only the main pool is
+  quoted. The quoter simulates the swap for real, so tick crossing is accounted
+  for - which matters most on exactly the thin tokens where a $10k exit leaves
+  the active range.
+
+  `depth_1pct_usd` / `depth_5pct_usd` stay null on the quoted path: a router
+  cannot be cheaply inverted for "the notional that moves price 1%", and
+  interpolating between quoted sizes would be an estimate dressed as a
+  measurement. A size the quoter cannot fill is reported as null, not zero.
+  `depth_unavailable` is raised only when nothing at all could be established.
 - **TWAP** *(planned)*: historical ticks/reserves for a time-weighted average price.
 - **Risk Flags**: Hard ceilings applied to the confidence score:
   - `thin_liquidity`: Liquidity below minimum threshold.

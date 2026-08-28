@@ -7,7 +7,15 @@ import { PriceResponse } from './schema';
 import { PriceRpcClient } from './utils/price_rpc';
 import { PricingError } from './errors';
 import { computeDispersion, type PriceSample } from './dispersion';
-import { constantProductDepthProfile, unknownDepth, type DepthResult } from './depth';
+import {
+  constantProductDepthProfile,
+  quotedDepthProfile,
+  unknownDepth,
+  isDepthUnknown,
+  SELL_QUOTE_SIZES_USD,
+  type DepthResult
+} from './depth';
+import type { PoolInfo } from './dex_adapter';
 
 const WETH = '0x4200000000000000000000000000000000000006'.toLowerCase();
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'.toLowerCase();
@@ -74,12 +82,18 @@ export class PricingEngine {
     const samples: PriceSample[] = [];
     // Everything the depth math needs from whichever pool wins, captured as we
     // go so we do not have to re-derive or re-fetch it afterwards.
-    let mainPoolInputs: {
-      reserveToken: number;
-      reserveQuote: number;
+    let mainPoolContext: {
+      pool: PoolInfo;
+      quoteToken: string;
+      quoteDecimals: number;
       quoteUsdPrice: number;
-      fee: number;
-      constantProduct: boolean;
+      /** Present only when the pool is x*y=k and depth is solvable in closed form. */
+      constantProduct: {
+        reserveToken: number;
+        reserveQuote: number;
+        quoteUsdPrice: number;
+        fee: number;
+      } | null;
     } | null = null;
 
     const tokenDecimals = await this.rpcClient.getTokenDecimals(token);
@@ -134,15 +148,22 @@ export class PricingEngine {
           reserveQuoteRaw !== undefined &&
           poolWithData.pool.stable !== true;
 
-        mainPoolInputs = constantProduct
-          ? {
-              reserveToken: Number(reserveTokenRaw) / Math.pow(10, tokenDecimals),
-              reserveQuote: Number(reserveQuoteRaw) / Math.pow(10, quoteDecimals),
-              quoteUsdPrice: lowerQuote === USDC ? 1 : (wethPriceUsd as number),
-              fee: poolWithData.pool.fee ?? 0.003,
-              constantProduct: true
-            }
-          : null;
+        const quoteUsdPrice = lowerQuote === USDC ? 1 : (wethPriceUsd as number);
+
+        mainPoolContext = {
+          pool: poolWithData.pool,
+          quoteToken,
+          quoteDecimals,
+          quoteUsdPrice,
+          constantProduct: constantProduct
+            ? {
+                reserveToken: Number(reserveTokenRaw) / Math.pow(10, tokenDecimals),
+                reserveQuote: Number(reserveQuoteRaw) / Math.pow(10, quoteDecimals),
+                quoteUsdPrice,
+                fee: poolWithData.pool.fee ?? 0.003
+              }
+            : null
+        };
 
         bestLiquidityUsd = liquidityUsd;
         bestPriceUsd = priceUsd;
@@ -176,9 +197,15 @@ export class PricingEngine {
     const dispersion = computeDispersion(samples);
 
     // What an agent actually gets on the way out, rather than what is parked.
-    const depth: DepthResult = mainPoolInputs
-      ? constantProductDepthProfile(mainPoolInputs)
-      : unknownDepth();
+    // Closed form where the curve allows it; otherwise ask the DEX itself.
+    let depth: DepthResult;
+    if (mainPoolContext?.constantProduct) {
+      depth = constantProductDepthProfile(mainPoolContext.constantProduct);
+    } else if (mainPoolContext) {
+      depth = await this.quoteDepth(token, tokenDecimals, bestPriceUsd, mainPoolContext);
+    } else {
+      depth = unknownDepth();
+    }
 
     const confResult = calculateConfidence({
       liquidity_usd: bestLiquidityUsd,
@@ -196,7 +223,7 @@ export class PricingEngine {
       is_unsellable: null
     });
 
-    if (depth.depth_1pct_usd === null) {
+    if (isDepthUnknown(depth)) {
       // Says plainly that exit liquidity was not established for this token,
       // rather than leaving a reader to infer it from null fields.
       confResult.flags.push('depth_unavailable');
@@ -216,6 +243,47 @@ export class PricingEngine {
         depth
       }
     );
+  }
+
+  /**
+   * Ask the DEX to simulate the sells we advertise. Used for curves we cannot
+   * solve in closed form - concentrated liquidity and Aerodrome's stable pools.
+   */
+  private async quoteDepth(
+    token: string,
+    tokenDecimals: number,
+    spotPriceUsd: number,
+    ctx: {
+      pool: PoolInfo;
+      quoteToken: string;
+      quoteDecimals: number;
+      quoteUsdPrice: number;
+    }
+  ): Promise<DepthResult> {
+    if (!(spotPriceUsd > 0) || !Number.isFinite(spotPriceUsd) || !(ctx.quoteUsdPrice > 0)) {
+      return unknownDepth();
+    }
+
+    const amountsIn: bigint[] = [];
+    for (const size of SELL_QUOTE_SIZES_USD) {
+      const raw = (size / spotPriceUsd) * Math.pow(10, tokenDecimals);
+      if (!Number.isFinite(raw) || raw <= 0) return unknownDepth();
+      amountsIn.push(BigInt(Math.floor(raw)));
+    }
+
+    const amountsOut = await this.orchestrator.quoteSell({
+      pool: ctx.pool,
+      tokenIn: token,
+      tokenOut: ctx.quoteToken,
+      amountsIn
+    });
+    if (!amountsOut) return unknownDepth();
+
+    const proceedsUsd = amountsOut.map(a =>
+      a === null ? null : (Number(a) / Math.pow(10, ctx.quoteDecimals)) * ctx.quoteUsdPrice
+    );
+
+    return quotedDepthProfile(proceedsUsd, spotPriceUsd);
   }
 
   private async getBestPoolPrice(token: string, quote: string, tokenDec: number, quoteDec: number) {

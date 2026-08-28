@@ -131,3 +131,47 @@ export function unknownDepth(): DepthResult {
     depth_5pct_usd: null
   };
 }
+
+/**
+ * Build a depth profile from exact on-chain quotes.
+ *
+ * `proceedsUsd[i]` is what the DEX itself said size `SELL_QUOTE_SIZES_USD[i]`
+ * returns, or null where that size could not be filled. Unlike the closed-form
+ * path there is no cheap way to invert a router for "the notional that moves
+ * price 1%", so those stay null rather than being interpolated.
+ */
+export function quotedDepthProfile(
+  proceedsUsd: (number | null)[],
+  spotPriceUsd: number
+): DepthResult {
+  return {
+    sell_quotes: SELL_QUOTE_SIZES_USD.map((size, i) => {
+      const proceeds = proceedsUsd[i];
+      if (proceeds === null || proceeds === undefined || !Number.isFinite(proceeds) || proceeds <= 0) {
+        return { size_usd: size, proceeds_usd: null, execution_price_usd: null, price_impact_bps: null };
+      }
+      if (!Number.isFinite(spotPriceUsd) || spotPriceUsd <= 0) {
+        return { size_usd: size, proceeds_usd: proceeds, execution_price_usd: null, price_impact_bps: null };
+      }
+
+      const amountIn = size / spotPriceUsd;
+      const executionPriceUsd = proceeds / amountIn;
+      return {
+        size_usd: size,
+        proceeds_usd: proceeds,
+        execution_price_usd: executionPriceUsd,
+        price_impact_bps: (1 - executionPriceUsd / spotPriceUsd) * 10000
+      };
+    }),
+    depth_1pct_usd: null,
+    depth_5pct_usd: null
+  };
+}
+
+/** True when a profile carries no usable information at all. */
+export function isDepthUnknown(depth: DepthResult): boolean {
+  return (
+    depth.depth_1pct_usd === null &&
+    depth.sell_quotes.every(q => q.proceeds_usd === null)
+  );
+}

@@ -1,5 +1,5 @@
 import { Address } from 'viem';
-import { DEXAdapter, PoolInfo, RawPoolData } from '../dex_adapter';
+import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from '../dex_adapter';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
 
 export class UniswapV3Adapter implements DEXAdapter {
@@ -16,6 +16,9 @@ export class UniswapV3Adapter implements DEXAdapter {
 
   // Standard Uniswap V3 fee tiers
   private feeTiers = [100, 500, 3000, 10000];
+
+  // QuoterV2 on Base, per Uniswap's official Base deployments table.
+  private quoterAddress: Address = '0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a';
 
   private pinBlock?: bigint;
 
@@ -169,5 +172,67 @@ export class UniswapV3Adapter implements DEXAdapter {
       }
       throw new Error(`Failed to fetch raw data for pool ${poolAddress}: ${error.message}`);
     }
+  }
+
+  /**
+   * Concentrated liquidity cannot be solved in closed form from `slot0` + `L`:
+   * the active tick range is unknown, and a real sale crosses ticks. QuoterV2
+   * simulates the swap for real, so the numbers account for tick crossing.
+   */
+  async quoteSell(request: SellQuoteRequest): Promise<(bigint | null)[]> {
+    // Declared `view` so viem eth_calls it; QuoterV2 is non-view in the source
+    // but is designed to be called this way.
+    const quoterAbi = [
+      {
+        inputs: [
+          {
+            components: [
+              { internalType: "address", name: "tokenIn", type: "address" },
+              { internalType: "address", name: "tokenOut", type: "address" },
+              { internalType: "uint256", name: "amountIn", type: "uint256" },
+              { internalType: "uint24", name: "fee", type: "uint24" },
+              { internalType: "uint160", name: "sqrtPriceLimitX96", type: "uint160" }
+            ],
+            internalType: "struct IQuoterV2.QuoteExactInputSingleParams",
+            name: "params",
+            type: "tuple"
+          }
+        ],
+        name: "quoteExactInputSingle",
+        outputs: [
+          { internalType: "uint256", name: "amountOut", type: "uint256" },
+          { internalType: "uint160", name: "sqrtPriceX96After", type: "uint160" },
+          { internalType: "uint32", name: "initializedTicksCrossed", type: "uint32" },
+          { internalType: "uint256", name: "gasEstimate", type: "uint256" }
+        ],
+        stateMutability: "view",
+        type: "function"
+      }
+    ] as const;
+
+    // PoolInfo carries the fee as a decimal (0.0005); the quoter wants uint24.
+    const feeTier = Math.round((request.pool.fee ?? 0.003) * 1_000_000);
+
+    const results = await this.client.multicall({
+      contracts: request.amountsIn.map(amountIn => ({
+        address: this.quoterAddress,
+        abi: quoterAbi,
+        functionName: 'quoteExactInputSingle',
+        args: [{
+          tokenIn: request.tokenIn as Address,
+          tokenOut: request.tokenOut as Address,
+          amountIn,
+          fee: feeTier,
+          sqrtPriceLimitX96: 0n
+        }]
+      })),
+      allowFailure: true,
+      blockNumber: this.pinBlock
+    });
+
+    // A reverting quote means that size cannot be filled; say so with null.
+    return results.map((r: any) =>
+      r?.status === 'success' && typeof r.result?.[0] === 'bigint' ? r.result[0] : null
+    );
   }
 }

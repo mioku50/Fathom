@@ -1,5 +1,5 @@
 import { Address } from 'viem';
-import { DEXAdapter, PoolInfo, RawPoolData } from '../dex_adapter';
+import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from '../dex_adapter';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
 
 export class AerodromeAdapter implements DEXAdapter {
@@ -13,6 +13,9 @@ export class AerodromeAdapter implements DEXAdapter {
 
   // Aerodrome v2 factory on Base
   private factoryAddress: Address = '0x420dd381b31aef6683db6b902084cb0ffece40da';
+
+  // Aerodrome Router on Base - the canonical source of executable quotes.
+  private routerAddress: Address = '0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43';
 
   private pinBlock?: bigint;
 
@@ -154,5 +157,60 @@ export class AerodromeAdapter implements DEXAdapter {
       }
       throw new Error(`Failed to fetch raw data for pool ${poolAddress}: ${error.message}`);
     }
+  }
+
+  /**
+   * Stable pools follow x3y+y3x, which has no convenient closed form, and the
+   * router is authoritative for both curves anyway. One multicall covers every
+   * requested size.
+   */
+  async quoteSell(request: SellQuoteRequest): Promise<(bigint | null)[]> {
+    const routerAbi = [
+      {
+        inputs: [
+          { internalType: "uint256", name: "amountIn", type: "uint256" },
+          {
+            components: [
+              { internalType: "address", name: "from", type: "address" },
+              { internalType: "address", name: "to", type: "address" },
+              { internalType: "bool", name: "stable", type: "bool" },
+              { internalType: "address", name: "factory", type: "address" }
+            ],
+            internalType: "struct IRouter.Route[]",
+            name: "routes",
+            type: "tuple[]"
+          }
+        ],
+        name: "getAmountsOut",
+        outputs: [{ internalType: "uint256[]", name: "amounts", type: "uint256[]" }],
+        stateMutability: "view",
+        type: "function"
+      }
+    ] as const;
+
+    const route = [{
+      from: request.tokenIn as Address,
+      to: request.tokenOut as Address,
+      stable: request.pool.stable === true,
+      factory: this.factoryAddress
+    }];
+
+    const results = await this.client.multicall({
+      contracts: request.amountsIn.map(amountIn => ({
+        address: this.routerAddress,
+        abi: routerAbi,
+        functionName: 'getAmountsOut',
+        args: [amountIn, route]
+      })),
+      allowFailure: true,
+      blockNumber: this.pinBlock
+    });
+
+    // getAmountsOut returns one amount per hop boundary; the last is the output.
+    return results.map((r: any) => {
+      if (r?.status !== 'success' || !Array.isArray(r.result) || r.result.length === 0) return null;
+      const out = r.result[r.result.length - 1];
+      return typeof out === 'bigint' && out > 0n ? out : null;
+    });
   }
 }
