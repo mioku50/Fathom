@@ -119,6 +119,17 @@ export class PricingEngine {
 
     const rawData = await this.orchestrator.getAllRawData(pools);
 
+    // Discovery found pools but not one of them could be read. That is a read
+    // failure, not an absence of liquidity, and the two must not look alike:
+    // reporting "no liquidity" for a token that has plenty is a wrong answer,
+    // where an error is merely an unavailable one.
+    if (rawData.length === 0) {
+      throw new PricingError(
+        'rpc_error',
+        `Found ${pools.length} pools for ${token} but could not read any of them`
+      );
+    }
+
     let bestPriceUsd = 0;
     let bestLiquidityUsd = 0;
     let mainPoolData = null;

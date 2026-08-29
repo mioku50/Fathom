@@ -6,7 +6,7 @@
  * where an input we depend on could not be established, so the caller gets an
  * explicit failure instead of a silently defaulted price.
  */
-export type PricingErrorCode = 'stale_anchor' | 'unknown_decimals';
+export type PricingErrorCode = 'stale_anchor' | 'unknown_decimals' | 'rpc_error';
 
 export class PricingError extends Error {
   /**

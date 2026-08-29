@@ -750,4 +750,25 @@ describe('PricingEngine guards', () => {
     expect(orchestrator.quoteSell).toHaveBeenCalledTimes(3);
     expect(res!.flags).toContain('depth_unavailable');
   });
+  it('reports unreadable pools as an rpc failure, not as absent liquidity', async () => {
+    // Discovery works, every read is throttled. Saying "no liquidity" about a
+    // token that has plenty is a wrong answer; an error is merely unavailable.
+    const orchestrator = {
+      getAllPools: vi.fn(async () => [TOKEN_USDC_POOL, TOKEN_WETH_POOL]),
+      getAllRawData: vi.fn(async () => []),
+      quoteSell: vi.fn(async () => null),
+      getTwapAmountOut: vi.fn(async () => null)
+    } as any;
+
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+
+    await expect(engine.calculatePrice(TOKEN)).rejects.toMatchObject({ code: 'rpc_error' });
+  });
+
+  it('still reports genuinely empty tokens as having no liquidity', async () => {
+    const orchestrator = makeOrchestrator({ [TOKEN.toLowerCase()]: [] }, {});
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+
+    await expect(engine.calculatePrice(TOKEN)).resolves.toBeNull();
+  });
 });

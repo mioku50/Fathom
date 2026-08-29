@@ -22,10 +22,14 @@ import { mapWithConcurrency } from './concurrency'
 import { runSmokeChecks, SMOKE_KV_KEY, type SmokeResult } from './smoke'
 
 /**
- * Tokens priced in parallel within one batch request. Bounded so a 50-token
- * batch does not fan out every token's RPC calls at once.
+ * Tokens priced in parallel within one batch request.
+ *
+ * Each token now costs several multicalls across five DEXes, so eight at once
+ * was enough to throttle the provider and come back with fewer sources - a
+ * quietly thinner answer rather than a slower one. For an oracle that trade is
+ * the wrong way round, so this is deliberately conservative.
  */
-const BATCH_CONCURRENCY = 8
+const BATCH_CONCURRENCY = 4
 
 class OrchestratorCacheAdapter implements CacheLayer {
   constructor(private kv?: KVNamespace, private defaultTTL: number = 60) {}
