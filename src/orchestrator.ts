@@ -9,7 +9,7 @@ import { mapWithConcurrency } from './concurrency';
  * looks like "no liquidity" rather than like a failure. Reads are bounded so a
  * well-covered token does not defeat its own discovery.
  */
-const RAW_DATA_CONCURRENCY = 6;
+const RAW_DATA_CONCURRENCY = 4;
 
 export interface PoolWithRawData {
   pool: PoolInfo;
@@ -112,38 +112,86 @@ export class DEXOrchestrator {
    * @returns A promise that resolves to an array of objects containing both pool info and its raw data.
    */
   async getAllRawData(pools: PoolInfo[]): Promise<PoolWithRawData[]> {
-    const results = await mapWithConcurrency(pools, RAW_DATA_CONCURRENCY, async (pool): Promise<PoolWithRawData | null> => {
-      try {
-        const cacheKey = `orchestrator:raw:${pool.address.toLowerCase()}`;
-        if (this.cache) {
-          const cachedRawData = await this.cache.get(cacheKey);
-          if (cachedRawData) {
-            return { pool, rawData: cachedRawData as RawPoolData };
-          }
-        }
+    if (pools.length === 0) return [];
 
-        // Find the adapter responsible for this DEX
-        const adapter = this.adapters.find(a => a.id === pool.dex);
-        if (!adapter) {
-          // A pool we cannot read is reported the same way whatever the cause;
-          // the warning explains why this particular one is unreadable.
-          console.warn(`No adapter found for DEX: ${pool.dex}`);
-          throw new Error(`No adapter found for DEX: ${pool.dex}`);
-        }
-        const rawData = await adapter.getRawData(pool.address, pool);
+    const rawKey = (pool: PoolInfo) => `orchestrator:raw:${pool.address.toLowerCase()}`;
+    const resolved = new Map<string, RawPoolData>();
 
-        if (this.cache) {
-          await this.cache.set(cacheKey, rawData, 60); // Cache for 60 seconds
+    // 1. Serve whatever the cache already holds.
+    const misses: PoolInfo[] = [];
+    if (this.cache) {
+      const cached = await mapWithConcurrency(pools, RAW_DATA_CONCURRENCY, async pool => {
+        try {
+          return await this.cache!.get(rawKey(pool));
+        } catch {
+          return null;
         }
+      });
+      pools.forEach((pool, i) => {
+        if (cached[i]) resolved.set(pool.address, cached[i] as RawPoolData);
+        else misses.push(pool);
+      });
+    } else {
+      misses.push(...pools);
+    }
 
-        return { pool, rawData };
-      } catch (error) {
-        // One unreadable pool must not remove the others from consideration.
-        console.error('Error fetching raw data for a pool:', error);
-        return null;
+    // 2. Read the rest one DEX at a time. Pools on the same DEX share an ABI,
+    // so an adapter that can batch reads them all in a single round trip
+    // instead of one per pool - the burst that was getting throttled.
+    const byDex = new Map<string, PoolInfo[]>();
+    for (const pool of misses) {
+      const group = byDex.get(pool.dex);
+      if (group) group.push(pool);
+      else byDex.set(pool.dex, [pool]);
+    }
+
+    const fetched: { pool: PoolInfo; rawData: RawPoolData }[] = [];
+
+    for (const [dex, group] of byDex) {
+      const adapter = this.adapters.find(a => a.id === dex);
+      if (!adapter) {
+        console.warn(`No adapter found for DEX: ${dex}`);
+        console.error('Error fetching raw data for a pool:', new Error(`No adapter found for DEX: ${dex}`));
+        continue;
       }
-    });
 
-    return results.filter((r): r is PoolWithRawData => r !== null);
+      if (adapter.getRawDataBatch) {
+        try {
+          const rows = await adapter.getRawDataBatch(group);
+          group.forEach((pool, i) => {
+            const rawData = rows[i];
+            if (rawData) fetched.push({ pool, rawData });
+          });
+          continue;
+        } catch (error) {
+          // Fall through to per-pool reads rather than losing the whole DEX.
+          console.error(`Batch read failed for ${dex}, falling back to per-pool:`, error);
+        }
+      }
+
+      const rows = await mapWithConcurrency(group, RAW_DATA_CONCURRENCY, async pool => {
+        try {
+          return { pool, rawData: await adapter.getRawData(pool.address, pool) };
+        } catch (error) {
+          console.error('Error fetching raw data for a pool:', error);
+          return null;
+        }
+      });
+      for (const row of rows) if (row) fetched.push(row);
+    }
+
+    // 3. Write back what we read, without blocking the caller on cache writes.
+    if (this.cache) {
+      await Promise.allSettled(
+        fetched.map(({ pool, rawData }) => this.cache!.set(rawKey(pool), rawData, 60))
+      );
+    }
+    for (const { pool, rawData } of fetched) resolved.set(pool.address, rawData);
+
+    // Preserve the caller's ordering.
+    return pools
+      .filter(pool => resolved.has(pool.address))
+      .map(pool => ({ pool, rawData: resolved.get(pool.address)! }));
   }
+
 }

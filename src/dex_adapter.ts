@@ -81,6 +81,15 @@ export interface DEXAdapter {
   getRawData(poolAddress: string, pool?: PoolInfo): Promise<RawPoolData>;
 
   /**
+   * Optional: read many pools of this DEX in one round trip.
+   *
+   * Pools on the same DEX share an ABI, so reading them individually is pure
+   * waste - and the resulting burst is what gets throttled. Returns one entry
+   * per input pool, `null` where that pool could not be read.
+   */
+  getRawDataBatch?(pools: PoolInfo[]): Promise<(RawPoolData | null)[]>;
+
+  /**
    * Optional: ask the DEX itself what a sell would return, so curves we cannot
    * solve in closed form (concentrated liquidity, Aerodrome's stable curve) are
    * quoted exactly instead of approximated.

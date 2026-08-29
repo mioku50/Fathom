@@ -1,6 +1,7 @@
 import { Address, keccak256, encodeAbiParameters } from 'viem';
 import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from '../dex_adapter';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
+import { readPoolsBatch } from './batch_read';
 
 /** In v4 the native asset is address(0), not WETH. */
 export const NATIVE_ETH = '0x0000000000000000000000000000000000000000';
@@ -253,5 +254,54 @@ export class UniswapV4Adapter implements DEXAdapter {
     return results.map((r: any) =>
       r?.status === 'success' && typeof r.result?.[0] === 'bigint' ? r.result[0] : null
     );
+  }
+
+  /**
+   * v4 reads are addressed by PoolId against the one StateView, so a batch is
+   * many ids against a single contract rather than many contracts.
+   */
+  async getRawDataBatch(pools: PoolInfo[]): Promise<(RawPoolData | null)[]> {
+    const stateViewAbi = [
+      { inputs: [{ internalType: 'PoolId', name: 'poolId', type: 'bytes32' }], name: 'getSlot0',
+        outputs: [
+          { internalType: 'uint160', name: 'sqrtPriceX96', type: 'uint160' },
+          { internalType: 'int24', name: 'tick', type: 'int24' },
+          { internalType: 'uint24', name: 'protocolFee', type: 'uint24' },
+          { internalType: 'uint24', name: 'lpFee', type: 'uint24' }
+        ], stateMutability: 'view', type: 'function' },
+      { inputs: [{ internalType: 'PoolId', name: 'poolId', type: 'bytes32' }], name: 'getLiquidity',
+        outputs: [{ internalType: 'uint128', name: 'liquidity', type: 'uint128' }],
+        stateMutability: 'view', type: 'function' }
+    ] as const;
+
+    if (pools.length === 0) return [];
+
+    const contracts = pools.flatMap(pool =>
+      (['getSlot0', 'getLiquidity'] as const).map(functionName => ({
+        address: this.stateViewAddress,
+        abi: stateViewAbi,
+        functionName,
+        args: [pool.address as `0x${string}`]
+      }))
+    );
+
+    const results = await this.client.multicall({
+      contracts, allowFailure: true, blockNumber: this.pinBlock
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    return pools.map((pool, i) => {
+      const slot0: any = results[i * 2];
+      const liquidity: any = results[i * 2 + 1];
+      if (slot0?.status !== 'success' || liquidity?.status !== 'success') return null;
+      return {
+        sqrtPriceX96: slot0.result[0] as bigint,
+        tick: slot0.result[1] as number,
+        liquidity: liquidity.result as bigint,
+        token0: pool.v4Key?.currency0,
+        token1: pool.v4Key?.currency1,
+        updatedAt: now
+      };
+    });
   }
 }

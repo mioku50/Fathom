@@ -52,7 +52,14 @@ class OrchestratorCacheAdapter implements CacheLayer {
  * for both once rather than once per token.
  */
 function buildPricingEngine(env: ExtendedEnv, chain: string, defaultTTL: number): PricingEngine {
-  const rpcClient = new PriceRpcClient(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS)
+  // Token decimals are immutable, so they are cached across requests rather
+  // than re-read every time - one fewer RPC call per token, and one fewer way
+  // for a throttled provider to fail a whole token.
+  const rpcClient = new PriceRpcClient(
+    env.PRICE_RPC_URL!,
+    env.PRICE_RPC_FALLBACK_URLS,
+    new OrchestratorCacheAdapter(env.FATHOM_KV, defaultTTL)
+  )
   const adapters = [
     new AerodromeAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new AerodromeSlipstreamAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),

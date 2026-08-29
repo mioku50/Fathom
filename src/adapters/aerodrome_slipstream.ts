@@ -1,6 +1,7 @@
 import { Address } from 'viem';
 import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest, TwapRequest, TwapResult } from '../dex_adapter';
 import { readConcentratedTwap } from './cl_twap';
+import { readPoolsBatch } from './batch_read';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
 
 /**
@@ -305,5 +306,36 @@ export class AerodromeSlipstreamAdapter implements DEXAdapter {
 
   getTwapAmountOut(request: TwapRequest): Promise<TwapResult | null> {
     return readConcentratedTwap(this.client, request, this.pinBlock);
+  }
+
+  async getRawDataBatch(pools: PoolInfo[]): Promise<(RawPoolData | null)[]> {
+    const poolAbi = [
+      { inputs: [], name: 'slot0', outputs: [
+          { internalType: 'uint160', name: 'sqrtPriceX96', type: 'uint160' },
+          { internalType: 'int24', name: 'tick', type: 'int24' },
+          { internalType: 'uint16', name: 'observationIndex', type: 'uint16' },
+          { internalType: 'uint16', name: 'observationCardinality', type: 'uint16' },
+          { internalType: 'uint16', name: 'observationCardinalityNext', type: 'uint16' },
+          { internalType: 'bool', name: 'unlocked', type: 'bool' }
+        ], stateMutability: 'view', type: 'function' },
+      { inputs: [], name: 'liquidity', outputs: [{ internalType: 'uint128', name: '', type: 'uint128' }], stateMutability: 'view', type: 'function' },
+      { inputs: [], name: 'token0', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' },
+      { inputs: [], name: 'token1', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' }
+    ] as const;
+
+    const rows = await readPoolsBatch(
+      this.client, pools.map(p => p.address), poolAbi,
+      ['slot0', 'liquidity', 'token0', 'token1'], this.pinBlock
+    );
+
+    const now = Math.floor(Date.now() / 1000);
+    return rows.map(row => row === null ? null : {
+      sqrtPriceX96: row[0][0] as bigint,
+      tick: row[0][1] as number,
+      liquidity: row[1] as bigint,
+      token0: row[2] as string,
+      token1: row[3] as string,
+      updatedAt: now
+    });
   }
 }

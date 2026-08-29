@@ -267,7 +267,7 @@ describe('DEXOrchestrator read concurrency', () => {
     // A well-covered token can sit in 30+ pools; firing them all at once is what
     // got them rate-limited into looking like "no liquidity".
     expect(data).toHaveLength(30);
-    expect(peak).toBeLessThanOrEqual(6);
+    expect(peak).toBeLessThanOrEqual(4);
     expect(peak).toBeGreaterThan(1);
   });
 
@@ -290,5 +290,98 @@ describe('DEXOrchestrator read concurrency', () => {
     spy.mockRestore();
 
     expect(data.map(d => d.pool.address)).toEqual(['0xgood1', '0xgood2']);
+  });
+});
+
+describe('DEXOrchestrator batched reads', () => {
+  it('reads all pools of one DEX in a single call', async () => {
+    const getRawDataBatch = vi.fn(async (pools: any[]) =>
+      pools.map(() => ({ reserve0: 1n, reserve1: 2n, updatedAt: 1 }))
+    );
+    const adapter = { id: 'batchy', getPools: vi.fn(), getRawData: vi.fn(), getRawDataBatch } as any;
+
+    const pools = Array.from({ length: 25 }, (_, i) => ({ address: `0x${i}`, dex: 'batchy' }));
+    const data = await new DEXOrchestrator([adapter]).getAllRawData(pools);
+
+    expect(data).toHaveLength(25);
+    // 25 pools, one round trip - not 25
+    expect(getRawDataBatch).toHaveBeenCalledTimes(1);
+    expect(adapter.getRawData).not.toHaveBeenCalled();
+  });
+
+  it('groups by DEX so each adapter is asked once', async () => {
+    const make = (id: string) => ({
+      id,
+      getPools: vi.fn(),
+      getRawData: vi.fn(),
+      getRawDataBatch: vi.fn(async (pools: any[]) => pools.map(() => ({ reserve0: 1n, reserve1: 2n, updatedAt: 1 })))
+    }) as any;
+    const a = make('dex_a');
+    const b = make('dex_b');
+
+    await new DEXOrchestrator([a, b]).getAllRawData([
+      { address: '0x1', dex: 'dex_a' }, { address: '0x2', dex: 'dex_b' },
+      { address: '0x3', dex: 'dex_a' }, { address: '0x4', dex: 'dex_b' }
+    ]);
+
+    expect(a.getRawDataBatch).toHaveBeenCalledTimes(1);
+    expect(a.getRawDataBatch.mock.calls[0][0]).toHaveLength(2);
+    expect(b.getRawDataBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops only the pools the batch could not read', async () => {
+    const adapter = {
+      id: 'batchy',
+      getPools: vi.fn(),
+      getRawData: vi.fn(),
+      getRawDataBatch: vi.fn(async (pools: any[]) =>
+        pools.map(p => p.address === '0xbad' ? null : { reserve0: 1n, reserve1: 2n, updatedAt: 1 })
+      )
+    } as any;
+
+    const data = await new DEXOrchestrator([adapter]).getAllRawData([
+      { address: '0xgood1', dex: 'batchy' },
+      { address: '0xbad', dex: 'batchy' },
+      { address: '0xgood2', dex: 'batchy' }
+    ]);
+
+    expect(data.map(d => d.pool.address)).toEqual(['0xgood1', '0xgood2']);
+  });
+
+  it('falls back to per-pool reads rather than losing a whole DEX', async () => {
+    const adapter = {
+      id: 'batchy',
+      getPools: vi.fn(),
+      getRawDataBatch: vi.fn(async () => { throw new Error('batch too large'); }),
+      getRawData: vi.fn(async () => ({ reserve0: 1n, reserve1: 2n, updatedAt: 1 }))
+    } as any;
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const data = await new DEXOrchestrator([adapter]).getAllRawData([
+      { address: '0x1', dex: 'batchy' }, { address: '0x2', dex: 'batchy' }
+    ]);
+    spy.mockRestore();
+
+    expect(data).toHaveLength(2);
+    expect(adapter.getRawData).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves the order it was given', async () => {
+    const adapter = {
+      id: 'batchy', getPools: vi.fn(), getRawData: vi.fn(),
+      getRawDataBatch: vi.fn(async (pools: any[]) => pools.map(() => ({ reserve0: 1n, reserve1: 2n, updatedAt: 1 })))
+    } as any;
+    const b = {
+      id: 'other', getPools: vi.fn(), getRawData: vi.fn(),
+      getRawDataBatch: vi.fn(async (pools: any[]) => pools.map(() => ({ reserve0: 3n, reserve1: 4n, updatedAt: 1 })))
+    } as any;
+
+    const input = [
+      { address: '0x1', dex: 'batchy' }, { address: '0x2', dex: 'other' },
+      { address: '0x3', dex: 'batchy' }
+    ];
+    const data = await new DEXOrchestrator([adapter, b]).getAllRawData(input);
+
+    expect(data.map(d => d.pool.address)).toEqual(['0x1', '0x2', '0x3']);
   });
 });

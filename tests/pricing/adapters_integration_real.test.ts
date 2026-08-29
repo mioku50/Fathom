@@ -90,12 +90,13 @@ describe('Real Adapters in Orchestrator', () => {
 
     // v2 fails with rate limit, v3 succeeds
     mockV2Client.multicall.mockRejectedValue(new Error('RPC rate limit exceeded (429)'));
-    // getRawData batches slot0/liquidity/token0/token1 into one allowFailure:false call.
+    // Pools of one DEX are now read together, so the batch shape is
+    // allowFailure:true - one {status,result} entry per call.
     mockV3Client.multicall.mockImplementation(async ({ contracts }: any) =>
       contracts.map(({ functionName }: any) => {
-        if (functionName === 'slot0') return [1000n, 10, 1, 1, 1, 1, true];
-        if (functionName === 'liquidity') return 5000n;
-        return null;
+        if (functionName === 'slot0') return { status: 'success', result: [1000n, 10, 1, 1, 1, 1, true] };
+        if (functionName === 'liquidity') return { status: 'success', result: 5000n };
+        return { status: 'success', result: '0xToken' };
       })
     );
 

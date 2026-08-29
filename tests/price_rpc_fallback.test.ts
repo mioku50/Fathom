@@ -112,7 +112,7 @@ describe('PriceRpcClient decimals caching', () => {
     expect(readContract).toHaveBeenCalledTimes(1);
   });
 
-  it('does not cache a failure, so a transient RPC error is retryable', async () => {
+  it('rides out a transient failure rather than failing the token', async () => {
     const client = new PriceRpcClient('http://primary.example');
     const readContract = vi
       .fn()
@@ -120,11 +120,67 @@ describe('PriceRpcClient decimals caching', () => {
       .mockResolvedValueOnce(18);
     (client as any).client = { readContract };
 
-    const token = '0x2222222222222222222222222222222222222222';
-
-    await expect(client.getTokenDecimals(token)).rejects.toMatchObject({ code: 'unknown_decimals' });
-    await expect(client.getTokenDecimals(token)).resolves.toBe(18);
+    await expect(
+      client.getTokenDecimals('0x2222222222222222222222222222222222222222')
+    ).resolves.toBe(18);
     expect(readContract).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up rather than guessing once retries are exhausted', async () => {
+    const client = new PriceRpcClient('http://primary.example');
+    const readContract = vi.fn().mockRejectedValue(new Error('fetch failed'));
+    (client as any).client = { readContract };
+
+    await expect(
+      client.getTokenDecimals('0x3333333333333333333333333333333333333333')
+    ).rejects.toMatchObject({ code: 'unknown_decimals' });
+    expect(readContract).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry an answer that cannot change', async () => {
+    const client = new PriceRpcClient('http://primary.example');
+    // 200 is not a plausible decimals value; asking again will not help.
+    const readContract = vi.fn().mockResolvedValue(200);
+    (client as any).client = { readContract };
+
+    await expect(
+      client.getTokenDecimals('0x4444444444444444444444444444444444444444')
+    ).rejects.toMatchObject({ code: 'unknown_decimals' });
+    expect(readContract).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache a failure, so the next request can succeed', async () => {
+    const client = new PriceRpcClient('http://primary.example');
+    const readContract = vi.fn()
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockResolvedValueOnce(6);
+    (client as any).client = { readContract };
+
+    const token = '0x5555555555555555555555555555555555555555';
+    await expect(client.getTokenDecimals(token)).rejects.toMatchObject({ code: 'unknown_decimals' });
+    await expect(client.getTokenDecimals(token)).resolves.toBe(6);
+  });
+
+  it('serves decimals from a shared cache without touching the network', async () => {
+    const store = new Map<string, any>();
+    const cache = {
+      get: vi.fn(async (k: string) => store.get(k) ?? null),
+      set: vi.fn(async (k: string, v: any) => { store.set(k, v); })
+    };
+    const readContract = vi.fn().mockResolvedValue(9);
+
+    const first = new PriceRpcClient('http://primary.example', undefined, cache);
+    (first as any).client = { readContract };
+    await expect(first.getTokenDecimals('0x6666666666666666666666666666666666666666')).resolves.toBe(9);
+
+    // A different client - i.e. a later request - reuses the stored value.
+    const second = new PriceRpcClient('http://primary.example', undefined, cache);
+    (second as any).client = { readContract };
+    await expect(second.getTokenDecimals('0x6666666666666666666666666666666666666666')).resolves.toBe(9);
+
+    expect(readContract).toHaveBeenCalledTimes(1);
   });
 
   it('answers canonical tokens without touching the network', async () => {

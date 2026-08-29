@@ -9,7 +9,16 @@
 export type PricingErrorCode = 'stale_anchor' | 'unknown_decimals';
 
 export class PricingError extends Error {
-  constructor(public readonly code: PricingErrorCode, message: string) {
+  /**
+   * @param deterministic True when repeating the call cannot change the answer,
+   *   so callers know not to retry - an out-of-range decimals value, say, as
+   *   opposed to a throttled request.
+   */
+  constructor(
+    public readonly code: PricingErrorCode,
+    message: string,
+    public readonly deterministic: boolean = false
+  ) {
     super(message);
     this.name = 'PricingError';
   }

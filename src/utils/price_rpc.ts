@@ -44,22 +44,37 @@ export function isRpcFailure(error: any): boolean {
          msg.includes('504');
 }
 
+/** Minimal cache surface, so this module does not depend on the KV wiring. */
+export interface DecimalsCache {
+  get(key: string): Promise<any>;
+  set(key: string, value: any, ttlSeconds?: number): Promise<void>;
+}
+
+/** A token's decimals cannot change, so this can be cached for a long time. */
+const DECIMALS_TTL_SECONDS = 60 * 60 * 24 * 30;
+
 export class PriceRpcClient {
   public client: any;
   /** Per-client decimals cache; a token's decimals cannot change. */
   private decimalsCache = new Map<string, Promise<number>>();
+  private sharedCache?: DecimalsCache;
 
-  constructor(primaryUrl: string, fallbackUrlsStr?: string) {
+  constructor(primaryUrl: string, fallbackUrlsStr?: string, sharedCache?: DecimalsCache) {
+    this.sharedCache = sharedCache;
     const fallbacks = parseFallbackUrls(fallbackUrlsStr);
     const urls = [primaryUrl, ...fallbacks].filter((u, i, a) => a.indexOf(u) === i);
 
-    const transports: Transport[] = urls.map((url, i) => {
-      return http(url, { 
-        retryCount: 0, // Fallback transport handles retrying next provider
-        timeout: 5000,
-        fetchOptions: {
-          // You could add custom fetch options here if needed
-        }
+    const transports: Transport[] = urls.map(url => {
+      return http(url, {
+        // Retry the same provider before failing over. A token can sit in 30+
+        // pools, so a burst of reads draws transient 429s that the next
+        // provider is no more likely to absorb than a short backoff is. Failing
+        // over immediately turned throttling into "no pools found".
+        retryCount: 1,
+        retryDelay: 150,
+        // Discovery multicalls carry 60+ calls and quoter calls simulate swaps,
+        // so five seconds was tight enough to be its own failure source.
+        timeout: 6000
       });
     });
     
@@ -92,12 +107,40 @@ export class PriceRpcClient {
     const cached = this.decimalsCache.get(cacheKey);
     if (cached) return cached;
 
-    const pending = this.readTokenDecimals(tokenAddress, pinBlock);
+    const pending = this.resolveDecimals(tokenAddress, pinBlock);
     this.decimalsCache.set(cacheKey, pending);
     // Do not cache a failure: a transient RPC error must not poison the token
     // for the rest of the request.
     pending.catch(() => this.decimalsCache.delete(cacheKey));
     return pending;
+  }
+
+  /**
+   * Decimals are immutable, so they survive between requests. Reading them was
+   * costing one RPC call per token on every request, and under provider
+   * throttling that single call failing is enough to fail the whole token.
+   */
+  private async resolveDecimals(tokenAddress: string, pinBlock?: bigint): Promise<number> {
+    const shared = this.sharedCache;
+    const key = `decimals:${tokenAddress.toLowerCase()}`;
+
+    if (shared && pinBlock === undefined) {
+      try {
+        const cached = await shared.get(key);
+        if (typeof cached === 'number' && Number.isInteger(cached)) return cached;
+      } catch {
+        // A cache miss must never be the reason a token cannot be priced.
+      }
+    }
+
+    const decimals = await this.readTokenDecimals(tokenAddress, pinBlock);
+
+    if (shared && pinBlock === undefined) {
+      try {
+        await shared.set(key, decimals, DECIMALS_TTL_SECONDS);
+      } catch {}
+    }
+    return decimals;
   }
 
   private async readTokenDecimals(tokenAddress: string, pinBlock?: bigint): Promise<number> {
@@ -117,6 +160,25 @@ export class PriceRpcClient {
       }
     }
 
+    // A throttled eth_call should not cost the whole token. An out-of-range
+    // answer is deterministic, so it is not worth repeating.
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await this.readDecimalsOnce(tokenAddress, pinBlock);
+      } catch (error) {
+        lastError = error;
+        if (error instanceof PricingError && error.deterministic) throw error;
+        if (attempt < 2) await new Promise(r => setTimeout(r, 150 * (attempt + 1)));
+      }
+    }
+
+    throw lastError instanceof PricingError
+      ? lastError
+      : new PricingError('unknown_decimals', `Could not read decimals() for token ${tokenAddress}`);
+  }
+
+  private async readDecimalsOnce(tokenAddress: string, pinBlock?: bigint): Promise<number> {
     try {
       const dec = await this.readContract({
         address: tokenAddress as any,
@@ -134,7 +196,8 @@ export class PriceRpcClient {
       if (!Number.isInteger(parsed) || parsed < 0 || parsed > 77) {
         throw new PricingError(
           'unknown_decimals',
-          `Token ${tokenAddress} returned an out-of-range decimals value`
+          `Token ${tokenAddress} returned an out-of-range decimals value`,
+          true // deterministic: the contract will keep saying the same thing
         );
       }
       return parsed;

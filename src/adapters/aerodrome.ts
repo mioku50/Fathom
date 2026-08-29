@@ -1,6 +1,7 @@
 import { Address } from 'viem';
 import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest, TwapRequest, TwapResult } from '../dex_adapter';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
+import { readPoolsBatch } from './batch_read';
 
 export class AerodromeAdapter implements DEXAdapter {
   readonly id = 'aerodrome';
@@ -274,5 +275,30 @@ export class AerodromeAdapter implements DEXAdapter {
     if (!Number.isFinite(windowSeconds) || windowSeconds <= 0) return null;
 
     return { amountOut: quoted.result, windowSeconds };
+  }
+
+  async getRawDataBatch(pools: PoolInfo[]): Promise<(RawPoolData | null)[]> {
+    const poolAbi = [
+      { inputs: [], name: 'getReserves', outputs: [
+          { internalType: 'uint256', name: '_reserve0', type: 'uint256' },
+          { internalType: 'uint256', name: '_reserve1', type: 'uint256' },
+          { internalType: 'uint256', name: '_blockTimestampLast', type: 'uint256' }
+        ], stateMutability: 'view', type: 'function' },
+      { inputs: [], name: 'token0', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' },
+      { inputs: [], name: 'token1', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' }
+    ] as const;
+
+    const rows = await readPoolsBatch(
+      this.client, pools.map(p => p.address), poolAbi,
+      ['getReserves', 'token0', 'token1'], this.pinBlock
+    );
+
+    return rows.map(row => row === null ? null : {
+      reserve0: row[0][0] as bigint,
+      reserve1: row[0][1] as bigint,
+      token0: row[1] as string,
+      token1: row[2] as string,
+      updatedAt: Number(row[0][2])
+    });
   }
 }

@@ -256,10 +256,19 @@ sequenceDiagram
   unbounded parallelism would fan out 50 tokens' RPC calls at once and invite
   provider rate limiting. Results keep request order regardless of completion
   order.
-- **Bounded pool reads.** A well-covered token now sits in 30+ pools across five
-  DEXes. Reading them all at once got nearly every read rate-limited, which the
-  engine could only see as "no pools" - a silent, wrong answer rather than a
-  visible failure. Pool reads run 6 at a time.
+- **Pools are read one DEX at a time, not one pool at a time.** A well-covered
+  token sits in 30+ pools across five DEXes. Reading each in its own round trip
+  produced a burst that providers throttle, and the engine could only see that
+  as "no pools" - a silent wrong answer rather than a visible failure. Pools on
+  a DEX share an ABI, so each adapter reads all of its own in one multicall:
+  ~30 round trips become ~5. Adapters without a batch path fall back to bounded
+  per-pool reads, and a failed batch degrades to those rather than losing the
+  DEX entirely.
+- **Token decimals are cached in KV** for 30 days, since they cannot change.
+  That removes an RPC call per token per request, and with it a single-point
+  failure: under throttling, one lost `decimals()` call was enough to fail a
+  whole token. The read also retries transient failures, while an out-of-range
+  answer - which repeating cannot change - fails immediately.
 - **Batched reads.** Every adapter issues one `multicall` per operation instead
   of one `eth_call` per probe: V3 pool discovery went from 8 sequential round
   trips per token to 1, Aerodrome from 4 to 1, and each `getRawData` from 3-4
