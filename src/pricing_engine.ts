@@ -27,6 +27,12 @@ const NATIVE_ETH = '0x0000000000000000000000000000000000000000';
 /** Averaging window requested from pool oracles, in seconds. */
 const TWAP_WINDOW_SECONDS = 300;
 
+/**
+ * Share of discovered pools that must actually be read before the engine will
+ * stand behind a verdict about the token's market.
+ */
+const MIN_POOL_READ_RATIO = 0.5;
+
 /** How many candidate pools may be tried before giving up on depth. */
 const MAX_DEPTH_CANDIDATES = 3;
 
@@ -384,6 +390,33 @@ export class PricingEngine {
       // Says plainly that exit liquidity was not established for this token,
       // rather than leaving a reader to infer it from null fields.
       confResult.flags.push('depth_unavailable');
+    }
+
+    // A verdict reached on a fraction of the market is not a verdict on the
+    // market.
+    //
+    // Under provider throttling, discovery can find twenty pools and reads can
+    // return one. If that one is dust, the engine measures a ruinous exit,
+    // stamps no_exit_liquidity and reports confidence 0 - a confident negative
+    // about a token whose real liquidity it simply never saw. Observed on TOSHI
+    // and KEYCAT, both of which price normally when the reads land.
+    //
+    // So the read ratio is reported, and where most of the market went unread
+    // the exit conclusion is withdrawn rather than published: we did not
+    // establish that there is no way out, we failed to look.
+    const readRatio = pools.length > 0 ? rawData.length / pools.length : 1;
+    if (readRatio < MIN_POOL_READ_RATIO) {
+      confResult.flags.push('incomplete_pool_coverage');
+
+      const exitIndex = confResult.flags.indexOf('no_exit_liquidity');
+      if (exitIndex !== -1) {
+        confResult.flags.splice(exitIndex, 1);
+        confResult.flags.push('exit_liquidity_unverified');
+      }
+      // Cap rather than zero: the prices we did read are real, but they are not
+      // the whole market, and neither a clean bill nor a damning one is earned.
+      confResult.confidence = Math.min(Math.max(confResult.confidence, 1), 49);
+      confResult.label = 'unreliable';
     }
 
     const reportedLiquidityUsd = mainPoolContext?.hasRealReserves ? bestLiquidityUsd : null;

@@ -880,3 +880,98 @@ describe('cold-path cost', () => {
     expect(wethLookups).toBe(2);
   });
 });
+
+describe('partial market reads', () => {
+  const twentyPools = Array.from({ length: 20 }, (_, i) => ({
+    address: `0xpool${i}`,
+    dex: 'aerodrome',
+    fee: 0.003
+  }));
+
+  // One dust pool: 1000 TOKEN against 0.1 USDC, i.e. a ruinous exit.
+  const dustRaw = {
+    token0: TOKEN,
+    token1: USDC,
+    reserve0: 1_000_000_000_000_000_000_000n,
+    reserve1: 100_000n,
+    updatedAt: 12345
+  };
+
+  function orchestratorReading(readable: string[], raw: any) {
+    return {
+      getAllPools: vi.fn(async (t: string) =>
+        t.toLowerCase() === TOKEN.toLowerCase() ? twentyPools : []
+      ),
+      getAllRawData: vi.fn(async (pools: any[]) =>
+        pools.filter(p => readable.includes(p.address)).map(p => ({ pool: p, rawData: raw }))
+      ),
+      quoteSell: vi.fn(async () => null),
+      getTwapAmountOut: vi.fn(async () => null)
+    } as any;
+  }
+
+  it('caps confidence when it could only read a fraction of the market', async () => {
+    // Twenty pools discovered, one read, and that one is dust: a ruinous exit
+    // measured on a twentieth of the market.
+    const orchestrator = orchestratorReading(['0xpool0'], dustRaw);
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    expect(res!.flags).toContain('incomplete_pool_coverage');
+    expect(res!.confidence).toBeLessThanOrEqual(49);
+  });
+
+  it('withdraws the no-exit verdict rather than publishing it on partial data', async () => {
+    // Concentrated liquidity whose quoter cannot fill the headline size: exit
+    // liquidity is measured as absent, which normally earns no_exit_liquidity.
+    const orchestrator = {
+      getAllPools: vi.fn(async (t: string) =>
+        t.toLowerCase() === TOKEN.toLowerCase() ? twentyPools : []
+      ),
+      getAllRawData: vi.fn(async (pools: any[]) =>
+        pools.filter(p => p.address === '0xpool0').map(p => ({ pool: p, rawData: tokenUsdcV3Raw }))
+      ),
+      // $1k fills, $5k and $10k do not: the quoter answered, and the answer is
+      // that the advertised exit size cannot be filled.
+      quoteSell: vi.fn(async () => [900_000_000n, null, null]),
+      getTwapAmountOut: vi.fn(async () => null)
+    } as any;
+
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    // "There is no way out" is a claim about the market. We saw a twentieth of it.
+    expect(res!.flags).toContain('incomplete_pool_coverage');
+    expect(res!.flags).not.toContain('no_exit_liquidity');
+    expect(res!.flags).toContain('exit_liquidity_unverified');
+    expect(res!.confidence).toBeGreaterThan(0);
+  });
+
+  it('says nothing about coverage when most of the market was read', async () => {
+    const readable = twentyPools.slice(0, 15).map(p => p.address);
+    const orchestrator = orchestratorReading(readable, tokenUsdcRaw);
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    expect(res!.flags).not.toContain('incomplete_pool_coverage');
+    expect(res!.flags).not.toContain('exit_liquidity_unverified');
+  });
+
+  it('still condemns a token whose market it did read', async () => {
+    // Every pool readable, and every one of them dust: now the verdict is earned.
+    const readable = twentyPools.map(p => p.address);
+    const orchestrator = orchestratorReading(readable, dustRaw);
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    expect(res!.flags).not.toContain('incomplete_pool_coverage');
+    expect(res!.confidence).toBeLessThanOrEqual(49);
+  });
+
+  it('treats a token with a single discovered pool as fully read', async () => {
+    const orchestrator = makeOrchestrator(
+      { [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [TOKEN_USDC_POOL.address]: tokenUsdcRaw }
+    );
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    // One of one is complete coverage, however thin the market.
+    expect(res!.flags).not.toContain('incomplete_pool_coverage');
+  });
+});
