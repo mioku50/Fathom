@@ -2,6 +2,14 @@ name = "fathom-api"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = [ "nodejs_compat" ]
+
+# SKILL.md is served verbatim at /SKILL.md so an agent can load Fathom as a
+# capability. Importing it as text keeps the repository file the single source:
+# the published skill cannot drift from the one in git.
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
 workers_dev = true
 preview_urls = true
 

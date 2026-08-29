@@ -107,6 +107,17 @@ import {
   metadataInputSchema, metadataOutputSchema,
   metadatasInputSchema, metadatasOutputSchema
 } from './schemas/x402DiscoverySchemas'
+import SKILL_MD from '../SKILL.md'
+
+/**
+ * The agent-facing entry point. Served free and unpaywalled: a capability
+ * description an agent has to pay to read is one it will never read.
+ */
+app.get('/SKILL.md', (c) => {
+  c.header('Content-Type', 'text/markdown; charset=utf-8')
+  c.header('Cache-Control', 'public, max-age=300')
+  return c.body(SKILL_MD)
+})
 
 app.get('/', (c) => {
   c.header('Cache-Control', 'no-store, no-cache, must-revalidate')
