@@ -46,6 +46,22 @@ type MainPoolContext = {
   } | null;
 };
 
+/**
+ * USD anchors, shared across every request an isolate handles.
+ *
+ * Deliberately not KV. An anchor is worth caching for seconds, and a KV entry
+ * rewritten every thirty seconds costs a couple of thousand writes a day - more
+ * than the whole free-tier allowance, to store a number that fits in a variable.
+ * Workers reuse isolates across requests, so a burst of traffic - which is
+ * exactly the shape discovery sends - shares one resolution for free.
+ */
+const anchorMemo = new Map<string, { price: number; expiresAt: number }>();
+
+/** Exported for tests: an isolate outlives a single request, and so does this. */
+export function __clearAnchorMemo() {
+  anchorMemo.clear();
+}
+
 export class PricingEngine {
   /**
    * USD anchors for the quote assets we price against, resolved lazily and
@@ -91,14 +107,48 @@ export class PricingEngine {
 
     let anchor = this.anchors.get(key);
     if (!anchor) {
-      anchor = this.getBestPoolPrice(key, USDC, decimals, 6).then(result =>
-        result && result.priceInQuote > 0 && Number.isFinite(result.priceInQuote)
-          ? result.priceInQuote
-          : null
-      );
+      anchor = this.resolveAnchor(key, decimals);
       this.anchors.set(key, anchor);
     }
     return anchor;
+  }
+
+  /**
+   * How long an anchor may be reused. The anchor rescales every price quoted
+   * against it, so this is deliberately shorter than the response cache: a
+   * stale anchor is not a stale answer for one token, it is a small error
+   * applied to every WETH-quoted token at once.
+   */
+  private static readonly ANCHOR_TTL_SECONDS = 30;
+
+  /**
+   * Resolving an anchor means discovering and reading the quote asset's own
+   * pools - a full second pricing pass, nested inside the first. On a cold
+   * request that was the single largest cost in the whole call, and it was paid
+   * again for every token, though WETH is worth the same to all of them.
+   *
+   * Sharing it across requests removes that pass from most cold paths. The
+   * cache is best-effort in both directions: a miss or a write failure costs
+   * speed, never correctness.
+   */
+  private async resolveAnchor(key: string, decimals: number): Promise<number | null> {
+    const memo = anchorMemo.get(key);
+    if (memo && memo.expiresAt > Date.now()) return memo.price;
+
+    const result = await this.getBestPoolPrice(key, USDC, decimals, 6);
+    const price =
+      result && result.priceInQuote > 0 && Number.isFinite(result.priceInQuote)
+        ? result.priceInQuote
+        : null;
+
+    if (price !== null) {
+      anchorMemo.set(key, {
+        price,
+        expiresAt: Date.now() + PricingEngine.ANCHOR_TTL_SECONDS * 1000
+      });
+    }
+
+    return price;
   }
 
   async calculatePrice(token: string): Promise<PriceResponse | null> {
@@ -109,7 +159,22 @@ export class PricingEngine {
       return this.buildHardcodedResponse(token, 1.0, 100000000, 6);
     }
 
-    // 2. Find the token's pools. Quote assets are anchored to USD lazily, as
+    // 2. Establish the token's decimals before anything else.
+    //
+    // This one call decides the scale of every number that follows, and it is
+    // the one input we refuse to guess - so it is fatal when it fails. It used
+    // to run after discovery and the pool reads, which is the busiest moment of
+    // the request: roughly fifty RPC calls in, competing with its own burst.
+    // Under a throttling provider that is where it failed, taking a token that
+    // was otherwise perfectly priceable down with it.
+    //
+    // Reading it first spends nothing extra - it is needed either way - and it
+    // buys two things: the call happens while the request's budget is still
+    // untouched, and a token that genuinely has no readable decimals costs one
+    // call to reject instead of fifty-six.
+    const tokenDecimals = await this.rpcClient.getTokenDecimals(token);
+
+    // 3. Find the token's pools. Quote assets are anchored to USD lazily, as
     // each pool needs one - a wrong anchor would rescale every price quoted in
     // that asset, so a missing one skips the pool rather than guessing.
     const pools = await this.orchestrator.getAllPools(token);
@@ -149,8 +214,6 @@ export class PricingEngine {
     const candidates: PoolCandidate[] = [];
 
     let mainPoolContext: MainPoolContext | null = null;
-
-    const tokenDecimals = await this.rpcClient.getTokenDecimals(token);
 
     for (const poolWithData of rawData) {
       if (!poolWithData.rawData.token0 || !poolWithData.rawData.token1) continue;

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { PricingEngine } from '../../src/pricing_engine';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { PricingEngine, __clearAnchorMemo } from '../../src/pricing_engine';
 import { PricingError } from '../../src/errors';
 
 const WETH = '0x4200000000000000000000000000000000000006';
@@ -122,6 +122,10 @@ function makeRpc(overrides: Record<string, unknown> = {}) {
     ...overrides
   } as any;
 }
+
+// The anchor memo is module state that deliberately outlives a request, which
+// is exactly why each test has to start from a fresh isolate.
+beforeEach(() => __clearAnchorMemo());
 
 describe('PricingEngine guards', () => {
   it('prices a WETH-quoted token through the WETH/USD anchor', async () => {
@@ -771,5 +775,108 @@ describe('PricingEngine guards', () => {
     const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
 
     await expect(engine.calculatePrice(TOKEN)).resolves.toBeNull();
+  });
+});
+
+describe('cold-path cost', () => {
+  const anchoredSetup = () =>
+    makeOrchestrator(
+      {
+        [WETH.toLowerCase()]: [WETH_USDC_POOL],
+        [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL]
+      },
+      { [WETH_USDC_POOL.address]: wethUsdcRaw, [TOKEN_WETH_POOL.address]: tokenWethRaw }
+    );
+
+  it('establishes decimals before spending anything on discovery', async () => {
+    const orchestrator = anchoredSetup();
+    const rpc = makeRpc({
+      getTokenDecimals: vi.fn(async () => {
+        throw new PricingError('unknown_decimals', 'Could not read decimals()');
+      })
+    });
+
+    const engine = new PricingEngine(orchestrator, rpc, 'base');
+    await expect(engine.calculatePrice(TOKEN)).rejects.toMatchObject({ code: 'unknown_decimals' });
+
+    // Decimals used to be read after discovery and the pool reads - the busiest
+    // moment of the request, and the one most likely to be throttled. A token
+    // we cannot scale should cost one call to reject, not fifty.
+    expect(orchestrator.getAllPools).not.toHaveBeenCalled();
+    expect(orchestrator.getAllRawData).not.toHaveBeenCalled();
+  });
+
+  it('resolves the USD anchor once across separate requests', async () => {
+    const orchestrator = anchoredSetup();
+    const engine = new PricingEngine(orchestrator, makeRpc(), 'base');
+
+    await engine.calculatePrice(TOKEN);
+    const wethLookupsAfterFirst = orchestrator.getAllPools.mock.calls.filter(
+      (c: any[]) => c[0].toLowerCase() === WETH.toLowerCase()
+    ).length;
+
+    // A second engine, as a second request would build.
+    const second = new PricingEngine(orchestrator, makeRpc(), 'base');
+    await second.calculatePrice(TOKEN);
+
+    const wethLookupsTotal = orchestrator.getAllPools.mock.calls.filter(
+      (c: any[]) => c[0].toLowerCase() === WETH.toLowerCase()
+    ).length;
+
+    expect(wethLookupsAfterFirst).toBe(1);
+    // Resolving an anchor is a full nested pricing pass. WETH is worth the same
+    // to every token, so paying for it once per request was pure waste.
+    expect(wethLookupsTotal).toBe(1);
+  });
+
+  it('still prices correctly from the memoised anchor', async () => {
+    const orchestrator = anchoredSetup();
+    const first = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+    const second = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    expect(first!.price_usd).toBeCloseTo(3, 10);
+    expect(second!.price_usd).toBe(first!.price_usd);
+  });
+
+  it('re-resolves the anchor once the memo has expired', async () => {
+    vi.useFakeTimers();
+    try {
+      const orchestrator = anchoredSetup();
+      await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+      vi.advanceTimersByTime(31_000);
+
+      await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+      const wethLookups = orchestrator.getAllPools.mock.calls.filter(
+        (c: any[]) => c[0].toLowerCase() === WETH.toLowerCase()
+      ).length;
+      // An anchor rescales every price quoted against it, so it is held for
+      // seconds, not for the life of the isolate.
+      expect(wethLookups).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not memoise an anchor it could not resolve', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [], [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL] },
+      { [TOKEN_WETH_POOL.address]: tokenWethRaw }
+    );
+
+    await expect(
+      new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN)
+    ).rejects.toMatchObject({ code: 'stale_anchor' });
+
+    // Caching a failure would turn one bad moment into thirty seconds of them.
+    await expect(
+      new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN)
+    ).rejects.toMatchObject({ code: 'stale_anchor' });
+
+    const wethLookups = orchestrator.getAllPools.mock.calls.filter(
+      (c: any[]) => c[0].toLowerCase() === WETH.toLowerCase()
+    ).length;
+    expect(wethLookups).toBe(2);
   });
 });
