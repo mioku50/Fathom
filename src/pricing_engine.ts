@@ -424,6 +424,21 @@ export class PricingEngine {
       confResult.label = 'unreliable';
     }
 
+    // Pools we could see but could not convert to USD are missing from this
+    // answer just as surely as pools we never found.
+    //
+    // The anchor guard above only fires when *nothing* priced. When something
+    // else did, every WETH-quoted pool was silently dropped and the remainder
+    // was reported as the market. DEGEN's real depth is a 6.7 WETH Aerodrome
+    // pool; with the anchor briefly unavailable it was priced instead off a
+    // $2,300 USDC pool, at 8966 bps, and called illiquid - a confident verdict
+    // assembled from the pools that happened to survive.
+    if (poolsBlockedOnAnchor > 0) {
+      confResult.flags.push('incomplete_quote_coverage');
+      confResult.confidence = Math.min(Math.max(confResult.confidence, 1), 49);
+      confResult.label = 'unreliable';
+    }
+
     const readRatio = pools.length > 0 ? rawData.length / pools.length : 1;
     if (readRatio < MIN_POOL_READ_RATIO) {
       confResult.flags.push('incomplete_pool_coverage');

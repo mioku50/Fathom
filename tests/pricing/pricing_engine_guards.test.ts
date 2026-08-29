@@ -1008,3 +1008,56 @@ describe('incomplete venue coverage', () => {
     expect(res!.flags).not.toContain('incomplete_venue_coverage');
   });
 });
+
+describe('pools blocked on an unavailable anchor', () => {
+  it('does not report the survivors as if they were the market', async () => {
+    // The token's real depth is its WETH pool; a shallow USDC pool also exists.
+    // With no WETH/USD anchor, only the shallow pool can be priced.
+    const orchestrator = makeOrchestrator(
+      {
+        [WETH.toLowerCase()]: [],
+        [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL, TOKEN_USDC_POOL]
+      },
+      {
+        [TOKEN_WETH_POOL.address]: tokenWethRaw,
+        [TOKEN_USDC_POOL.address]: tokenUsdcRaw
+      }
+    );
+
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    // It still answers - the USDC pool is real - but it says the answer is
+    // assembled from whatever survived, rather than presenting it as the market.
+    expect(res).not.toBeNull();
+    expect(res!.flags).toContain('incomplete_quote_coverage');
+    expect(res!.confidence).toBeLessThanOrEqual(49);
+  });
+
+  it('still throws when the anchor blocked every pool there was', async () => {
+    const orchestrator = makeOrchestrator(
+      { [WETH.toLowerCase()]: [], [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL] },
+      { [TOKEN_WETH_POOL.address]: tokenWethRaw }
+    );
+
+    await expect(
+      new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN)
+    ).rejects.toMatchObject({ code: 'stale_anchor' });
+  });
+
+  it('says nothing when every pool could be converted', async () => {
+    const orchestrator = makeOrchestrator(
+      {
+        [WETH.toLowerCase()]: [WETH_USDC_POOL],
+        [TOKEN.toLowerCase()]: [TOKEN_WETH_POOL, TOKEN_USDC_POOL]
+      },
+      {
+        [WETH_USDC_POOL.address]: wethUsdcRaw,
+        [TOKEN_WETH_POOL.address]: tokenWethRaw,
+        [TOKEN_USDC_POOL.address]: tokenUsdcRaw
+      }
+    );
+
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+    expect(res!.flags).not.toContain('incomplete_quote_coverage');
+  });
+});

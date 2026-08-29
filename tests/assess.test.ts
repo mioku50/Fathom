@@ -190,3 +190,14 @@ describe('a venue that could not be searched', () => {
     expect(a.unverified).toHaveLength(1);
   });
 });
+
+describe('pools that could not be converted to USD', () => {
+  it('withholds the verdict rather than judging the pools that survived', () => {
+    const a = assess(
+      withQuote({ price_impact_bps: 8966 }, { flags: ['incomplete_quote_coverage'] }),
+      10000
+    );
+    expect(a.verdict).toBe('unverified');
+    expect(a.reason).toMatch(/could not be converted to USD/i);
+  });
+});

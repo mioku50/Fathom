@@ -111,6 +111,7 @@ not about the token:
 `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked`,
 `depth_unavailable`, `liquidity_unmeasured`, `low_measurement_coverage`,
 `no_measurable_signal`, `incomplete_pool_coverage`, `incomplete_venue_coverage`,
+`incomplete_quote_coverage`,
 `exit_liquidity_unverified`,
 `hardcoded_numeraire`
 

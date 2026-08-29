@@ -88,6 +88,7 @@ const UNVERIFIED_FLAGS: Record<string, string> = {
   no_measurable_signal: 'None of the confidence model could be measured.',
   incomplete_pool_coverage: 'Most discovered pools could not be read, so this is not a reading of the whole market.',
   incomplete_venue_coverage: 'One or more DEXes could not be searched, so pools this token trades on may be missing entirely.',
+  incomplete_quote_coverage: 'Pools quoted in another asset could not be converted to USD, so the deepest venue may be missing from this answer.',
   exit_liquidity_unverified: 'Whether the position can be exited was not established.',
   hardcoded_numeraire: 'This is USDC, whose value is defined rather than measured.'
 };
@@ -174,6 +175,13 @@ function decide(input: {
     return {
       verdict: 'unverified',
       reason: 'One or more DEXes could not be searched, so this may be missing the pools the token actually trades in. Retry before acting.'
+    };
+  }
+
+  if (input.flags.includes('incomplete_quote_coverage')) {
+    return {
+      verdict: 'unverified',
+      reason: 'Pools quoted in another asset could not be converted to USD, so the deepest venue may be missing from this answer. Retry before acting.'
     };
   }
 
