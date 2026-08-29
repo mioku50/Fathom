@@ -167,7 +167,8 @@ export class PriceRpcClient {
     if (shared) {
       try {
         const cached = await shared.get(key);
-        if (typeof cached === 'string') return cached === '' ? null : cached;
+        // An empty entry is a poisoned negative from before this rule; ignore it.
+        if (typeof cached === 'string' && cached !== '') return cached;
       } catch {
         // A cache miss must never be the reason a token cannot be priced.
       }
@@ -196,10 +197,15 @@ export class PriceRpcClient {
       symbol = null;
     }
 
-    if (shared) {
+    // Only a successful read is worth keeping. A throttled call and a token
+    // with no symbol() are indistinguishable from here, and caching the pair of
+    // them for a month freezes a passing RPC failure into a permanent "UNKNOWN".
+    // Re-reading the rare genuinely unnamed token costs one call; a poisoned
+    // cache costs the name of every token unlucky enough to be read during a
+    // spike. This is the same rule getTokenDecimals already follows.
+    if (shared && symbol !== null) {
       try {
-        // Cache the negative too, so an unnamed token is not re-read every time.
-        await shared.set(key, symbol ?? '', DECIMALS_TTL_SECONDS);
+        await shared.set(key, symbol, DECIMALS_TTL_SECONDS);
       } catch {}
     }
     return symbol;
