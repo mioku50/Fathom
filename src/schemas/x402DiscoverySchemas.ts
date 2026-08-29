@@ -42,9 +42,15 @@ export const priceOutputSchema = {
       type: ["number", "null"],
       description: "Spread between independent sources in basis points; null when there are fewer than 2 sources."
     },
+    measured_weight: {
+      type: "number",
+      minimum: 0,
+      maximum: 1,
+      description: "Share of the confidence model actually backed by a measurement, 0-1. `confidence` is computed only over the components that were measured, so this says how much evidence stands behind it: 1.0 is the whole model, 0.35 is a score derived from barely a third of it. Below 0.5 the response cannot be labelled reliable and carries `low_measurement_coverage`."
+    },
     confidence_components: {
       type: "object",
-      description: "Per-component breakdown of `confidence`. A component with score null was not measured and its weight was redistributed.",
+      description: "Per-component breakdown of `confidence`. A component with score null was not measured and its weight was redistributed across the ones that were.",
       properties: {
         liquidity: {
       type: "object",
@@ -148,7 +154,7 @@ export const priceOutputSchema = {
     flags: {
       type: "array",
       items: { type: "string" },
-      description: "Risk markers. `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked`, `depth_unavailable` and `liquidity_unmeasured` mean the corresponding check did not run. `no_exit_liquidity` is a measurement: the largest advertised sale cannot be filled."
+      description: "Risk markers, in two kinds. Measurements about the token: `thin_liquidity`, `no_exit_liquidity` (the largest advertised sale cannot be filled), `possible_manipulation`, `single_pool`, `stale`, `unsellable`. Limits of what could be established: `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked`, `depth_unavailable`, `liquidity_unmeasured`, `low_measurement_coverage` (under half the confidence model was measured), `no_measurable_signal` (none of it was), `incomplete_pool_coverage` (most discovered pools could not be read, so no verdict about the market is offered), `exit_liquidity_unverified` (exit was not established rather than found absent), `hardcoded_numeraire` (USDC, whose value is defined rather than measured). Never infer a token is bad from the second kind."
     },
     updated_at: { type: "string", format: "date-time" },
     status: { type: "string", enum: ["ok", "not_found", "no_liquidity", "rpc_error", "unpriceable", "stale_anchor", "unknown_decimals"] },
