@@ -56,7 +56,13 @@ describe('x402Middleware', () => {
     expect(payload).toHaveProperty('accepts')
     expect(payload).toHaveProperty('resource')
     expect(payload.resource).toHaveProperty('description')
-    expect(payload.resource.description).toContain('Base ERC-20 token using Base mainnet DEX liquidity')
+    // Assert what the description has to convey, not how it is worded: agents
+    // select on these, and pinning the prose makes every rewrite a test failure.
+    const priceDescription = payload.resource.description as string
+    for (const claim of ['Base', 'price', 'sell', 'impact']) {
+      expect(priceDescription.toLowerCase()).toContain(claim.toLowerCase())
+    }
+    expect(payload.resource.tags).toEqual(expect.arrayContaining(['base', 'exit-liquidity', 'price-impact']))
     
     expect(payload).toHaveProperty('extensions')
     expect(payload.extensions).toHaveProperty('bazaar')
@@ -72,7 +78,10 @@ describe('x402Middleware', () => {
     const reqHeader = res.headers.get('Payment-Required') || res.headers.get('payment-required')
     const payload = JSON.parse(Buffer.from(reqHeader!, 'base64').toString('utf8'))
     
-    expect(payload.resource.description).toContain('ERC-20 metadata for a Base token')
+    const metadataDescription = payload.resource.description as string
+    for (const claim of ['Base', 'ERC-20', 'decimals', 'symbol']) {
+      expect(metadataDescription.toLowerCase()).toContain(claim.toLowerCase())
+    }
     expect(payload.extensions.bazaar.info.input.queryParams.token).toBe('0x940181a94A35A4569E4529A3CDfB74e38FD98631')
   })
 

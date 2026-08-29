@@ -88,9 +88,13 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   const routes: RoutesConfig = {
       "/v1/price": {
           accepts: [baseAccepts],
-          description: "Returns price, liquidity, confidence score, main pool, and risk flags for a Base ERC-20 token using Base mainnet DEX liquidity.",
+          description: "Decide whether a Base ERC-20 can be priced and exited before you trade it. Reads five DEXes on Base mainnet - Aerodrome, Aerodrome Slipstream, Uniswap V2/V3/V4 - and returns spot price cross-checked across independent pools, the pool's own TWAP against spot, and on-chain quotes for actually selling $1k, $5k and $10k with the price impact each costs. Built for long-tail tokens that major feeds either lack or quote without any sense of whether the market can absorb a sale. Every number is measured or absent: liquidity_usd is null for concentrated-liquidity pools rather than reporting L*sqrtP as a balance it is not, unmeasured components are excluded from the confidence score, and measured_weight says what share of the model that score rests on. Flags separate what is true about the token from what could not be established about it.",
           mimeType: "application/json",
-          tags: ["base", "price", "oracle", "dex", "liquidity", "long-tail", "aero", "usdc", "agent"],
+          tags: [
+            "base", "token-price", "long-tail", "dex", "liquidity", "exit-liquidity",
+            "price-impact", "slippage", "execution", "sell-quote", "risk", "twap",
+            "oracle", "trading-agent", "onchain-data", "erc20", "pre-trade"
+          ],
           extensions: {
               ...builderCodeExtension,
               ...createFixedDiscoveryExtension({
@@ -108,9 +112,13 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "/v1/prices": {
           accepts: [batchAccepts],
-          description: "Batch pricing endpoint for Base ERC-20 token lists. Returns price, liquidity, confidence score, risk flags, and main pool data for up to 50 Base tokens in one paid x402 request.",
+          description: "Value or de-risk a whole Base portfolio in one paid call. Same measurement as /v1/price - spot cross-checked across five DEXes, TWAP against spot, executable $1k/$5k/$10k sell quotes with price impact, confidence and risk flags - for up to 50 Base ERC-20s at once. Use it to mark a book, screen a watchlist, or find which holdings cannot actually be exited at size. Each token reports its own status, so one unreadable token does not cost you the rest.",
           mimeType: "application/json",
-          tags: ["base", "batch", "price", "oracle", "liquidity", "long-tail", "agents", "wallets", "trading"],
+          tags: [
+            "base", "batch", "portfolio", "token-price", "long-tail", "liquidity",
+            "exit-liquidity", "price-impact", "execution", "risk", "twap", "oracle",
+            "trading-agent", "wallet", "onchain-data", "valuation"
+          ],
           extensions: {
               ...builderCodeExtension,
               ...createFixedDiscoveryExtension({
@@ -134,9 +142,9 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "/v1/metadata": {
           accepts: [baseAccepts],
-          description: "Returns ERC-20 metadata for a Base token, including address, symbol, name, and decimals.",
+          description: "Read a Base ERC-20's own identity from the chain: address, symbol, name and decimals, taken from the contract rather than from a list that can be stale or absent. Use it to resolve a token you have only an address for, before pricing it.",
           mimeType: "application/json",
-          tags: ["base", "erc20", "metadata", "token"],
+          tags: ["base", "erc20", "metadata", "token", "decimals", "symbol", "onchain-data"],
           extensions: {
               ...builderCodeExtension,
               ...createFixedDiscoveryExtension({
@@ -155,9 +163,9 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "/v1/metadatas": {
           accepts: [batchAccepts],
-          description: "Batch endpoint for Base ERC-20 token metadata.",
+          description: "Resolve many Base ERC-20s at once: address, symbol, name and decimals read from each contract. Use it to label a portfolio or a watchlist in one paid call before pricing it.",
           mimeType: "application/json",
-          tags: ["base", "erc20", "metadata", "batch"],
+          tags: ["base", "erc20", "metadata", "batch", "portfolio", "decimals", "symbol", "onchain-data"],
           extensions: {
               ...builderCodeExtension,
               ...createFixedDiscoveryExtension({
