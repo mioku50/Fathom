@@ -262,3 +262,82 @@ export const metadatasOutputSchema = {
   },
   required: ["chain", "count", "results"]
 };
+
+export const assessInputSchema = {
+  type: "object",
+  properties: {
+    token: {
+      type: "string",
+      pattern: "^0x[a-fA-F0-9]{40}$",
+      description: "Base ERC-20 token address"
+    },
+    size_usd: {
+      type: "number",
+      minimum: 1,
+      maximum: 10000000,
+      default: 10000,
+      description: "The sale you are contemplating, in USD. Quoted on chain at exactly this size rather than interpolated between standard sizes. Pass the position you actually hold."
+    },
+    chain: { type: "string", enum: ["base"], default: "base" }
+  },
+  required: ["token"],
+  additionalProperties: false
+};
+
+export const assessOutputSchema = {
+  type: "object",
+  properties: {
+    token: { type: "string" },
+    chain: { type: "string" },
+    symbol: { type: "string" },
+    price_usd: { type: "number" },
+    verdict: {
+      type: "string",
+      enum: ["tradeable", "caution", "illiquid", "unverified"],
+      description: "The single field to branch on. `tradeable`: the sale fills cheaply against a corroborated price. `caution`: it fills, at a cost worth knowing. `illiquid`: it cannot be filled, or costs over a tenth of the position. `unverified`: too little could be measured to say - retry rather than treating this as a negative."
+    },
+    reason: {
+      type: "string",
+      description: "One sentence saying why, for an agent's trace and for a human reading it."
+    },
+    size_usd: { type: "number", description: "The sale this verdict is about." },
+    exit: {
+      type: "object",
+      description: "What the requested sale actually returns, quoted on chain.",
+      properties: {
+        fillable: {
+          type: ["boolean", "null"],
+          description: "true if the sale fills, false if measured and it cannot, null if never established. The last is not a negative."
+        },
+        proceeds_usd: { type: ["number", "null"] },
+        price_impact_bps: { type: ["number", "null"], description: "Shortfall of the realised price against spot." },
+        execution_price_usd: { type: ["number", "null"] }
+      },
+      required: ["fillable", "proceeds_usd", "price_impact_bps", "execution_price_usd"]
+    },
+    price_trust: {
+      type: "object",
+      description: "How well corroborated the price behind that quote is.",
+      properties: {
+        confidence: { type: "number", minimum: 0, maximum: 100 },
+        measured_weight: { type: "number", minimum: 0, maximum: 1, description: "Share of the confidence model actually measured." },
+        sources: { type: "number", description: "Independent pools that agreed." },
+        dispersion_bps: { type: ["number", "null"] },
+        twap_deviation_bps: { type: ["number", "null"] }
+      },
+      required: ["confidence", "measured_weight", "sources", "dispersion_bps", "twap_deviation_bps"]
+    },
+    concerns: {
+      type: "array",
+      items: { type: "string" },
+      description: "Measured facts about the token that argue against trading it. Act on these."
+    },
+    unverified: {
+      type: "array",
+      items: { type: "string" },
+      description: "Checks that did not run. Never evidence against the token - a failure to look is not a finding."
+    },
+    updated_at: { type: "string", format: "date-time" }
+  },
+  required: ["token", "chain", "verdict", "reason", "size_usd", "exit", "price_trust"]
+};

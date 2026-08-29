@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { priceOutputSchema, pricesOutputSchema } from '../../src/schemas/x402DiscoverySchemas';
 import { PricingEngine } from '../../src/pricing_engine';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 /**
  * The discovery schema is how an agent decides whether Fathom answers its
@@ -113,5 +115,48 @@ describe('discovery schema matches the response it advertises', () => {
 
     const missingFromBatch = single.filter(k => !batchItem.includes(k));
     expect(missingFromBatch).toEqual([]);
+  });
+});
+
+describe('the assess schema matches the assessment it advertises', () => {
+  async function realAssessment() {
+    const { assess } = await import('../../src/assess');
+    return assess(await realResponse(), 10000);
+  }
+
+  it('declares every field the assessment actually returns', async () => {
+    const { assessOutputSchema } = await import('../../src/schemas/x402DiscoverySchemas');
+    const declared = Object.keys(assessOutputSchema.properties);
+    const undeclared = Object.keys(await realAssessment()).filter(k => !declared.includes(k));
+    expect(undeclared).toEqual([]);
+  });
+
+  it('does not promise fields the assessment never returns', async () => {
+    const { assessOutputSchema } = await import('../../src/schemas/x402DiscoverySchemas');
+    const assessment = await realAssessment();
+    const missing = Object.keys(assessOutputSchema.properties).filter(k => !(k in assessment));
+    expect(missing).toEqual([]);
+  });
+
+  it('declares the nested exit and price_trust shapes correctly', async () => {
+    const { assessOutputSchema } = await import('../../src/schemas/x402DiscoverySchemas');
+    const props = assessOutputSchema.properties as any;
+    const assessment = await realAssessment();
+
+    expect(Object.keys(props.exit.properties).sort()).toEqual(Object.keys(assessment.exit).sort());
+    expect(Object.keys(props.price_trust.properties).sort()).toEqual(
+      Object.keys(assessment.price_trust).sort()
+    );
+  });
+
+  it('advertises exactly the verdicts the code can produce', async () => {
+    const { assessOutputSchema } = await import('../../src/schemas/x402DiscoverySchemas');
+    const declared = (assessOutputSchema.properties as any).verdict.enum as string[];
+
+    // An agent branching on a verdict we never documented has no case for it.
+    const source = readFileSync(join(__dirname, '..', '..', 'src', 'assess.ts'), 'utf8');
+    const produced = [...source.matchAll(/verdict: '([a-z]+)'/g)].map(m => m[1]);
+
+    expect([...new Set(produced)].sort()).toEqual([...declared].sort());
   });
 });

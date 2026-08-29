@@ -33,6 +33,15 @@ import { runSmokeChecks, SMOKE_KV_KEY, type SmokeResult } from './smoke'
 const BATCH_CONCURRENCY = 4
 
 /**
+ * The sale size /v1/assess judges when the caller does not name one. $10k is
+ * the size the standard profile has always headlined.
+ */
+const DEFAULT_ASSESS_SIZE_USD = 10000
+/** Below this a quote rounds to nothing; above it, no Base long-tail pool is honest. */
+const MIN_ASSESS_SIZE_USD = 1
+const MAX_ASSESS_SIZE_USD = 10_000_000
+
+/**
  * KV for the orchestrator, encoded so bigint survives the round trip.
  *
  * Pool state is bigint, and plain `JSON.stringify` throws on it. This class
@@ -108,6 +117,7 @@ import {
   metadatasInputSchema, metadatasOutputSchema
 } from './schemas/x402DiscoverySchemas'
 import SKILL_MD from '../SKILL.md'
+import { assess } from './assess'
 
 /**
  * The agent-facing entry point. Served free and unpaywalled: a capability
@@ -407,6 +417,61 @@ app.get('/v1/cache/metrics', adminAuthMiddleware, async (c) => {
   }
 })
 
+
+/**
+ * The decision endpoint.
+ *
+ * Same measurement as /v1/price, quoted at the size the caller actually holds,
+ * reduced to one verdict they can branch on. `size_usd` is priced on chain
+ * rather than interpolated between the standard quotes, because a guess about
+ * slippage is the one thing this service will not sell.
+ */
+app.get('/v1/assess', validateAddressesMiddleware, validateChainMiddleware, x402Middleware, async (c) => {
+  const token = c.req.query('token') || '0x0000000000000000000000000000000000000000'
+  const chain = c.req.query('chain') || 'base'
+
+  const sizeParam = c.req.query('size_usd')
+  let sizeUsd = DEFAULT_ASSESS_SIZE_USD
+  if (sizeParam !== undefined) {
+    const parsed = Number(sizeParam)
+    if (!Number.isFinite(parsed) || parsed < MIN_ASSESS_SIZE_USD || parsed > MAX_ASSESS_SIZE_USD) {
+      return c.json({
+        error: 'invalid_request',
+        message: `size_usd must be a number between ${MIN_ASSESS_SIZE_USD} and ${MAX_ASSESS_SIZE_USD}`
+      }, 400)
+    }
+    sizeUsd = parsed
+  }
+
+  const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
+    ? Math.max(60, parseInt(c.env.CACHE_DEFAULT_TTL_SECONDS) || 60)
+    : 60
+
+  if (!c.env?.PRICE_RPC_URL) {
+    return c.json({ error: 'server_error', message: 'PRICE_RPC_URL is not configured on the server' }, 500)
+  }
+  if (c.env?.PRICE_CHAIN_ID !== '8453') {
+    return c.json({ error: 'server_error', message: 'PRICE_CHAIN_ID must be configured as 8453 for Base mainnet reads' }, 500)
+  }
+
+  const engine = buildPricingEngine(c.env, chain, defaultTTL)
+
+  let price
+  try {
+    price = await engine.calculatePrice(token, [sizeUsd])
+  } catch (error) {
+    if (isPricingError(error)) {
+      return c.json({ error: error.code, message: error.message }, 503)
+    }
+    throw error
+  }
+
+  if (!price) {
+    return c.json({ error: 'not_found', message: 'No pools found or un-priceable' }, 404)
+  }
+
+  return c.json(assess(price, sizeUsd))
+})
 
 app.get('/v1/price', validateAddressesMiddleware, validateChainMiddleware, x402Middleware, async (c) => {
   const token = c.req.query('token') || '0x0000000000000000000000000000000000000000'

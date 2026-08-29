@@ -99,6 +99,35 @@ of its market.
 `503 unknown_decimals`, because a wrong decimals value silently rescales the
 answer by orders of magnitude.
 
+## One call, one decision
+
+`/v1/price` returns everything measured and leaves the judgement to you.
+`/v1/assess` makes it:
+
+```
+GET /v1/assess?token=0x940181…&size_usd=10000
+```
+
+```json
+{
+  "verdict": "tradeable",
+  "reason": "$10,000 fills at 48 bps against a price corroborated across venues.",
+  "exit": { "fillable": true, "proceeds_usd": 9951.96, "price_impact_bps": 48.0 },
+  "price_trust": { "confidence": 96, "measured_weight": 0.75, "sources": 6 },
+  "concerns": [],
+  "unverified": ["No honeypot or transfer-tax simulation was run."]
+}
+```
+
+Four verdicts: `tradeable`, `caution`, `illiquid`, and `unverified` — which
+means *we could not measure enough to say*, and is a reason to retry rather than
+a mark against the token. `concerns` and `unverified` stay separate for the same
+reason: a failure to look is not a finding.
+
+`size_usd` is quoted on chain at exactly the size you name. Fathom will not
+interpolate between standard sizes, because a guess about slippage is worse than
+no answer.
+
 ## Quickstart
 
 Any x402 client works. With the [x402 fetch wrapper](https://www.npmjs.com/package/@x402/fetch):
@@ -127,7 +156,8 @@ curl -sD- -o/dev/null 'https://fathom-api.mioku-fathom.workers.dev/v1/price?toke
 
 | Endpoint | Price | Returns |
 |---|---|---|
-| `GET /v1/price?token=` | 0.001 USDC | Full assessment for one token |
+| `GET /v1/assess?token=&size_usd=` | 0.001 USDC | One verdict to branch on |
+| `GET /v1/price?token=` | 0.001 USDC | Every measurement for one token |
 | `GET /v1/prices?tokens=` | 0.003 USDC | Same, up to 50 tokens, each with its own status |
 | `GET /v1/metadata?token=` | 0.001 USDC | Symbol, name, decimals, read from the contract |
 | `GET /v1/metadatas?tokens=` | 0.003 USDC | The same in bulk |

@@ -110,18 +110,27 @@ export function constantProductDepth(pool: ConstantProductPool, drop: number): n
   return Number.isFinite(notionalUsd) && notionalUsd > 0 ? notionalUsd : null;
 }
 
-export function constantProductDepthProfile(pool: ConstantProductPool): DepthResult {
+export function constantProductDepthProfile(
+  pool: ConstantProductPool,
+  /**
+   * Sizes to quote. Callers asking about one specific position pass that
+   * position's notional: a holder of $3,200 wants $3,200 priced, and
+   * interpolating between the standard sizes would be a guess dressed as a
+   * measurement.
+   */
+  sizesUsd: readonly number[] = SELL_QUOTE_SIZES_USD
+): DepthResult {
   return {
-    sell_quotes: SELL_QUOTE_SIZES_USD.map(size => constantProductSellQuote(pool, size)),
+    sell_quotes: sizesUsd.map(size => constantProductSellQuote(pool, size)),
     depth_1pct_usd: constantProductDepth(pool, 0.01),
     depth_5pct_usd: constantProductDepth(pool, 0.05)
   };
 }
 
 /** Depth we could not compute: every field explicitly null, never a guess. */
-export function unknownDepth(): DepthResult {
+export function unknownDepth(sizesUsd: readonly number[] = SELL_QUOTE_SIZES_USD): DepthResult {
   return {
-    sell_quotes: SELL_QUOTE_SIZES_USD.map(size => ({
+    sell_quotes: sizesUsd.map(size => ({
       size_usd: size,
       proceeds_usd: null,
       execution_price_usd: null,
@@ -142,10 +151,11 @@ export function unknownDepth(): DepthResult {
  */
 export function quotedDepthProfile(
   proceedsUsd: (number | null)[],
-  spotPriceUsd: number
+  spotPriceUsd: number,
+  sizesUsd: readonly number[] = SELL_QUOTE_SIZES_USD
 ): DepthResult {
   return {
-    sell_quotes: SELL_QUOTE_SIZES_USD.map((size, i) => {
+    sell_quotes: sizesUsd.map((size, i) => {
       const proceeds = proceedsUsd[i];
       if (proceeds === null || proceeds === undefined || !Number.isFinite(proceeds) || proceeds <= 0) {
         return { size_usd: size, proceeds_usd: null, execution_price_usd: null, price_impact_bps: null };
@@ -191,8 +201,11 @@ export function headlineExecution(depth: DepthResult): {
   impactBps: number | null;
   fillable: boolean | null;
 } {
-  const headlineSize = SELL_QUOTE_SIZES_USD[SELL_QUOTE_SIZES_USD.length - 1];
-  const quote = depth.sell_quotes.find(q => q.size_usd === headlineSize);
+  // The largest size quoted, whatever the caller asked for.
+  const quote = depth.sell_quotes.reduce<SellQuote | null>(
+    (largest, q) => (largest === null || q.size_usd > largest.size_usd ? q : largest),
+    null
+  );
 
   if (quote && quote.price_impact_bps !== null && Number.isFinite(quote.price_impact_bps)) {
     return { impactBps: quote.price_impact_bps, fillable: true };

@@ -28,11 +28,42 @@ cheaper and just as good. Fathom earns its fee where liquidity is the question.
 All are paid via x402 on Base (USDC, `exact` scheme, CDP facilitator).
 
 ```
-GET /v1/price?token=<address>                    0.001 USDC
+GET /v1/assess?token=<address>&size_usd=<n>      0.001 USDC   one verdict
+GET /v1/price?token=<address>                    0.001 USDC   everything measured
 GET /v1/prices?tokens=<addr1,addr2,...>          0.003 USDC   up to 50 tokens
 GET /v1/metadata?token=<address>                 symbol, name, decimals
 GET /v1/metadatas?tokens=<addr1,addr2,...>
 ```
+
+**Start with `/v1/assess`** unless you need the raw measurements. It answers the
+question you probably have — *can I get out of this, at this size, at a price I
+can trust?* — as a single word you can branch on.
+
+```json
+{
+  "verdict": "tradeable",
+  "reason": "$10,000 fills at 48 bps against a price corroborated across venues.",
+  "size_usd": 10000,
+  "exit": { "fillable": true, "proceeds_usd": 9951.96, "price_impact_bps": 48.0 },
+  "price_trust": { "confidence": 96, "measured_weight": 0.75, "sources": 6 },
+  "concerns": [],
+  "unverified": ["No honeypot or transfer-tax simulation was run."]
+}
+```
+
+| `verdict` | What to do |
+|---|---|
+| `tradeable` | The sale fills cheaply against a corroborated price. Proceed. |
+| `caution` | It fills, at a cost worth knowing. Read `reason`, size down. |
+| `illiquid` | It cannot be filled, or costs over a tenth of the position. Do not. |
+| `unverified` | Too little could be measured to say. **Retry — this is not a negative.** |
+
+Pass `size_usd` for the position you actually hold. It is quoted on chain at
+exactly that size; Fathom will not interpolate between standard sizes, because a
+guess about slippage is worse than no answer. Default 10000.
+
+`concerns` are measured facts about the token — act on them. `unverified` are
+checks that did not run — never treat them as evidence against the token.
 
 Only Base mainnet is served. `chain` may be omitted or `base`; anything else is
 rejected before payment is taken.

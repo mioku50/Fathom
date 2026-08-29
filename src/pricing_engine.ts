@@ -157,7 +157,15 @@ export class PricingEngine {
     return price;
   }
 
-  async calculatePrice(token: string): Promise<PriceResponse | null> {
+  /**
+   * @param sizesUsd Sale sizes to quote on chain. Defaults to the standard
+   *   $1k/$5k/$10k profile; /v1/assess passes the caller's actual position size,
+   *   because that is the number they need priced.
+   */
+  async calculatePrice(
+    token: string,
+    sizesUsd: readonly number[] = SELL_QUOTE_SIZES_USD
+  ): Promise<PriceResponse | null> {
     const lowerToken = token.toLowerCase();
 
     // 1. Handle USDC special case
@@ -338,12 +346,12 @@ export class PricingEngine {
     // report. So the deepest-looking pool can turn out to be one that cannot
     // fill the trade at all, while a sibling pool at another tick spacing can.
     // Rather than trusting that ranking, walk the candidates until one answers.
-    let depth: DepthResult = unknownDepth();
+    let depth: DepthResult = unknownDepth(sizesUsd);
     for (const candidate of candidates.slice(0, MAX_DEPTH_CANDIDATES)) {
       const ctx = candidate.context;
       const attempt = ctx.constantProduct
-        ? constantProductDepthProfile(ctx.constantProduct)
-        : await this.quoteDepth(token, tokenDecimals, candidate.priceUsd, ctx);
+        ? constantProductDepthProfile(ctx.constantProduct, sizesUsd)
+        : await this.quoteDepth(token, tokenDecimals, candidate.priceUsd, ctx, sizesUsd);
 
       if (!isDepthUnknown(attempt)) {
         depth = attempt;
@@ -499,16 +507,17 @@ export class PricingEngine {
       quoteToken: string;
       quoteDecimals: number;
       quoteUsdPrice: number;
-    }
+    },
+    sizesUsd: readonly number[] = SELL_QUOTE_SIZES_USD
   ): Promise<DepthResult> {
     if (!(spotPriceUsd > 0) || !Number.isFinite(spotPriceUsd) || !(ctx.quoteUsdPrice > 0)) {
-      return unknownDepth();
+      return unknownDepth(sizesUsd);
     }
 
     const amountsIn: bigint[] = [];
-    for (const size of SELL_QUOTE_SIZES_USD) {
+    for (const size of sizesUsd) {
       const raw = (size / spotPriceUsd) * Math.pow(10, tokenDecimals);
-      if (!Number.isFinite(raw) || raw <= 0) return unknownDepth();
+      if (!Number.isFinite(raw) || raw <= 0) return unknownDepth(sizesUsd);
       amountsIn.push(BigInt(Math.floor(raw)));
     }
 
@@ -518,13 +527,13 @@ export class PricingEngine {
       tokenOut: ctx.quoteToken,
       amountsIn
     });
-    if (!amountsOut) return unknownDepth();
+    if (!amountsOut) return unknownDepth(sizesUsd);
 
     const proceedsUsd = amountsOut.map(a =>
       a === null ? null : (Number(a) / Math.pow(10, ctx.quoteDecimals)) * ctx.quoteUsdPrice
     );
 
-    return quotedDepthProfile(proceedsUsd, spotPriceUsd);
+    return quotedDepthProfile(proceedsUsd, spotPriceUsd, sizesUsd);
   }
 
   private async getBestPoolPrice(token: string, quote: string, tokenDec: number, quoteDec: number) {
