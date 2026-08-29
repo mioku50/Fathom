@@ -27,6 +27,7 @@ describe('SKILL.md', () => {
       'stale', 'unsellable', 'twap_unavailable', 'freshness_unchecked',
       'sellability_unchecked', 'depth_unavailable', 'liquidity_unmeasured',
       'low_measurement_coverage', 'no_measurable_signal', 'incomplete_pool_coverage',
+      'incomplete_venue_coverage',
       'exit_liquidity_unverified', 'hardcoded_numeraire'
     ];
     const errors = ['rpc_error', 'stale_anchor', 'unknown_decimals', 'not_found'];

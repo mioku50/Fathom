@@ -99,6 +99,7 @@ describe('discovery schema matches the response it advertises', () => {
       'no_measurable_signal',
       'depth_unavailable',
       'incomplete_pool_coverage',
+      'incomplete_venue_coverage',
       'exit_liquidity_unverified',
       'hardcoded_numeraire'
     ];

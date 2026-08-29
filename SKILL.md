@@ -110,7 +110,8 @@ not about the token:
 
 `twap_unavailable`, `freshness_unchecked`, `sellability_unchecked`,
 `depth_unavailable`, `liquidity_unmeasured`, `low_measurement_coverage`,
-`no_measurable_signal`, `incomplete_pool_coverage`, `exit_liquidity_unverified`,
+`no_measurable_signal`, `incomplete_pool_coverage`, `incomplete_venue_coverage`,
+`exit_liquidity_unverified`,
 `hardcoded_numeraire`
 
 Never conclude a token is bad from the second kind. `exit_liquidity_unverified`

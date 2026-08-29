@@ -1,5 +1,5 @@
 import { Address } from 'viem';
-import { DEXOrchestrator } from './orchestrator';
+import { DEXOrchestrator, type DiscoveryReport } from './orchestrator';
 import { PriceCalculator } from './calculator';
 import { calculateConfidence } from './confidence';
 import { formatPriceResponse, NO_TWAP, type TwapReport } from './utils';
@@ -191,7 +191,8 @@ export class PricingEngine {
     // 3. Find the token's pools. Quote assets are anchored to USD lazily, as
     // each pool needs one - a wrong anchor would rescale every price quoted in
     // that asset, so a missing one skips the pool rather than guessing.
-    const pools = await this.orchestrator.getAllPools(token);
+    const discovery: DiscoveryReport = { adaptersTotal: 0, adaptersFailed: 0 };
+    const pools = await this.orchestrator.getAllPools(token, discovery);
     if (pools.length === 0) {
       return null;
     }
@@ -412,6 +413,17 @@ export class PricingEngine {
     // So the read ratio is reported, and where most of the market went unread
     // the exit conclusion is withdrawn rather than published: we did not
     // establish that there is no way out, we failed to look.
+    // Discovery itself can come back partial, and that is not visible in the
+    // read ratio: if four of five adapters were throttled, every pool the fifth
+    // found is read successfully and the ratio is a perfect 1. The token then
+    // looks like it trades on one thin venue, which is a statement about our
+    // luck, not about the token.
+    if (discovery.adaptersFailed > 0) {
+      confResult.flags.push('incomplete_venue_coverage');
+      confResult.confidence = Math.min(Math.max(confResult.confidence, 1), 49);
+      confResult.label = 'unreliable';
+    }
+
     const readRatio = pools.length > 0 ? rawData.length / pools.length : 1;
     if (readRatio < MIN_POOL_READ_RATIO) {
       confResult.flags.push('incomplete_pool_coverage');

@@ -551,3 +551,57 @@ describe('raw-pool cache cost', () => {
     expect(new Set(cache.writes).size).toBe(1);
   });
 });
+
+describe('partial discovery', () => {
+  const good = (id: string) =>
+    ({ id, getPools: vi.fn(async () => [{ address: '0x' + id, dex: id }]), getRawData: vi.fn() }) as any;
+  const broken = (id: string) =>
+    ({ id, getPools: vi.fn(async () => { throw new Error('rate limit exceeded'); }), getRawData: vi.fn() }) as any;
+
+  const makeCache = () => {
+    const store = new Map<string, any>();
+    const ttls: number[] = [];
+    return {
+      store,
+      ttls,
+      async get(k: string) { return store.has(k) ? store.get(k) : null; },
+      async set(k: string, v: any, ttl?: number) { store.set(k, v); ttls.push(ttl ?? 0); }
+    };
+  };
+
+  it('reports how many adapters failed', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const report = { adaptersTotal: 0, adaptersFailed: 0 };
+
+    const pools = await new DEXOrchestrator([good('a'), broken('b'), broken('c')])
+      .getAllPools('0xtoken', report);
+    consoleSpy.mockRestore();
+
+    expect(pools).toHaveLength(1);
+    expect(report).toEqual({ adaptersTotal: 3, adaptersFailed: 2 });
+  });
+
+  it('does not freeze an impoverished pool list for an hour', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cache = makeCache();
+
+    await new DEXOrchestrator([good('a'), broken('b')], cache).getAllPools('0xtoken');
+    consoleSpy.mockRestore();
+
+    // A token that trades on four venues must not look like a one-venue token
+    // for the next hour because four adapters were throttled for one second.
+    expect(cache.ttls).toEqual([60]);
+  });
+
+  it('still caches a complete discovery for an hour', async () => {
+    const cache = makeCache();
+    await new DEXOrchestrator([good('a'), good('b')], cache).getAllPools('0xtoken');
+    expect(cache.ttls).toEqual([3600]);
+  });
+
+  it('reports a clean sweep as no failures', async () => {
+    const report = { adaptersTotal: 0, adaptersFailed: 0 };
+    await new DEXOrchestrator([good('a'), good('b')]).getAllPools('0xtoken', report);
+    expect(report.adaptersFailed).toBe(0);
+  });
+});

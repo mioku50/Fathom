@@ -13,6 +13,12 @@ import { keccak256, toHex } from 'viem';
 const RAW_DATA_CONCURRENCY = 4;
 
 /**
+ * How long a pool list may be reused when some adapters failed to answer.
+ * Short enough that a throttled moment does not become the hour's truth.
+ */
+const PARTIAL_DISCOVERY_TTL_SECONDS = 60;
+
+/**
  * Cache key for the raw data of a whole pool set.
  *
  * Exported so callers and tests address the entry the same way the orchestrator
@@ -22,6 +28,16 @@ export function rawSetCacheKey(pools: PoolInfo[]): string {
   return `orchestrator:raw:${keccak256(
     toHex(pools.map(p => p.address.toLowerCase()).sort().join(','))
   )}`;
+}
+
+/**
+ * How complete a discovery pass was. Adapters fail independently, so a token
+ * can come back with pools from one venue while four others were throttled -
+ * which is not the same as a token that only trades on one venue.
+ */
+export interface DiscoveryReport {
+  adaptersTotal: number;
+  adaptersFailed: number;
 }
 
 export interface PoolWithRawData {
@@ -57,8 +73,13 @@ export class DEXOrchestrator {
    * @param tokenAddress The ERC-20 token contract address (0x...).
    * @returns A promise that resolves to an aggregated array of PoolInfo objects.
    */
-  async getAllPools(tokenAddress: string): Promise<PoolInfo[]> {
+  async getAllPools(tokenAddress: string, report?: DiscoveryReport): Promise<PoolInfo[]> {
     const cacheKey = `orchestrator:pools:${tokenAddress.toLowerCase()}`;
+    if (report) {
+      report.adaptersTotal = this.adapters.length;
+      report.adaptersFailed = 0;
+    }
+
     if (this.cache) {
       const cachedPools = await this.cache.get(cacheKey);
       if (cachedPools) {
@@ -70,16 +91,27 @@ export class DEXOrchestrator {
     const results = await Promise.allSettled(promises);
 
     const allPools: PoolInfo[] = [];
+    let failed = 0;
     for (const result of results) {
       if (result.status === 'fulfilled') {
         allPools.push(...result.value);
       } else {
+        failed++;
         console.error('Error fetching pools from an adapter:', result.reason);
       }
     }
+    if (report) report.adaptersFailed = failed;
 
+    // Only a complete discovery is worth remembering for an hour.
+    //
+    // A throttled provider can take four of the five adapters down, leaving a
+    // token that trades on Slipstream looking like it lives in one thin V2 pool.
+    // Caching that froze the impoverished view for the full hour, so every
+    // subsequent request repeated it - identically, which made it look like a
+    // fact about the token rather than a moment of bad luck.
     if (this.cache && allPools.length > 0) {
-      await this.cache.set(cacheKey, allPools, 3600); // Cache for 1 hour
+      const ttl = failed === 0 ? 3600 : PARTIAL_DISCOVERY_TTL_SECONDS;
+      await this.cache.set(cacheKey, allPools, ttl);
     }
 
     return allPools;

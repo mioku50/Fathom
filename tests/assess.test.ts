@@ -171,3 +171,22 @@ describe('the size asked about', () => {
     });
   });
 });
+
+describe('a venue that could not be searched', () => {
+  it('withholds the verdict rather than judging the venues that answered', () => {
+    const a = assess(
+      withQuote({ price_impact_bps: 8966 }, { flags: ['incomplete_venue_coverage'] }),
+      10000
+    );
+    // The liquidity that makes this token tradeable may sit on the DEX we could
+    // not reach, so a ruinous quote from the ones we could is not a finding.
+    expect(a.verdict).toBe('unverified');
+    expect(a.reason).toMatch(/DEXes could not be searched/i);
+  });
+
+  it('files it as unverified, never as a concern', () => {
+    const a = assess({ ...BASE, flags: ['incomplete_venue_coverage'] }, 10000);
+    expect(a.concerns).toEqual([]);
+    expect(a.unverified).toHaveLength(1);
+  });
+});

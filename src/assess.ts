@@ -87,6 +87,7 @@ const UNVERIFIED_FLAGS: Record<string, string> = {
   low_measurement_coverage: 'Under half the confidence model could be measured.',
   no_measurable_signal: 'None of the confidence model could be measured.',
   incomplete_pool_coverage: 'Most discovered pools could not be read, so this is not a reading of the whole market.',
+  incomplete_venue_coverage: 'One or more DEXes could not be searched, so pools this token trades on may be missing entirely.',
   exit_liquidity_unverified: 'Whether the position can be exited was not established.',
   hardcoded_numeraire: 'This is USDC, whose value is defined rather than measured.'
 };
@@ -163,6 +164,16 @@ function decide(input: {
     return {
       verdict: 'unverified',
       reason: 'Most of this token’s pools could not be read, so neither its price nor its exit was established. Retry before acting.'
+    };
+  }
+
+  // A venue we could not search may hold the liquidity that makes this token
+  // tradeable. Quoting the venues that did answer would describe a market the
+  // token does not have.
+  if (input.flags.includes('incomplete_venue_coverage')) {
+    return {
+      verdict: 'unverified',
+      reason: 'One or more DEXes could not be searched, so this may be missing the pools the token actually trades in. Retry before acting.'
     };
   }
 

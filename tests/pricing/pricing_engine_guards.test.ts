@@ -975,3 +975,36 @@ describe('partial market reads', () => {
     expect(res!.flags).not.toContain('incomplete_pool_coverage');
   });
 });
+
+describe('incomplete venue coverage', () => {
+  it('will not price a token confidently when a DEX could not be searched', async () => {
+    const orchestrator = {
+      getAllPools: vi.fn(async (t: string, report?: any) => {
+        if (report) { report.adaptersTotal = 5; report.adaptersFailed = 4; }
+        return t.toLowerCase() === TOKEN.toLowerCase() ? [TOKEN_USDC_POOL] : [];
+      }),
+      getAllRawData: vi.fn(async (pools: any[]) =>
+        pools.map(p => ({ pool: p, rawData: tokenUsdcRaw }))
+      ),
+      quoteSell: vi.fn(async () => null),
+      getTwapAmountOut: vi.fn(async () => null)
+    } as any;
+
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    // Every pool the one working adapter found was read, so the read ratio is a
+    // perfect 1. The gap is invisible there and has to be reported separately.
+    expect(res!.flags).toContain('incomplete_venue_coverage');
+    expect(res!.flags).not.toContain('incomplete_pool_coverage');
+    expect(res!.confidence).toBeLessThanOrEqual(49);
+  });
+
+  it('says nothing when every adapter answered', async () => {
+    const orchestrator = makeOrchestrator(
+      { [TOKEN.toLowerCase()]: [TOKEN_USDC_POOL] },
+      { [TOKEN_USDC_POOL.address]: tokenUsdcRaw }
+    );
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+    expect(res!.flags).not.toContain('incomplete_venue_coverage');
+  });
+});
