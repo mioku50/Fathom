@@ -68,6 +68,25 @@ export function __clearAnchorMemo() {
   anchorMemo.clear();
 }
 
+/**
+ * The pool each quote asset's USD price is read from directly.
+ *
+ * Resolving an anchor by discovery means a full nested pricing pass - every
+ * adapter probed for WETH, every pool it finds read - which is both the most
+ * expensive part of a cold request and the most likely to be throttled. When it
+ * failed, every WETH-quoted pool was dropped, and tokens whose real depth is a
+ * WETH pool were priced off whatever shallow USDC pool happened to survive.
+ *
+ * These are the deepest USDC pair for each asset on Base, verified on chain:
+ * 3.0M USDC in the Uniswap V3 500 pool, 14.4M in the Aerodrome AERO/USDC pool.
+ * Knowing where to look is not the same as assuming what is there - the price
+ * is still read live, and discovery still runs if this read fails.
+ */
+const CANONICAL_ANCHOR_POOLS: Record<string, PoolInfo> = {
+  [WETH]: { address: '0xd0b53D9277642d899DF5C87A3966A349A798F224', dex: 'uniswap_v3', fee: 500 },
+  [AERO]: { address: '0x6cDcb1C4A4D1C3C6d054b27AC5B77e89eAFb971d', dex: 'aerodrome', fee: 0.003 }
+};
+
 export class PricingEngine {
   /**
    * USD anchors for the quote assets we price against, resolved lazily and
@@ -140,6 +159,16 @@ export class PricingEngine {
   private async resolveAnchor(key: string, decimals: number): Promise<number | null> {
     const memo = anchorMemo.get(key);
     if (memo && memo.expiresAt > Date.now()) return memo.price;
+
+    // One known pool first; discovery only if that read does not land.
+    const direct = await this.readCanonicalAnchor(key, decimals);
+    if (direct !== null) {
+      anchorMemo.set(key, {
+        price: direct,
+        expiresAt: Date.now() + PricingEngine.ANCHOR_TTL_SECONDS * 1000
+      });
+      return direct;
+    }
 
     const result = await this.getBestPoolPrice(key, USDC, decimals, 6);
     const price =
@@ -561,6 +590,42 @@ export class PricingEngine {
     );
 
     return quotedDepthProfile(proceedsUsd, spotPriceUsd, sizesUsd);
+  }
+
+  /**
+   * Reads a quote asset's USD price from its deepest known USDC pool in one
+   * round trip. Returns null on any doubt, so the caller falls back to
+   * discovery rather than proceeding on a number this could not confirm.
+   */
+  private async readCanonicalAnchor(key: string, decimals: number): Promise<number | null> {
+    const pool = CANONICAL_ANCHOR_POOLS[key];
+    if (!pool) return null;
+
+    try {
+      const rows = await this.orchestrator.getAllRawData([pool]);
+      const raw = rows[0]?.rawData;
+      if (!raw || !raw.token0 || !raw.token1) return null;
+
+      const isToken0 = raw.token0.toLowerCase() === key;
+      // The pool must actually be this asset against USDC; if the address ever
+      // stops being that pair, fall through rather than mispricing everything.
+      const other = (isToken0 ? raw.token1 : raw.token0).toLowerCase();
+      if (other !== USDC) return null;
+
+      const result = PriceCalculator.calculatePoolPriceAndLiquidity(
+        raw,
+        isToken0,
+        decimals,
+        6,
+        pool.stable === true
+      );
+
+      return result.priceInQuote > 0 && Number.isFinite(result.priceInQuote)
+        ? result.priceInQuote
+        : null;
+    } catch {
+      return null;
+    }
   }
 
   private async getBestPoolPrice(token: string, quote: string, tokenDec: number, quoteDec: number) {

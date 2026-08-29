@@ -1061,3 +1061,66 @@ describe('pools blocked on an unavailable anchor', () => {
     expect(res!.flags).not.toContain('incomplete_quote_coverage');
   });
 });
+
+describe('canonical anchor pools', () => {
+  const CANONICAL_WETH_USDC = '0xd0b53D9277642d899DF5C87A3966A349A798F224';
+
+  function orchestratorWithCanonical(canonicalRaw: any) {
+    return {
+      getAllPools: vi.fn(async (t: string) =>
+        t.toLowerCase() === TOKEN.toLowerCase() ? [TOKEN_WETH_POOL] : [WETH_USDC_POOL]
+      ),
+      getAllRawData: vi.fn(async (pools: any[]) =>
+        pools
+          .map(p => {
+            if (p.address === CANONICAL_WETH_USDC) return canonicalRaw ? { pool: p, rawData: canonicalRaw } : null;
+            if (p.address === TOKEN_WETH_POOL.address) return { pool: p, rawData: tokenWethRaw };
+            if (p.address === WETH_USDC_POOL.address) return { pool: p, rawData: wethUsdcRaw };
+            return null;
+          })
+          .filter(Boolean)
+      ),
+      quoteSell: vi.fn(async () => null),
+      getTwapAmountOut: vi.fn(async () => null)
+    } as any;
+  }
+
+  it('reads the anchor from one known pool instead of rediscovering WETH', async () => {
+    const orchestrator = orchestratorWithCanonical(wethUsdcRaw);
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    expect(res!.price_usd).toBeCloseTo(3, 10);
+    // Discovery ran for the token itself, and not for WETH.
+    const wethDiscoveries = orchestrator.getAllPools.mock.calls.filter(
+      (c: any[]) => c[0].toLowerCase() === WETH.toLowerCase()
+    );
+    expect(wethDiscoveries).toHaveLength(0);
+  });
+
+  it('falls back to discovery when the known pool cannot be read', async () => {
+    const orchestrator = orchestratorWithCanonical(null);
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    // Still priced, via the slower path.
+    expect(res!.price_usd).toBeCloseTo(3, 10);
+    const wethDiscoveries = orchestrator.getAllPools.mock.calls.filter(
+      (c: any[]) => c[0].toLowerCase() === WETH.toLowerCase()
+    );
+    expect(wethDiscoveries).toHaveLength(1);
+  });
+
+  it('refuses a canonical pool that is not the pair it claims to be', async () => {
+    // If that address ever stops being WETH/USDC, using it would rescale every
+    // WETH-quoted token at once.
+    const wrongPair = { token0: WETH, token1: AERO, reserve0: 1n, reserve1: 1n, updatedAt: 1 };
+    const orchestrator = orchestratorWithCanonical(wrongPair);
+
+    const res = await new PricingEngine(orchestrator, makeRpc(), 'base').calculatePrice(TOKEN);
+
+    expect(res!.price_usd).toBeCloseTo(3, 10);
+    // It fell through to discovery rather than trusting the mismatch.
+    expect(
+      orchestrator.getAllPools.mock.calls.filter((c: any[]) => c[0].toLowerCase() === WETH.toLowerCase())
+    ).toHaveLength(1);
+  });
+});
