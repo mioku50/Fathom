@@ -15,3 +15,6 @@ coverage/
 .wrangler/
 .dev.vars
 .dev.vars.*
+
+# Vendored agent skill docs. Third-party content, not part of Fathom.
+.agents/

@@ -1,6 +1,7 @@
 {
   "name": "fathom",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Fathom price oracle API for Base long-tail tokens",
   "main": "src/index.ts",
   "scripts": {
