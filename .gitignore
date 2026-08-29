@@ -9,3 +9,9 @@ dist/
 build/
 .DS_Store
 coverage/
+
+# Wrangler local state and secrets. .dev.vars and .wrangler/ were tracked until
+# the history purge; keep them out for good.
+.wrangler/
+.dev.vars
+.dev.vars.*
