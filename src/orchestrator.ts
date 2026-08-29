@@ -190,10 +190,22 @@ export class DEXOrchestrator {
             if (rawData) fetched.push({ pool, rawData });
             else missed.push(pool);
           });
-          // A batch can come back partly empty - one reverting pool, or a
-          // provider trimming an oversized multicall. Dropping those entries is
-          // how a token silently loses half its sources while still answering,
-          // so the gaps are retried one at a time rather than accepted.
+          // A batch that came back partly empty means those particular pools
+          // did not answer - a revert, or a provider trimming an oversized
+          // multicall. Dropping them is how a token silently loses half its
+          // sources while still answering, so they are retried one at a time.
+          //
+          // A batch that came back *entirely* empty means something else: the
+          // call itself was refused. Retrying every pool separately then turns
+          // one rejected request into `group.length` of them against a provider
+          // that is already saying no, which is how a throttled read became a
+          // forty-second one instead of a fast degraded answer.
+          if (missed.length === group.length && group.length > 0) {
+            console.warn(
+              `Batch read for ${dex} returned nothing for all ${group.length} pools; not retrying individually`
+            );
+            continue;
+          }
           if (missed.length > 0) {
             console.warn(
               `Batch read for ${dex} returned ${missed.length}/${group.length} empty; retrying individually`

@@ -353,6 +353,29 @@ describe('DEXOrchestrator batched reads', () => {
     expect(adapter.getRawData.mock.calls[0][0]).toBe('0xgap');
   });
 
+  it('does not retry pool by pool when the whole batch came back empty', async () => {
+    const adapter = {
+      id: 'batchy',
+      getPools: vi.fn(),
+      getRawData: vi.fn(async () => ({ reserve0: 3n, reserve1: 4n, updatedAt: 2 })),
+      getRawDataBatch: vi.fn(async (pools: any[]) => pools.map(() => null))
+    } as any;
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const data = await new DEXOrchestrator([adapter]).getAllRawData([
+      { address: '0xa', dex: 'batchy' },
+      { address: '0xb', dex: 'batchy' },
+      { address: '0xc', dex: 'batchy' }
+    ]);
+    warnSpy.mockRestore();
+
+    // Nothing came back at all, which means the call was refused rather than
+    // that three particular pools reverted. Retrying each one turns a single
+    // rejected request into three against a provider already saying no.
+    expect(adapter.getRawData).not.toHaveBeenCalled();
+    expect(data).toHaveLength(0);
+  });
+
   it('drops a pool only once the individual retry has also failed', async () => {
     const adapter = {
       id: 'batchy',
