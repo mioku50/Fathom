@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DEXOrchestrator, CacheLayer } from '../../src/orchestrator';
+import { DEXOrchestrator, rawSetCacheKey, CacheLayer } from '../../src/orchestrator';
 import { DEXAdapter, PoolInfo, RawPoolData } from '../../src/dex_adapter';
 
 class MockCacheLayer implements CacheLayer {
@@ -82,9 +82,10 @@ describe('DEXOrchestrator Caching', () => {
     expect(allData.length).toBe(1);
     expect(adapter.getRawDataCallCount).toBe(1);
 
-    const cachedData = await cache.get('orchestrator:raw:0xa1');
-    expect(cachedData).toBeDefined();
-    expect(cachedData.reserve0).toBe(100n);
+    // One entry holds the whole set, keyed on the set rather than on each pool.
+    const cachedSet = await cache.get(rawSetCacheKey(pools));
+    expect(cachedSet).toBeDefined();
+    expect(cachedSet['0xa1'].reserve0).toBe(100n);
   });
 
   it('should return raw data from cache and skip adapter if available', async () => {
@@ -93,9 +94,10 @@ describe('DEXOrchestrator Caching', () => {
     const orchestrator = new DEXOrchestrator([adapter], cache);
 
     // Seed cache
-    await cache.set('orchestrator:raw:0xa1', { reserve0: 500n, reserve1: 1000n, updatedAt: 99999 });
-
     const pools = [{ address: '0xA1', dex: 'aerodrome', fee: 0.003 }];
+    await cache.set(rawSetCacheKey(pools), {
+      '0xa1': { reserve0: 500n, reserve1: 1000n, updatedAt: 99999 }
+    });
     const allData = await orchestrator.getAllRawData(pools);
 
     expect(allData.length).toBe(1);
@@ -108,13 +110,15 @@ describe('DEXOrchestrator Caching', () => {
     const adapter = new MockAerodromeAdapter();
     const orchestrator = new DEXOrchestrator([adapter], cache);
 
-    // Seed cache for A2 only
-    await cache.set('orchestrator:raw:0xa2', { reserve0: 500n, reserve1: 1000n, updatedAt: 99999 });
-
     const pools = [
       { address: '0xA1', dex: 'aerodrome', fee: 0.003 }, // Not cached
       { address: '0xA2', dex: 'aerodrome', fee: 0.001 }  // Cached
     ];
+
+    // A set entry that covers only part of the set: the rest is still a miss.
+    await cache.set(rawSetCacheKey(pools), {
+      '0xa2': { reserve0: 500n, reserve1: 1000n, updatedAt: 99999 }
+    });
 
     const allData = await orchestrator.getAllRawData(pools);
 
@@ -188,7 +192,7 @@ describe('DEXOrchestrator Caching', () => {
     const pools = [{ address: '0xA1_TTL', dex: 'aerodrome', fee: 0.003 }];
     await orchestrator.getAllRawData(pools);
     expect(setSpy).toHaveBeenCalledWith(
-      'orchestrator:raw:0xa1_ttl',
+      rawSetCacheKey(pools),
       expect.any(Object),
       60
     );

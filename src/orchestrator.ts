@@ -1,5 +1,6 @@
 import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest, TwapRequest, TwapResult } from './dex_adapter';
 import { mapWithConcurrency } from './concurrency';
+import { keccak256, toHex } from 'viem';
 
 /**
  * How many pools may be read at once.
@@ -10,6 +11,18 @@ import { mapWithConcurrency } from './concurrency';
  * well-covered token does not defeat its own discovery.
  */
 const RAW_DATA_CONCURRENCY = 4;
+
+/**
+ * Cache key for the raw data of a whole pool set.
+ *
+ * Exported so callers and tests address the entry the same way the orchestrator
+ * does, rather than reconstructing a hash by hand.
+ */
+export function rawSetCacheKey(pools: PoolInfo[]): string {
+  return `orchestrator:raw:${keccak256(
+    toHex(pools.map(p => p.address.toLowerCase()).sort().join(','))
+  )}`;
+}
 
 export interface PoolWithRawData {
   pool: PoolInfo;
@@ -114,23 +127,33 @@ export class DEXOrchestrator {
   async getAllRawData(pools: PoolInfo[]): Promise<PoolWithRawData[]> {
     if (pools.length === 0) return [];
 
-    const rawKey = (pool: PoolInfo) => `orchestrator:raw:${pool.address.toLowerCase()}`;
+    // One entry for the whole pool set, not one per pool.
+    //
+    // Per-pool keys cost a read and a write for every pool in the set, and a
+    // well-covered token now sits in thirty-odd of them. That is 33 writes per
+    // uncached token, against a free-tier allowance of 1,000 a day - the
+    // scheduled check alone would spend it several times over. The set a caller
+    // asks for is deterministic per token, so keying on the set collapses that
+    // to one read and one write while keeping the same hit rate.
+    const rawKey = rawSetCacheKey(pools);
     const resolved = new Map<string, RawPoolData>();
 
     // 1. Serve whatever the cache already holds.
     const misses: PoolInfo[] = [];
+    let cachedSet: Record<string, RawPoolData> | null = null;
     if (this.cache) {
-      const cached = await mapWithConcurrency(pools, RAW_DATA_CONCURRENCY, async pool => {
-        try {
-          return await this.cache!.get(rawKey(pool));
-        } catch {
-          return null;
-        }
-      });
-      pools.forEach((pool, i) => {
-        if (cached[i]) resolved.set(pool.address, cached[i] as RawPoolData);
+      try {
+        cachedSet = (await this.cache.get(rawKey)) as Record<string, RawPoolData> | null;
+      } catch {
+        cachedSet = null;
+      }
+    }
+    if (cachedSet) {
+      for (const pool of pools) {
+        const hit = cachedSet[pool.address.toLowerCase()];
+        if (hit) resolved.set(pool.address, hit);
         else misses.push(pool);
-      });
+      }
     } else {
       misses.push(...pools);
     }
@@ -196,13 +219,23 @@ export class DEXOrchestrator {
       for (const row of rows) if (row) fetched.push(row);
     }
 
-    // 3. Write back what we read, without blocking the caller on cache writes.
-    if (this.cache) {
-      await Promise.allSettled(
-        fetched.map(({ pool, rawData }) => this.cache!.set(rawKey(pool), rawData, 60))
-      );
-    }
     for (const { pool, rawData } of fetched) resolved.set(pool.address, rawData);
+
+    // 3. Write the set back as a single entry, and only when something new was
+    // actually read - rewriting an untouched set would spend a write to store
+    // what is already there.
+    if (this.cache && fetched.length > 0) {
+      const payload: Record<string, RawPoolData> = {};
+      for (const pool of pools) {
+        const data = resolved.get(pool.address);
+        if (data) payload[pool.address.toLowerCase()] = data;
+      }
+      try {
+        await this.cache.set(rawKey, payload, 60);
+      } catch {
+        // A cache write must never be the reason a priced token fails.
+      }
+    }
 
     // Preserve the caller's ordering.
     return pools

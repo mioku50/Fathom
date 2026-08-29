@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DEXOrchestrator } from '../../src/orchestrator';
+import { DEXOrchestrator, rawSetCacheKey } from '../../src/orchestrator';
 import { UniswapV2Adapter } from '../../src/adapters/uniswap_v2';
 import { UniswapV3Adapter } from '../../src/adapters/uniswap_v3';
 import { AerodromeAdapter } from '../../src/adapters/aerodrome';
@@ -46,10 +46,12 @@ describe('Pricing Engine Adapters Integration', () => {
   it('should use cache for getAllRawData when provided', async () => {
     const uniV2 = new MockDEXAdapter('uniswap_v2');
     const cache = new MockCache();
-    await cache.set('orchestrator:raw:0xpool', { reserve0: 500n, reserve1: 1000n, updatedAt: 123 });
+    const testPools: PoolInfo[] = [{ address: '0xpool', dex: 'uniswap_v2', fee: 0.003 }];
+    await cache.set(rawSetCacheKey(testPools), {
+      '0xpool': { reserve0: 500n, reserve1: 1000n, updatedAt: 123 }
+    });
 
     const orchestrator = new DEXOrchestrator([uniV2], cache);
-    const testPools: PoolInfo[] = [{ address: '0xpool', dex: 'uniswap_v2', fee: 0.003 }];
     const data = await orchestrator.getAllRawData(testPools);
 
     expect(data).toHaveLength(1);

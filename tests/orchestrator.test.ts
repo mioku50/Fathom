@@ -431,3 +431,100 @@ describe('DEXOrchestrator batched reads', () => {
     expect(data.map(d => d.pool.address)).toEqual(['0x1', '0x2', '0x3']);
   });
 });
+
+describe('raw-pool cache cost', () => {
+  const makeCache = () => {
+    const store = new Map<string, any>();
+    return {
+      store,
+      reads: [] as string[],
+      writes: [] as string[],
+      async get(k: string) {
+        this.reads.push(k);
+        return store.has(k) ? store.get(k) : null;
+      },
+      async set(k: string, v: any) {
+        this.writes.push(k);
+        store.set(k, v);
+      }
+    };
+  };
+
+  const manyPools = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      address: '0x' + String(i).padStart(40, '0'),
+      dex: 'batchy'
+    }));
+
+  const adapter = () =>
+    ({
+      id: 'batchy',
+      getPools: vi.fn(),
+      getRawData: vi.fn(),
+      getRawDataBatch: vi.fn(async (pools: any[]) =>
+        pools.map(() => ({ reserve0: 1n, reserve1: 2n, updatedAt: 1 }))
+      )
+    }) as any;
+
+  it('costs one read and one write regardless of how many pools a token has', async () => {
+    // Per-pool keys cost 33 writes for a token like WETH, against a free-tier
+    // allowance of 1,000 a day. The set is deterministic, so it needs one entry.
+    const cache = makeCache();
+    const pools = manyPools(33);
+
+    await new DEXOrchestrator([adapter()], cache).getAllRawData(pools);
+
+    expect(cache.reads).toHaveLength(1);
+    expect(cache.writes).toHaveLength(1);
+  });
+
+  it('serves the whole set back from that one entry', async () => {
+    const cache = makeCache();
+    const pools = manyPools(33);
+    const a = adapter();
+    const orchestrator = new DEXOrchestrator([a], cache);
+
+    await orchestrator.getAllRawData(pools);
+    a.getRawDataBatch.mockClear();
+
+    const second = await orchestrator.getAllRawData(pools);
+
+    expect(a.getRawDataBatch).not.toHaveBeenCalled();
+    expect(second).toHaveLength(33);
+    expect(second[0].rawData.reserve0).toBe(1n);
+  });
+
+  it('does not spend a write when the cache already answered in full', async () => {
+    const cache = makeCache();
+    const pools = manyPools(5);
+    const orchestrator = new DEXOrchestrator([adapter()], cache);
+
+    await orchestrator.getAllRawData(pools);
+    const writesAfterFirst = cache.writes.length;
+
+    await orchestrator.getAllRawData(pools);
+
+    expect(cache.writes).toHaveLength(writesAfterFirst);
+  });
+
+  it('keys on the set, so a different pool list does not collide', async () => {
+    const cache = makeCache();
+    const orchestrator = new DEXOrchestrator([adapter()], cache);
+
+    await orchestrator.getAllRawData(manyPools(3));
+    await orchestrator.getAllRawData(manyPools(4));
+
+    expect(new Set(cache.writes).size).toBe(2);
+  });
+
+  it('keys on the set as a set, so ordering does not fragment the cache', async () => {
+    const cache = makeCache();
+    const pools = manyPools(4);
+    const orchestrator = new DEXOrchestrator([adapter()], cache);
+
+    await orchestrator.getAllRawData(pools);
+    await orchestrator.getAllRawData([...pools].reverse());
+
+    expect(new Set(cache.writes).size).toBe(1);
+  });
+});
