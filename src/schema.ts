@@ -29,6 +29,13 @@ export type PriceResponse = {
   /** Per-component breakdown of the confidence score, incl. what was not measured. */
   confidence_components: ConfidenceComponents;
   /**
+   * Share of the nominal confidence model actually backed by a measurement,
+   * 0..1. The score itself is computed only over measured components, so this
+   * says how much evidence stands behind it: 1.0 is the whole model, 0.35 is a
+   * number derived from barely a third of it.
+   */
+  measured_weight: number;
+  /**
    * Time-weighted average price from the main pool's own oracle, with the
    * window it actually averaged over. Null when the pool cannot answer -
    * commonly a fresh pool whose observation cardinality is still 1.
@@ -72,6 +79,8 @@ export function isPriceResponse(data: any): data is PriceResponse {
   if (typeof data.source_count !== 'number') return false;
   if (data.price_dispersion_bps !== null && typeof data.price_dispersion_bps !== 'number') return false;
   if (!data.confidence_components || typeof data.confidence_components !== 'object') return false;
+  // Older cached entries predate this field; rejecting them recomputes them.
+  if (typeof data.measured_weight !== 'number') return false;
   if (!data.twap || typeof data.twap !== 'object') return false;
   if (!Array.isArray(data.sell_quotes)) return false;
   if (data.depth_1pct_usd !== null && typeof data.depth_1pct_usd !== 'number') return false;

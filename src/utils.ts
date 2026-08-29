@@ -50,6 +50,7 @@ export function generateDummyResponse(token: string, chain: string): PriceRespon
     source_count: 1,
     price_dispersion_bps: null,
     confidence_components: UNMEASURED_COMPONENTS,
+    measured_weight: 0,
     twap: NO_TWAP,
     ...unknownDepth(),
     main_pool: {
@@ -96,13 +97,15 @@ export function formatPriceResponse(
   bestPrice: number,
   bestLiquidity: number | null,
   mainPoolData: PoolData,
-  confResult: { confidence: number; label: string; flags: string[]; components?: ConfidenceComponents },
-  metrics: PriceMetrics = { source_count: 0, price_dispersion_bps: null }
+  confResult: { confidence: number; label: string; flags: string[]; components?: ConfidenceComponents; measured_weight?: number },
+  metrics: PriceMetrics = { source_count: 0, price_dispersion_bps: null },
+  /** ERC-20 symbol, or 'UNKNOWN' when the token does not expose a readable one. */
+  symbol: string = 'UNKNOWN'
 ): PriceResponse {
   return {
     token,
     chain,
-    symbol: 'TBD', // This could be fetched from metadata
+    symbol,
     price_usd: bestPrice,
     confidence: confResult.confidence,
     label: confResult.label,
@@ -110,6 +113,7 @@ export function formatPriceResponse(
     source_count: metrics.source_count,
     price_dispersion_bps: metrics.price_dispersion_bps,
     confidence_components: confResult.components ?? UNMEASURED_COMPONENTS,
+    measured_weight: confResult.measured_weight ?? 0,
     twap: metrics.twap ?? NO_TWAP,
     ...(metrics.depth ?? unknownDepth()),
     main_pool: mainPoolData,

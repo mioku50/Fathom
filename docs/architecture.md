@@ -46,8 +46,10 @@ Fathom provides a RESTful API for fetching token prices and liquidity data. It f
   "liquidity_usd": 84200,
   "source_count": 2,
   "price_dispersion_bps": 118,
+  "measured_weight": 0.7,
   "confidence_components": {
-    "liquidity": { "score": 0.774, "weight": 0.35, "effective_weight": 0.5 },
+    "liquidity": { "score": 0.774, "weight": 0.15, "effective_weight": 0.214 },
+    "execution_quality": { "score": 0.820, "weight": 0.20, "effective_weight": 0.286 },
     "source_agreement": { "score": 0.764, "weight": 0.20, "effective_weight": 0.286 },
     "twap_deviation": { "score": null, "weight": 0.20, "effective_weight": 0 },
     "volatility": { "score": 0.662, "weight": 0.15, "effective_weight": 0.214 },

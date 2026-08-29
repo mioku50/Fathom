@@ -84,6 +84,12 @@ const V_MAX = 500000;
 const IMPACT_MAX_BPS = 1000; // 10%
 
 /**
+ * Minimum share of the nominal model that must be measured before a response is
+ * allowed to be labelled "reliable".
+ */
+const MIN_COVERAGE_FOR_RELIABLE = 0.5;
+
+/**
  * The old model gave 0.35 to parked liquidity alone. That weight is now split:
  * what is parked still counts, but most of it moves to what an agent can
  * actually get out, which is the question the number was standing in for.
@@ -235,6 +241,16 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
   if (input.is_unsellable === true) {
     flags.push("unsellable");
     confidence = 0;
+  }
+
+  // A score is only as good as the share of the model behind it. With just
+  // source_agreement and volatility live, a token can compute to 95 on 0.35 of
+  // the nominal weight - a confident number about almost nothing. Redistribution
+  // makes the arithmetic sound but cannot make the evidence sufficient, so below
+  // half the model measured the answer may not call itself reliable.
+  if (measuredWeight > 0 && measuredWeight < MIN_COVERAGE_FOR_RELIABLE) {
+    flags.push("low_measurement_coverage");
+    confidence = Math.min(confidence, 79);
   }
 
   // Determine label

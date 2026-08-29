@@ -125,11 +125,12 @@ flowchart LR
 
 ## Confidence: детальная формула
 
-Мастер-формула — взвешенная сумма пяти под-скоров, потом «потолки» от флагов:
+Мастер-формула — взвешенная сумма шести под-скоров, потом «потолки» от флагов:
 
 ```
 confidence = round( 100 × (
-      0.35 · S_liq      # глубина ликвидности
+      0.15 · S_liq      # припаркованная ликвидность
+    + 0.20 · S_exec     # во что обходится продажа $10k
     + 0.20 · S_src      # согласованность источников
     + 0.20 · S_twap     # spot vs TWAP
     + 0.15 · S_sigma    # неопределённость sigma/mu
@@ -137,38 +138,59 @@ confidence = round( 100 × (
 ))
 ```
 
+Раньше 0.35 нёс один только `S_liq`. Большая часть этого веса ушла в `S_exec`,
+потому что «сколько я реально выручу на выходе» — это и есть тот вопрос, который
+припаркованная ликвидность лишь изображала.
+
 Каждый под-скор нормализован в диапазон 0..1:
 
 | Под-скор | Как считаем | Параметры (старт) |
 | --- | --- | --- |
 | S_liq | `clamp( log10(liq / L_min) / log10(L_good / L_min), 0, 1 )` | L_min=$2k, L_good=$250k |
+| S_exec | `1 - clamp( impact_bps / I_max, 0, 1 )` | I_max=1000 bps; 0, если продажа вообще не исполняется |
 | S_src | `1 - clamp( max_dev / D_max, 0, 1 )` | D_max=5% (макс. расхождение цены между пулами) |
 | S_twap | `1 - clamp( abs(spot-twap)/twap / T_max, 0, 1 )` | T_max=10% |
 | S_sigma | `1 - clamp( (sigma/mu) / Sg_max, 0, 1 )` | Sg_max=8% |
 | S_mat | `0.5*age_f + 0.5*vol_f` | age_f=`clamp(age_days/30,0,1)`, vol_f=`clamp(log10(vol24h/5k)/log10(500k/5k),0,1)` |
+
+**Компонент со входом `null` не измерен, а не «в порядке».** Он исключается из
+суммы, а его вес перераспределяется между измеренными. Доля номинальной модели,
+за которой стоит реальное измерение, отдаётся в ответе как `measured_weight`.
 
 После взвешенной суммы применяем жёсткие «потолки» (берём минимум) — они же выставляют флаги:
 
 | Условие | Флаг | Эффект на confidence |
 | --- | --- | --- |
 | `liq < L_min` | `thin_liquidity` | min(c, 49) |
+| продажу $10k нечем исполнить | `no_exit_liquidity` | min(c, 39) |
 | `abs(spot-twap)/twap > 25%` | `possible_manipulation` | min(c, 39) |
+| измерено меньше половины модели | `low_measurement_coverage` | min(c, 79) |
 | только один пул | `single_pool` | min(c, 69) |
 | данные устарели / RPC молчит | `stale` | min(c, 29) |
 | симуляция продажи реверзится | `unsellable` | c = 0 (🔴) |
+
+Потолок `low_measurement_coverage` существует потому, что перераспределение веса
+делает арифметику корректной, но не делает доказательства достаточными: на одних
+`S_src` и `S_sigma` токен считается в 95, стоя на 0.35 модели. Такой ответ больше
+не имеет права назваться `reliable`.
 
 Пример расчёта для токена из примера (PEPECOIN):
 
 ```
 liq = $84,200      -> S_liq   = log10(42.1)/log10(125)  = 0.774
+impact = 180 bps   -> S_exec  = 1 - 180/1000            = 0.820
 max_dev = 1.5%     -> S_src   = 1 - 1.5/5               = 0.700
 spot vs twap=0.45% -> S_twap  = 1 - 0.45/10             = 0.955
 sigma/mu = 2.7%    -> S_sigma = 1 - 2.7/8               = 0.662
-age=12d, vol=$40k  -> S_mat   = 0.5*0.40 + 0.5*0.45     = 0.425
+age, vol24h        -> S_mat   = не измеряем             = null
 
-confidence = 100 * (0.35*0.774 + 0.20*0.700 + 0.20*0.955
-                  + 0.15*0.662 + 0.10*0.425) ~= 74
-liq > L_min, один пул? нет -> потолков нет -> confidence = 74 (🟡 thin/volatile)
+measured_weight = 0.90 (всё, кроме maturity)
+веса нормируются на 0.90: 0.15/0.90, 0.20/0.90, ...
+
+confidence = 100 * (0.15*0.774 + 0.20*0.820 + 0.20*0.700
+                  + 0.20*0.955 + 0.15*0.662) / 0.90 ~= 79
+liq > L_min, один пул? нет, coverage 0.90 > 0.5 -> потолков нет
+-> confidence = 79 (🟡 thin/volatile)
 ```
 
 <aside>
@@ -202,8 +224,10 @@ liq > L_min, один пул? нет -> потолков нет -> confidence = 
   "liquidity_usd": 84200,
   "source_count": 2,
   "price_dispersion_bps": 118,
+  "measured_weight": 0.7,
   "confidence_components": {
-    "liquidity": { "score": 0.774, "weight": 0.35, "effective_weight": 0.5 },
+    "liquidity": { "score": 0.774, "weight": 0.15, "effective_weight": 0.214 },
+    "execution_quality": { "score": 0.820, "weight": 0.20, "effective_weight": 0.286 },
     "source_agreement": { "score": 0.764, "weight": 0.20, "effective_weight": 0.286 },
     "twap_deviation": { "score": null, "weight": 0.20, "effective_weight": 0 },
     "volatility": { "score": 0.662, "weight": 0.15, "effective_weight": 0.214 },

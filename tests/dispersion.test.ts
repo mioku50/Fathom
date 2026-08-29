@@ -3,7 +3,7 @@ import { computeDispersion } from '../src/dispersion';
 
 describe('computeDispersion', () => {
   it('reports dispersion as undefined for a single source rather than as zero agreement', () => {
-    const res = computeDispersion([{ priceUsd: 100, liquidityUsd: 50000 }]);
+    const res = computeDispersion([{ priceUsd: 100, depthWeightUsd: 50000 }]);
 
     expect(res.sourceCount).toBe(1);
     expect(res.maxDeviation).toBeNull();
@@ -13,8 +13,8 @@ describe('computeDispersion', () => {
 
   it('measures spread and volatility across two equally deep sources', () => {
     const res = computeDispersion([
-      { priceUsd: 100, liquidityUsd: 10000 },
-      { priceUsd: 110, liquidityUsd: 10000 }
+      { priceUsd: 100, depthWeightUsd: 10000 },
+      { priceUsd: 110, depthWeightUsd: 10000 }
     ]);
 
     expect(res.sourceCount).toBe(2);
@@ -26,8 +26,8 @@ describe('computeDispersion', () => {
 
   it('weights the mean by liquidity', () => {
     const res = computeDispersion([
-      { priceUsd: 100, liquidityUsd: 90000 },
-      { priceUsd: 200, liquidityUsd: 10000 }
+      { priceUsd: 100, depthWeightUsd: 90000 },
+      { priceUsd: 200, depthWeightUsd: 10000 }
     ]);
 
     // (100*90000 + 200*10000) / 100000
@@ -36,8 +36,8 @@ describe('computeDispersion', () => {
 
   it('excludes dust pools so one stale micro-pool cannot fake manipulation', () => {
     const res = computeDispersion([
-      { priceUsd: 100, liquidityUsd: 100000 },
-      { priceUsd: 500, liquidityUsd: 100 } // below both the abs floor and 1% of deepest
+      { priceUsd: 100, depthWeightUsd: 100000 },
+      { priceUsd: 500, depthWeightUsd: 100 } // below both the abs floor and 1% of deepest
     ]);
 
     expect(res.sourceCount).toBe(1);
@@ -46,7 +46,7 @@ describe('computeDispersion', () => {
   });
 
   it('keeps the deepest pool even when it is below the absolute floor', () => {
-    const res = computeDispersion([{ priceUsd: 100, liquidityUsd: 50 }]);
+    const res = computeDispersion([{ priceUsd: 100, depthWeightUsd: 50 }]);
 
     expect(res.sourceCount).toBe(1);
     expect(res.weightedMeanUsd).toBe(100);
@@ -54,10 +54,10 @@ describe('computeDispersion', () => {
 
   it('ignores non-finite and non-positive samples', () => {
     const res = computeDispersion([
-      { priceUsd: 100, liquidityUsd: 10000 },
-      { priceUsd: NaN, liquidityUsd: 10000 },
-      { priceUsd: 0, liquidityUsd: 10000 },
-      { priceUsd: 100, liquidityUsd: 0 }
+      { priceUsd: 100, depthWeightUsd: 10000 },
+      { priceUsd: NaN, depthWeightUsd: 10000 },
+      { priceUsd: 0, depthWeightUsd: 10000 },
+      { priceUsd: 100, depthWeightUsd: 0 }
     ]);
 
     expect(res.sourceCount).toBe(1);

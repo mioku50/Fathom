@@ -329,23 +329,69 @@ describe('DEXOrchestrator batched reads', () => {
     expect(b.getRawDataBatch).toHaveBeenCalledTimes(1);
   });
 
-  it('drops only the pools the batch could not read', async () => {
+  it('retries individually the pools a batch came back empty on', async () => {
     const adapter = {
       id: 'batchy',
       getPools: vi.fn(),
-      getRawData: vi.fn(),
+      getRawData: vi.fn(async () => ({ reserve0: 3n, reserve1: 4n, updatedAt: 2 })),
       getRawDataBatch: vi.fn(async (pools: any[]) =>
-        pools.map(p => p.address === '0xbad' ? null : { reserve0: 1n, reserve1: 2n, updatedAt: 1 })
+        pools.map(p => p.address === '0xgap' ? null : { reserve0: 1n, reserve1: 2n, updatedAt: 1 })
       )
     } as any;
 
     const data = await new DEXOrchestrator([adapter]).getAllRawData([
       { address: '0xgood1', dex: 'batchy' },
-      { address: '0xbad', dex: 'batchy' },
+      { address: '0xgap', dex: 'batchy' },
       { address: '0xgood2', dex: 'batchy' }
     ]);
 
+    // A gap in a batch means "this one read did not land", not "this pool has
+    // nothing". Accepting the gap is how a token quietly loses half its sources
+    // while still answering confidently, so the gap is retried on its own.
+    expect(data.map(d => d.pool.address)).toEqual(['0xgood1', '0xgap', '0xgood2']);
+    expect(adapter.getRawData).toHaveBeenCalledTimes(1);
+    expect(adapter.getRawData.mock.calls[0][0]).toBe('0xgap');
+  });
+
+  it('drops a pool only once the individual retry has also failed', async () => {
+    const adapter = {
+      id: 'batchy',
+      getPools: vi.fn(),
+      getRawData: vi.fn(async () => { throw new Error('still unreadable'); }),
+      getRawDataBatch: vi.fn(async (pools: any[]) =>
+        pools.map(p => p.address === '0xbad' ? null : { reserve0: 1n, reserve1: 2n, updatedAt: 1 })
+      )
+    } as any;
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const data = await new DEXOrchestrator([adapter]).getAllRawData([
+      { address: '0xgood1', dex: 'batchy' },
+      { address: '0xbad', dex: 'batchy' },
+      { address: '0xgood2', dex: 'batchy' }
+    ]);
+    consoleSpy.mockRestore();
+    warnSpy.mockRestore();
+
     expect(data.map(d => d.pool.address)).toEqual(['0xgood1', '0xgood2']);
+  });
+
+  it('does not retry when the batch answered for every pool', async () => {
+    const adapter = {
+      id: 'batchy',
+      getPools: vi.fn(),
+      getRawData: vi.fn(),
+      getRawDataBatch: vi.fn(async (pools: any[]) =>
+        pools.map(() => ({ reserve0: 1n, reserve1: 2n, updatedAt: 1 }))
+      )
+    } as any;
+
+    await new DEXOrchestrator([adapter]).getAllRawData([
+      { address: '0xa', dex: 'batchy' },
+      { address: '0xb', dex: 'batchy' }
+    ]);
+
+    expect(adapter.getRawData).not.toHaveBeenCalled();
   });
 
   it('falls back to per-pool reads rather than losing a whole DEX', async () => {

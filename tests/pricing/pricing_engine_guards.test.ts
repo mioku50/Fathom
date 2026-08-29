@@ -118,6 +118,7 @@ function makeRpc(overrides: Record<string, unknown> = {}) {
     getTokenDecimals: vi.fn(async (address: string) =>
       address.toLowerCase() === USDC.toLowerCase() ? 6 : 18
     ),
+    getTokenSymbol: vi.fn(async () => 'TKN'),
     ...overrides
   } as any;
 }

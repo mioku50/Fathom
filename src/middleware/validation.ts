@@ -32,3 +32,29 @@ export const validateAddressesMiddleware = createMiddleware(async (c, next) => {
 
   await next()
 })
+
+/**
+ * The only chain Fathom reads is Base mainnet.
+ *
+ * `chain` was accepted unvalidated on the price endpoints: a request for
+ * `chain=ethereum` was answered with Base data, stamped `"chain": "ethereum"`,
+ * and cached under its own key - a wrong answer served confidently, and a paid
+ * one. The metadata endpoints already rejected it, so the API contradicted
+ * itself. Rejecting is the honest response: we cannot price what we do not read.
+ */
+export const SUPPORTED_CHAINS = ['base'] as const;
+
+export const validateChainMiddleware = createMiddleware(async (c, next) => {
+  const chain = c.req.query('chain')
+  if (chain && !SUPPORTED_CHAINS.includes(chain as (typeof SUPPORTED_CHAINS)[number])) {
+    return c.json(
+      {
+        error: 'invalid_request',
+        message: `Unsupported chain: ${chain}. Fathom reads Base mainnet only (chain=base).`
+      },
+      400
+    )
+  }
+
+  await next()
+})

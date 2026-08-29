@@ -3,8 +3,9 @@ import type { PriceResponse, BatchPriceResponse, BatchPriceResult } from './sche
 import { KVCacheLayer, type FathomEnv, getCacheStats } from './cache'
 import { Address } from 'viem'
 import { x402Middleware } from './middleware/x402'
-import { validateAddressesMiddleware } from './middleware/validation'
+import { validateAddressesMiddleware, validateChainMiddleware } from './middleware/validation'
 import { adminAuthMiddleware } from './middleware/adminAuth'
+import { stringifyWithBigInt, parseWithBigInt } from './utils/json_bigint'
 import { rateLimitMiddleware } from './middleware/rate_limit'
 import { getTokenMetadata, getBatchTokenMetadata, type TokenMetadata } from './api/metadata'
 import { DEXOrchestrator, type CacheLayer } from './orchestrator'
@@ -31,22 +32,37 @@ import { runSmokeChecks, SMOKE_KV_KEY, type SmokeResult } from './smoke'
  */
 const BATCH_CONCURRENCY = 4
 
+/**
+ * KV for the orchestrator, encoded so bigint survives the round trip.
+ *
+ * Pool state is bigint, and plain `JSON.stringify` throws on it. This class
+ * used to swallow that throw in a bare `catch {}`, so the raw-pool cache
+ * silently stored nothing at all while reporting success - every request paid
+ * full RPC cost for pools it had already read moments earlier. Failures are now
+ * logged rather than discarded, because a cache that fails quietly is worse
+ * than no cache: it hides the load it was added to remove.
+ */
 class OrchestratorCacheAdapter implements CacheLayer {
   constructor(private kv?: KVNamespace, private defaultTTL: number = 60) {}
   async get(key: string): Promise<any> {
     if (!this.kv) return null;
     try {
-      const val = await this.kv.get(key, 'json');
-      return val;
-    } catch {
+      const raw = await this.kv.get(key, 'text');
+      return raw === null ? null : parseWithBigInt(raw);
+    } catch (error) {
+      console.error(`Cache read failed for ${key}:`, error);
       return null;
     }
   }
   async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
     if (!this.kv) return;
     try {
-      await this.kv.put(key, JSON.stringify(value), { expirationTtl: ttlSeconds || this.defaultTTL });
-    } catch {}
+      await this.kv.put(key, stringifyWithBigInt(value), {
+        expirationTtl: ttlSeconds || this.defaultTTL
+      });
+    } catch (error) {
+      console.error(`Cache write failed for ${key}:`, error);
+    }
   }
 }
 
@@ -381,7 +397,7 @@ app.get('/v1/cache/metrics', adminAuthMiddleware, async (c) => {
 })
 
 
-app.get('/v1/price', validateAddressesMiddleware, x402Middleware, async (c) => {
+app.get('/v1/price', validateAddressesMiddleware, validateChainMiddleware, x402Middleware, async (c) => {
   const token = c.req.query('token') || '0x0000000000000000000000000000000000000000'
   const chain = c.req.query('chain') || 'base'
 
@@ -426,7 +442,7 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
   return c.json(finalResponse)
 })
 
-app.get('/v1/prices', validateAddressesMiddleware, x402Middleware, async (c) => {
+app.get('/v1/prices', validateAddressesMiddleware, validateChainMiddleware, x402Middleware, async (c) => {
   const tokensParam = c.req.query('tokens') || ''
   const chain = c.req.query('chain') || 'base'
 
@@ -595,7 +611,7 @@ app.post('/v1/cache/clear', adminAuthMiddleware, async (c) => {
   }
 })
 
-app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) => {
+app.get('/v1/metadata', validateAddressesMiddleware, validateChainMiddleware, x402Middleware, async (c) => {
   const token = c.req.query('token') as Address
   const chain = c.req.query('chain') || 'base'
 
@@ -638,7 +654,7 @@ app.get('/v1/metadata', validateAddressesMiddleware, x402Middleware, async (c) =
 })
 
 
-app.get('/v1/metadatas', validateAddressesMiddleware, x402Middleware, async (c) => {
+app.get('/v1/metadatas', validateAddressesMiddleware, validateChainMiddleware, x402Middleware, async (c) => {
   const tokensParam = c.req.query('tokens') || ''
   const chain = c.req.query('chain') || 'base'
 

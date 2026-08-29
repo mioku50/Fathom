@@ -165,7 +165,8 @@ export class PricingEngine {
         poolWithData.rawData,
         isToken0,
         tokenDecimals,
-        quoteDecimals
+        quoteDecimals,
+        poolWithData.pool.stable === true
       );
 
       // Pricing a quote asset against itself says nothing.
@@ -183,7 +184,7 @@ export class PricingEngine {
       const liquidityUsd = result.liquidityInQuote * quoteUsdPrice;
 
       if (priceUsd > 0 && Number.isFinite(priceUsd) && liquidityUsd > 0) {
-        samples.push({ priceUsd, liquidityUsd });
+        samples.push({ priceUsd, depthWeightUsd: liquidityUsd });
       }
 
       {
@@ -324,6 +325,10 @@ export class PricingEngine {
 
     const reportedLiquidityUsd = mainPoolContext?.hasRealReserves ? bestLiquidityUsd : null;
 
+    // Cached for a month like decimals, and never a reason to fail: a token
+    // that will not name itself is still perfectly priceable.
+    const symbol = await this.rpcClient.getTokenSymbol(token);
+
     return formatPriceResponse(
       token,
       this.chain,
@@ -337,7 +342,8 @@ export class PricingEngine {
           dispersion.maxDeviation === null ? null : dispersion.maxDeviation * 10000,
         depth,
         twap
-      }
+      },
+      symbol ?? 'UNKNOWN'
     );
   }
 
@@ -437,7 +443,7 @@ export class PricingEngine {
       const pQuote = isToken0 ? p.rawData.token1 : p.rawData.token0;
       if (pQuote.toLowerCase() !== quote.toLowerCase()) continue;
 
-      const res = PriceCalculator.calculatePoolPriceAndLiquidity(p.rawData, isToken0, tokenDec, quoteDec);
+      const res = PriceCalculator.calculatePoolPriceAndLiquidity(p.rawData, isToken0, tokenDec, quoteDec, p.pool.stable === true);
       if (res.liquidityInQuote > bestLiquidity) {
         bestLiquidity = res.liquidityInQuote;
         bestPrice = res.priceInQuote;
@@ -467,7 +473,8 @@ export class PricingEngine {
         label: 'reliable',
         flags: ['hardcoded_numeraire']
       },
-      { source_count: 0, price_dispersion_bps: null, depth: unknownDepth(), twap: NO_TWAP }
+      { source_count: 0, price_dispersion_bps: null, depth: unknownDepth(), twap: NO_TWAP },
+      'USDC'
     );
   }
 }

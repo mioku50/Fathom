@@ -1,0 +1,62 @@
+name: CI
+
+# The Jules automation that used to run here was removed once it stopped
+# working, and nothing replaced it - so the branch carrying an oracle's pricing
+# logic had no checks at all. This runs the two that matter: the types, and the
+# suite that encodes what each number is allowed to mean.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # `npm test` starts vitest in watch mode, which never exits on CI.
+      - name: Tests
+        run: npx vitest run
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Advisory: a new upstream advisory should be visible without blocking a
+    # merge that did not introduce it.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm audit --audit-level=high

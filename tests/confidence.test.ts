@@ -456,3 +456,69 @@ describe('Confidence Score Module', () => {
     expect(result.confidence).toBeLessThanOrEqual(49);
   });
 });
+
+describe('measurement coverage', () => {
+  const measuredOnly = (over: Partial<Parameters<typeof calculateConfidence>[0]> = {}) =>
+    calculateConfidence({
+      liquidity_usd: null,
+      max_deviation_percent: 0.001,
+      spot_vs_twap_percent: null,
+      sigma_over_mu_percent: 0.001,
+      pool_age_days: null,
+      volume_24h_usd: null,
+      execution_impact_bps: null,
+      execution_fillable: null,
+      num_pools: 3,
+      is_stale: null,
+      is_unsellable: null,
+      ...over
+    });
+
+  it('reports the share of the model that was actually measured', () => {
+    // source_agreement (0.20) + volatility (0.15) and nothing else.
+    expect(measuredOnly().measured_weight).toBeCloseTo(0.35, 10);
+  });
+
+  it('refuses to call a near-perfect score reliable on a third of the model', () => {
+    const result = measuredOnly();
+    // The arithmetic is sound - both live components score ~1 - but there is
+    // not enough evidence behind it to earn the word.
+    expect(result.flags).toContain('low_measurement_coverage');
+    expect(result.confidence).toBeLessThanOrEqual(79);
+    expect(result.label).not.toBe('reliable');
+  });
+
+  it('allows reliable once half the model is measured', () => {
+    const result = measuredOnly({
+      liquidity_usd: 500000,
+      execution_impact_bps: 20,
+      execution_fillable: true,
+      spot_vs_twap_percent: 0.0005
+    });
+
+    expect(result.measured_weight).toBeGreaterThanOrEqual(0.5);
+    expect(result.flags).not.toContain('low_measurement_coverage');
+    expect(result.label).toBe('reliable');
+  });
+
+  it('does not stack the coverage cap onto a token with nothing measured', () => {
+    const nothing = calculateConfidence({
+      liquidity_usd: null,
+      max_deviation_percent: null,
+      spot_vs_twap_percent: null,
+      sigma_over_mu_percent: null,
+      pool_age_days: null,
+      volume_24h_usd: null,
+      execution_impact_bps: null,
+      execution_fillable: null,
+      num_pools: 1,
+      is_stale: null,
+      is_unsellable: null
+    });
+
+    expect(nothing.measured_weight).toBe(0);
+    expect(nothing.confidence).toBe(0);
+    expect(nothing.flags).toContain('no_measurable_signal');
+    expect(nothing.flags).not.toContain('low_measurement_coverage');
+  });
+});

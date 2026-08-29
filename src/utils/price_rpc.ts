@@ -143,6 +143,68 @@ export class PriceRpcClient {
     return decimals;
   }
 
+  /**
+   * Best-effort ERC-20 symbol, cached alongside decimals.
+   *
+   * Returns null rather than throwing: unlike decimals, a missing symbol
+   * degrades nothing. A wrong decimals value silently rescales the price, so it
+   * must fail loudly; a wrong symbol is only a label, so failing to read one is
+   * not a reason to refuse the price. Some tokens also declare `symbol` as
+   * bytes32 rather than string, and those simply come back unnamed.
+   */
+  async getTokenSymbol(tokenAddress: string): Promise<string | null> {
+    const lowerToken = tokenAddress.toLowerCase();
+    const canonical: Record<string, string> = {
+      '0x0000000000000000000000000000000000000000': 'ETH',
+      '0x4200000000000000000000000000000000000006': 'WETH',
+      '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913': 'USDC',
+      '0x940181a94a35a4569e4529a3cdfb74e38fd98631': 'AERO'
+    };
+    if (canonical[lowerToken]) return canonical[lowerToken];
+
+    const shared = this.sharedCache;
+    const key = `symbol:${lowerToken}`;
+    if (shared) {
+      try {
+        const cached = await shared.get(key);
+        if (typeof cached === 'string') return cached === '' ? null : cached;
+      } catch {
+        // A cache miss must never be the reason a token cannot be priced.
+      }
+    }
+
+    let symbol: string | null = null;
+    try {
+      const raw = await this.readContract({
+        address: tokenAddress as any,
+        abi: [{
+          inputs: [],
+          name: 'symbol',
+          outputs: [{ internalType: 'string', name: '', type: 'string' }],
+          stateMutability: 'view',
+          type: 'function'
+        }],
+        functionName: 'symbol'
+      });
+      if (typeof raw === 'string') {
+        // Symbols are attacker-controlled text. Trim it to something that can
+        // be rendered safely and can never dominate a response.
+        const cleaned = raw.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 32);
+        symbol = cleaned === '' ? null : cleaned;
+      }
+    } catch {
+      symbol = null;
+    }
+
+    if (shared) {
+      try {
+        // Cache the negative too, so an unnamed token is not re-read every time.
+        await shared.set(key, symbol ?? '', DECIMALS_TTL_SECONDS);
+      } catch {}
+    }
+    return symbol;
+  }
+
   private async readTokenDecimals(tokenAddress: string, pinBlock?: bigint): Promise<number> {
     const canonical: Record<string, number> = {
       // Uniswap v4 denominates native ETH as address(0). It has no decimals()

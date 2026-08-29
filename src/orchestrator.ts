@@ -155,21 +155,37 @@ export class DEXOrchestrator {
         continue;
       }
 
+      // Pools the batch could not deliver, to be retried individually below.
+      let outstanding = group;
+
       if (adapter.getRawDataBatch) {
         try {
           const rows = await adapter.getRawDataBatch(group);
+          const missed: PoolInfo[] = [];
           group.forEach((pool, i) => {
             const rawData = rows[i];
             if (rawData) fetched.push({ pool, rawData });
+            else missed.push(pool);
           });
-          continue;
+          // A batch can come back partly empty - one reverting pool, or a
+          // provider trimming an oversized multicall. Dropping those entries is
+          // how a token silently loses half its sources while still answering,
+          // so the gaps are retried one at a time rather than accepted.
+          if (missed.length > 0) {
+            console.warn(
+              `Batch read for ${dex} returned ${missed.length}/${group.length} empty; retrying individually`
+            );
+          }
+          outstanding = missed;
         } catch (error) {
           // Fall through to per-pool reads rather than losing the whole DEX.
           console.error(`Batch read failed for ${dex}, falling back to per-pool:`, error);
         }
       }
 
-      const rows = await mapWithConcurrency(group, RAW_DATA_CONCURRENCY, async pool => {
+      if (outstanding.length === 0) continue;
+
+      const rows = await mapWithConcurrency(outstanding, RAW_DATA_CONCURRENCY, async pool => {
         try {
           return { pool, rawData: await adapter.getRawData(pool.address, pool) };
         } catch (error) {

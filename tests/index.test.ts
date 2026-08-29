@@ -502,6 +502,7 @@ describe('Fathom API', () => {
       sell_quotes: [],
       depth_1pct_usd: null,
       depth_5pct_usd: null,
+      measured_weight: 0.7,
       confidence_components: {
         liquidity: { score: 0.77, weight: 0.15, effective_weight: 0.25 },
         execution_quality: { score: 0.6, weight: 0.20, effective_weight: 0.333 },
