@@ -58,6 +58,37 @@ function createBuilderCodeExtension(env?: FathomEnv) {
   }
 }
 
+/**
+ * Advertise the endpoint, not the request that happened to hit it.
+ *
+ * The Hono adapter builds `resource.url` from the full request URL, so an
+ * unpaid GET for one token advertises
+ * `/v1/price?token=0x9401...` as the resource - a different resource string for
+ * every token anyone ever asks about. Of 500 resources in the CDP Bazaar index,
+ * not one carries a query string; templated path segments appear, query
+ * parameters never do. Fathom is absent from all 14,532 of them.
+ *
+ * The parameters are not lost: they are declared in the Bazaar extension's
+ * `info.input.queryParams`, which is where a client is meant to read them from.
+ * This only stops the resource identity from changing on every call.
+ */
+function stripQueryFromAdvertisedResource(res: Response): void {
+  const header = res.headers.get('PAYMENT-REQUIRED') ?? res.headers.get('payment-required')
+  if (!header) return
+
+  try {
+    const decoded = JSON.parse(atob(header))
+    const url: unknown = decoded?.resource?.url
+    if (typeof url !== 'string' || !url.includes('?')) return
+
+    decoded.resource.url = url.split('?')[0]
+    res.headers.set('PAYMENT-REQUIRED', btoa(JSON.stringify(decoded)))
+  } catch (error) {
+    // A challenge we cannot rewrite is still a valid challenge; leave it be.
+    console.error('Could not normalise the advertised resource URL:', error)
+  }
+}
+
 export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
   if (authHeader && c.env?.ADMIN_AUTH_TOKEN && authHeader === `Bearer ${c.env.ADMIN_AUTH_TOKEN}`) {
@@ -245,6 +276,7 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
     const res = await middleware(c, next)
     if (res && res.status === 402) {
       res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+      stripQueryFromAdvertisedResource(res)
     }
     return res
   } catch (err) {

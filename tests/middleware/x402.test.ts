@@ -98,3 +98,52 @@ describe('x402Middleware', () => {
     expect(payload).not.toHaveProperty('extensions')
   })
 })
+
+describe('the resource it advertises', () => {
+  let app: Hono<{ Bindings: FathomEnv }>
+
+  const env = {
+    FATHOM_X402_FACILITATOR_URL: 'http://mock',
+    X402_NETWORK: 'base-sepolia',
+    X402_PRICE_USDC: '0.01',
+    FATHOM_X402_RECIPIENT: '0x123'
+  } as any
+
+  const challenge = async (url: string) => {
+    const res = await app.fetch(new Request(url), env)
+    expect(res.status).toBe(402)
+    const header = res.headers.get('PAYMENT-REQUIRED') || res.headers.get('payment-required')
+    return JSON.parse(Buffer.from(header!, 'base64').toString('utf8'))
+  }
+
+  beforeEach(() => {
+    app = new Hono<{ Bindings: FathomEnv }>()
+    app.use('*', x402Middleware)
+    app.get('/v1/price', (c) => c.json({ ok: true }))
+    app.get('/v1/assess', (c) => c.json({ ok: true }))
+  })
+
+  it('names the endpoint, not the request that happened to hit it', async () => {
+    const payload = await challenge(
+      'https://fathom.test/v1/price?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631&chain=base'
+    )
+
+    // A resource string that changes with every token is a different resource
+    // on every call. Not one entry in the CDP Bazaar index carries a query
+    // string; the parameters belong in the extension's input schema instead.
+    expect(payload.resource.url).toBe('https://fathom.test/v1/price')
+    expect(payload.resource.url).not.toContain('?')
+  })
+
+  it('leaves a query-free resource alone', async () => {
+    const payload = await challenge('https://fathom.test/v1/price')
+    expect(payload.resource.url).toBe('https://fathom.test/v1/price')
+  })
+
+  it('still declares the query parameters in the extension', async () => {
+    const payload = await challenge(
+      'https://fathom.test/v1/assess?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631'
+    )
+    expect(payload.extensions.bazaar.info.input.queryParams).toHaveProperty('token')
+  })
+})
