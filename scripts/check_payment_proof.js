@@ -19,12 +19,8 @@ const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 function rpcUrl() {
   if (process.env.PRICE_RPC_URL) return process.env.PRICE_RPC_URL;
-  const devVars = require('path').join(__dirname, '..', '.dev.vars');
-  if (fs.existsSync(devVars)) {
-    const m = fs.readFileSync(devVars, 'utf8').match(/^PRICE_RPC_URL=(.*)$/m);
-    if (m) return m[1].trim();
-  }
-  // Any Base mainnet endpoint answers these reads.
+  // The project's own endpoint is a pricing node and refuses eth_getLogs, so
+  // the default here is one that serves them.
   return 'https://mainnet.base.org';
 }
 
@@ -100,29 +96,53 @@ function decode(b64, label) {
     }
   }
 
-  // Ground truth from the other direction: the transfer event itself.
+  // Ground truth from the other direction: the transfer events themselves.
+  //
+  // A scan that cannot run and a scan that finds nothing must never look alike.
+  // Many Base endpoints - the one in .dev.vars among them - refuse getLogs with
+  // "Archive requests require a personal token", and swallowing that turns a
+  // read failure into a confident "you were never paid".
   const head = await client.getBlockNumber();
-  let found = null;
-  for (let i = 0; i < 40 && !found; i++) {
-    const hi = head - BigInt(i * 900);
-    const lo = hi - 899n;
-    const logs = await client.getLogs({
-      address: USDC,
-      event: parseAbiItem('event Transfer(address indexed from,address indexed to,uint256 value)'),
-      args: { from, to },
-      fromBlock: lo,
-      toBlock: hi
-    }).catch(() => []);
-    if (logs.length) found = logs[logs.length - 1];
+  const found = [];
+  let scanned = 0;
+  let scanError = null;
+
+  for (let i = 0; i < 40; i++) {
+    const hi = head - BigInt(i * 500);
+    const lo = hi - 499n;
+    try {
+      const logs = await client.getLogs({
+        address: USDC,
+        event: parseAbiItem('event Transfer(address indexed from,address indexed to,uint256 value)'),
+        args: { from, to },
+        fromBlock: lo,
+        toBlock: hi
+      });
+      found.push(...logs);
+      scanned++;
+    } catch (e) {
+      scanError = e.details || e.shortMessage || e.message;
+      break;
+    }
   }
 
   console.log('');
   console.log('=== transfer events ===');
-  if (found) {
-    console.log(`${formatUnits(found.args.value, 6)} USDC  ${from} -> ${to}`);
-    console.log(`tx ${found.transactionHash}`);
+  if (scanError && scanned === 0) {
+    console.log('COULD NOT SCAN - this endpoint will not serve logs:');
+    console.log(`  ${String(scanError).split('\n')[0]}`);
+    console.log('  Re-run with PRICE_RPC_URL set to an endpoint that serves eth_getLogs.');
+    console.log('  This says nothing about whether you were paid; trust the nonce verdict above.');
+  } else if (found.length === 0) {
+    const blocks = scanned * 500;
+    console.log(`no ${from} -> ${to} USDC transfer in the last ${blocks} blocks (~${Math.round(blocks * 2 / 3600)}h)`);
   } else {
-    console.log(`no ${from} -> ${to} USDC transfer in roughly the last 20 hours`);
+    found.sort((a, b) => Number(a.blockNumber - b.blockNumber));
+    for (const l of found) {
+      const b = await client.getBlock({ blockNumber: l.blockNumber });
+      const when = new Date(Number(b.timestamp) * 1000).toISOString();
+      console.log(`${when}  ${formatUnits(l.args.value, 6)} USDC  tx ${l.transactionHash}`);
+    }
   }
 })().catch(e => {
   console.error('error:', e.message);
