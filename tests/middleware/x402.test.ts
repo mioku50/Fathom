@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Hono } from 'hono'
 import { x402Middleware } from '../../src/middleware/x402'
 import type { FathomEnv } from '../../src/cache'
+import { validatePaymentPayload } from '@x402/core/schemas'
 
 describe('x402Middleware', () => {
   let app: Hono<{ Bindings: FathomEnv }>
@@ -145,5 +146,78 @@ describe('the resource it advertises', () => {
       'https://fathom.test/v1/assess?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631'
     )
     expect(payload.extensions.bazaar.info.input.queryParams).toHaveProperty('token')
+  })
+
+  it('keeps the canonical resource in the challenge but omits it for the facilitator', async () => {
+    let verifyBody: any
+    let settleBody: any
+
+    global.fetch = vi.fn().mockImplementation((url: any, init?: RequestInit) => {
+      const target = url.toString()
+      if (target.includes('/supported')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:84532', asset: 'usdc' }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (target.includes('/verify')) {
+        verifyBody = JSON.parse(String(init?.body))
+        return Promise.resolve(new Response(JSON.stringify({
+          isValid: true,
+          payer: '0x1111111111111111111111111111111111111111'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (target.includes('/settle')) {
+        settleBody = JSON.parse(String(init?.body))
+        return Promise.resolve(new Response(JSON.stringify({
+          success: true,
+          payer: '0x1111111111111111111111111111111111111111',
+          transaction: `0x${'1'.repeat(64)}`,
+          network: 'eip155:84532',
+          amount: '10000'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(null, { status: 404 }))
+    })
+
+    const url = 'https://fathom.test/v1/assess?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631&size_usd=10000'
+    const paymentRequired = await challenge(url)
+    const accepted = paymentRequired.accepts[0]
+    const paymentPayload = {
+      x402Version: 2,
+      resource: paymentRequired.resource,
+      accepted,
+      payload: {
+        authorization: {
+          from: '0x1111111111111111111111111111111111111111',
+          to: accepted.payTo,
+          value: accepted.amount,
+          validAfter: '0',
+          validBefore: '9999999999',
+          nonce: `0x${'2'.repeat(64)}`
+        },
+        signature: `0x${'3'.repeat(130)}`
+      }
+    }
+
+    // ResourceInfoSchema caps tags at five. A larger challenge can be served,
+    // but clients that echo it create a paid payload the facilitator rejects.
+    expect(paymentRequired.resource.tags).toHaveLength(5)
+    expect(() => validatePaymentPayload(paymentPayload)).not.toThrow()
+
+    const encodedPayment = Buffer.from(JSON.stringify(paymentPayload)).toString('base64url')
+    expect(encodedPayment).toMatch(/[-_]/)
+
+    const res = await app.fetch(new Request(url, {
+      headers: {
+        // PayBox transports the JSON envelope as Base64URL. The middleware
+        // normalizes it before handing it to @x402/core's Base64-only decoder.
+        'PAYMENT-SIGNATURE': encodedPayment
+      }
+    }), env)
+
+    expect(res.status).toBe(200)
+    expect(paymentRequired.resource.url).toBe('https://fathom.test/v1/assess')
+    expect(verifyBody.paymentPayload.resource).toBeUndefined()
+    expect(settleBody.paymentPayload.resource).toBeUndefined()
   })
 })

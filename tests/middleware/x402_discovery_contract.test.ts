@@ -1,17 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { declareDiscoveryExtension } from '@x402/extensions';
+import { declareDiscoveryExtension, validateDiscoveryExtension } from '@x402/extensions';
 import { priceInputSchema, priceOutputSchema } from '../../src/schemas/x402DiscoverySchemas';
 
-/**
- * The x402 SDK's declareDiscoveryExtension() does not emit the shape agents need:
- * it nests the real output schema behind a { type, example } wrapper, leaves
- * `output` out of `required`, and advertises methods this API does not serve.
- * src/middleware/x402.ts patches that in createFixedDiscoveryExtension().
- *
- * These tests pin both sides. If a future SDK release fixes the underlying bug,
- * the first test fails and the workaround can be deleted — rather than silently
- * outliving its purpose.
- */
+/** Pin the official Bazaar wire format that the CDP/Agentic Market validator reads. */
 const TEST_ENV = {
   FATHOM_X402_FACILITATOR_URL: 'http://mock',
   X402_NETWORK: 'base-sepolia',
@@ -38,26 +29,27 @@ describe('x402 discovery extension contract', () => {
     );
   });
 
-  const raw: any = declareDiscoveryExtension({
+  const official: any = declareDiscoveryExtension({
+    method: 'GET',
     input: { token: '0x940181a94A35A4569E4529A3CDfB74e38FD98631' },
     inputSchema: priceInputSchema,
-    output: { example: { token: '0xabc', chain: 'base', status: 'ok' } }
+    output: {
+      example: { token: '0xabc', chain: 'base', status: 'ok' },
+      schema: priceOutputSchema
+    }
   } as any);
 
-  it('documents that the SDK still needs patching (as of @x402/extensions 2.24)', () => {
-    const schema = raw.bazaar?.schema;
+  it('uses the SDK-native output wrapper and validates its example', () => {
+    const schema = official.bazaar?.schema;
 
-    // output is not required...
+    expect(validateDiscoveryExtension(official.bazaar)).toEqual({ valid: true });
     expect(schema?.required).toEqual(['input']);
-    // ...and is a wrapper rather than the real response schema
     expect(Object.keys(schema?.properties?.output?.properties ?? {})).toEqual(['type', 'example']);
-    expect(schema?.properties?.output?.properties?.price_usd).toBeUndefined();
-    // ...and advertises verbs this API does not serve
+    expect(schema?.properties?.output?.properties?.example).toEqual(priceOutputSchema);
     expect(schema?.properties?.input?.properties?.method?.enum).toContain('HEAD');
   });
 
-  it('serves the real output schema, marked required, GET only', async () => {
-    // Exercise the patched extension exactly as the middleware builds it.
+  it('serves a validator-compatible discovery extension, GET only', async () => {
     const { default: app } = await import('../../src/index');
 
     const res = await app.fetch(
@@ -74,11 +66,12 @@ describe('x402 discovery extension contract', () => {
 
     const bazaar = challenge.extensions?.bazaar;
     expect(bazaar).toBeTruthy();
-    expect(bazaar.schema.required).toEqual(['input', 'output']);
+    expect(validateDiscoveryExtension(bazaar)).toEqual({ valid: true });
+    expect(bazaar.schema.required).toEqual(['input']);
     expect(bazaar.schema.properties.input.properties.method.enum).toEqual(['GET']);
 
-    // the real response schema, not the SDK's wrapper
-    const output = bazaar.schema.properties.output;
+    // The response schema belongs under output.example in the Bazaar protocol.
+    const output = bazaar.schema.properties.output.properties.example;
     expect(output.properties.price_usd).toEqual({ type: 'number' });
     expect(output.properties.confidence.maximum).toBe(100);
     expect(output.properties.source_count).toBeTruthy();
