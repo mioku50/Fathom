@@ -383,7 +383,7 @@ describe('Fathom API', () => {
       if (item.status === 'ok') {
         if(!isPriceResponse(item)) console.log("INVALID:", JSON.stringify(item, null, 2)); expect(isPriceResponse(item)).toBe(true)
       } else {
-        expect(item.status).toBe('not_found')
+        expect(item.status).toBe('unpriceable')
       }
     }
   })

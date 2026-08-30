@@ -581,6 +581,23 @@ describe('partial discovery', () => {
     expect(report).toEqual({ adaptersTotal: 3, adaptersFailed: 2 });
   });
 
+  it('uses pools from a backfilling adapter but reports partial coverage', async () => {
+    const report = { adaptersTotal: 0, adaptersFailed: 0 };
+    const partial = {
+      id: 'v4',
+      getPools: vi.fn(),
+      getPoolsWithCoverage: vi.fn(async () => ({
+        pools: [{ address: '0xpool', dex: 'v4' }],
+        complete: false
+      })),
+      getRawData: vi.fn()
+    } as any;
+
+    const pools = await new DEXOrchestrator([partial]).getAllPools('0xtoken', report);
+    expect(pools).toHaveLength(1);
+    expect(report).toEqual({ adaptersTotal: 1, adaptersFailed: 1 });
+  });
+
   it('does not freeze an impoverished pool list for an hour', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const cache = makeCache();

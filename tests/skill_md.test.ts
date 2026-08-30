@@ -30,7 +30,7 @@ describe('SKILL.md', () => {
       'incomplete_venue_coverage', 'incomplete_quote_coverage',
       'exit_liquidity_unverified', 'hardcoded_numeraire'
     ];
-    const errors = ['rpc_error', 'stale_anchor', 'unknown_decimals', 'not_found'];
+    const errors = ['rpc_error', 'stale_anchor', 'unknown_decimals', 'unpriceable'];
     const quoteFields = ['size_usd', 'proceeds_usd', 'execution_price_usd', 'price_impact_bps'];
     const known = new Set([...real, ...flags, ...errors, ...quoteFields]);
 

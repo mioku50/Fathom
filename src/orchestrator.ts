@@ -87,14 +87,20 @@ export class DEXOrchestrator {
       }
     }
 
-    const promises = this.adapters.map(adapter => adapter.getPools(tokenAddress));
+    const promises = this.adapters.map(async adapter => {
+      if (adapter.getPoolsWithCoverage) {
+        return adapter.getPoolsWithCoverage(tokenAddress);
+      }
+      return { pools: await adapter.getPools(tokenAddress), complete: true };
+    });
     const results = await Promise.allSettled(promises);
 
     const allPools: PoolInfo[] = [];
     let failed = 0;
     for (const result of results) {
       if (result.status === 'fulfilled') {
-        allPools.push(...result.value);
+        allPools.push(...result.value.pools);
+        if (!result.value.complete) failed++;
       } else {
         failed++;
         console.error('Error fetching pools from an adapter:', result.reason);

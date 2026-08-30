@@ -12,6 +12,7 @@ export interface FathomEnv {
   ADMIN_AUTH_TOKEN?: string
   PRICE_RPC_URL?: string
   PRICE_RPC_FALLBACK_URLS?: string
+  V4_INDEX_RPC_URL?: string
   PRICE_CHAIN_ID?: string
   PIN_BLOCK?: string
   X402_PRICE_BATCH_USDC?: string

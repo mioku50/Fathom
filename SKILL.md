@@ -136,7 +136,7 @@ much was.
 | Status | Meaning |
 |---|---|
 | `402` | Payment required; the challenge carries the terms |
-| `404` `not_found` | No pools discovered for this token |
+| `503` `unpriceable` | No supported price source was measured; pool absence was not established |
 | `503` `rpc_error` | Pools exist but could not be read - retry |
 | `503` `stale_anchor` | The USD anchor was unavailable - retry |
 | `503` `unknown_decimals` | The token's decimals could not be read; Fathom will not guess them |

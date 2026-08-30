@@ -97,7 +97,7 @@ export function isPriceResponse(data: any): data is PriceResponse {
 
 export type BatchPriceResult = 
   | (PriceResponse & { status: "ok" })
-  | { token: string; status: "not_found" | "no_liquidity" | "rpc_error" | "stale_anchor" | "unknown_decimals"; error: { code: string; message: string } }
+  | { token: string; status: "not_found" | "no_liquidity" | "rpc_error" | "unpriceable" | "stale_anchor" | "unknown_decimals"; error: { code: string; message: string } }
 
 export type BatchPriceResponse = {
   chain: string;

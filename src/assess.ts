@@ -56,6 +56,8 @@ export type Assessment = {
   updated_at: string;
 };
 
+export type UnverifiedAssessment = Omit<Assessment, 'symbol' | 'price_usd'>;
+
 /**
  * Impact thresholds, in basis points of the requested sale.
  *
@@ -147,6 +149,44 @@ export function assess(price: PriceResponse, sizeUsd: number): Assessment {
     concerns,
     unverified,
     updated_at: price.updated_at
+  };
+}
+
+/**
+ * A complete, branchable answer for the case where no supported price source
+ * was measured. Discovery failure cannot prove pool absence, so it carries no
+ * negative finding and every unmeasured value is explicitly null/zero.
+ */
+export function unverifiedAssessment(
+  token: string,
+  chain: string,
+  sizeUsd: number
+): UnverifiedAssessment {
+  return {
+    token,
+    chain,
+    verdict: 'unverified',
+    reason: 'Fathom could not establish a price or exit quote. This does not mean the token has no pool or no liquidity.',
+    size_usd: sizeUsd,
+    exit: {
+      fillable: null,
+      proceeds_usd: null,
+      price_impact_bps: null,
+      execution_price_usd: null
+    },
+    price_trust: {
+      confidence: 0,
+      measured_weight: 0,
+      sources: 0,
+      dispersion_bps: null,
+      twap_deviation_bps: null
+    },
+    concerns: [],
+    unverified: [
+      'No supported price source was measured.',
+      'Pool discovery is not proof that no other pool exists.'
+    ],
+    updated_at: new Date().toISOString()
   };
 }
 

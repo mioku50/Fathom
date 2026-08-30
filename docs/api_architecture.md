@@ -41,7 +41,7 @@ The API uses standard HTTP error codes:
 | --- | --- | --- |
 | 400 | `invalid_request` | Invalid parameters or address format |
 | 402 | `payment_required` | Payment via x402 required |
-| 404 | `token_not_found` | No pools found for the token |
+| 503 | `unpriceable` | No supported price source was measured; this is not proof that no pool exists |
 | 422 | `no_liquidity` | Pools exist but price cannot be calculated |
 | 429 | `rate_limited` | Free tier or API limits exceeded |
 | 500 | `internal_error` | Internal server error |

@@ -62,6 +62,12 @@ export interface SellQuoteRequest {
   amountsIn: bigint[];
 }
 
+/** Pools found by one venue, plus whether that venue was searched completely. */
+export interface PoolDiscoveryResult {
+  pools: PoolInfo[];
+  complete: boolean;
+}
+
 export interface DEXAdapter {
   readonly id: string;
 
@@ -71,6 +77,14 @@ export interface DEXAdapter {
    * @returns A promise that resolves to an array of PoolInfo objects.
    */
   getPools(tokenAddress: string): Promise<PoolInfo[]>;
+
+  /**
+   * Optional coverage-aware discovery. Event-indexed adapters can return pools
+   * already found while saying that their historical cursor is still catching
+   * up. The orchestrator then uses those pools but cannot mistake the partial
+   * view for complete venue coverage.
+   */
+  getPoolsWithCoverage?(tokenAddress: string): Promise<PoolDiscoveryResult>;
 
   /**
    * Fetch reserves, ticks, or state for price/liquidity calculation.

@@ -195,13 +195,14 @@ describe('Prices API Endpoint (/v1/prices)', () => {
         });
         const res = await app.fetch(req, mockEnv, { waitUntil: vi.fn() } as any);
 
-        // It should return 200, with result status 'no_liquidity'
+        // A batch stays branchable, but does not turn missing measurement into
+        // a claim that liquidity is absent.
         expect(res.status).toBe(200);
         const data = await res.json() as any;
         expect(typeof data).toBe('object');
         expect(Array.isArray(data.results)).toBe(true);
         expect(data.results.length).toBe(1);
-        expect(data.results[0].status).toBe('no_liquidity');
+        expect(data.results[0].status).toBe('unpriceable');
         expect(data.results[0].token).toBe(validToken);
     });
 });

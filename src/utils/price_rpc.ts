@@ -1,4 +1,4 @@
-import { createPublicClient, http, fallback, PublicClient, Transport } from 'viem';
+import { createPublicClient, http, fallback, PublicClient, Transport, type Address, type Hex } from 'viem';
 import { base } from 'viem/chains';
 import { PricingError } from '../errors';
 
@@ -97,6 +97,30 @@ export class PriceRpcClient {
   async multicall(args: any) {
     try {
       return await this.client.multicall(args);
+    } catch (e: any) {
+      throw sanitizeRpcError(e);
+    }
+  }
+
+  async getBlockNumber(): Promise<bigint> {
+    try {
+      return await this.client.getBlockNumber();
+    } catch (e: any) {
+      throw sanitizeRpcError(e);
+    }
+  }
+
+  async getLogs(args: any): Promise<any[]> {
+    try {
+      return await this.client.getLogs(args);
+    } catch (e: any) {
+      throw sanitizeRpcError(e);
+    }
+  }
+
+  async getBytecode(address: Address, blockNumber?: bigint): Promise<Hex | undefined> {
+    try {
+      return await this.client.getBytecode({ address, blockNumber });
     } catch (e: any) {
       throw sanitizeRpcError(e);
     }

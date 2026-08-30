@@ -167,8 +167,9 @@ Base mainnet only. `chain` may be omitted or `base`; anything else is rejected
 before payment is taken.
 
 Errors are `503` when a measurement could not be made — `rpc_error`,
-`stale_anchor`, `unknown_decimals` — and `404 not_found` when a token genuinely
-has no pools. A `503` is never a verdict on the token.
+`stale_anchor`, `unknown_decimals`, or `unpriceable`. Fathom does not use failed
+discovery as proof that a token has no pools. A `503` is never a verdict on the
+token.
 
 Full field reference: **[SKILL.md](SKILL.md)**.
 

@@ -1,7 +1,14 @@
-import { Address, keccak256, encodeAbiParameters } from 'viem';
-import { DEXAdapter, PoolInfo, RawPoolData, SellQuoteRequest } from '../dex_adapter';
+import { Address } from 'viem';
+import { DEXAdapter, PoolDiscoveryResult, PoolInfo, RawPoolData, SellQuoteRequest } from '../dex_adapter';
 import { PriceRpcClient, isRpcFailure } from '../utils/price_rpc';
-import { readPoolsBatch } from './batch_read';
+import {
+  readIndexedV4PoolKeys,
+  syncTokenV4PoolIndex,
+  V4_DYNAMIC_FEE_FLAG,
+  v4PoolId,
+  type V4PoolIndexStore,
+  type V4PoolKey
+} from './uniswap_v4_index';
 
 /** In v4 the native asset is address(0), not WETH. */
 export const NATIVE_ETH = '0x0000000000000000000000000000000000000000';
@@ -11,14 +18,10 @@ export const NATIVE_ETH = '0x0000000000000000000000000000000000000000';
  *
  * Every pool lives inside one PoolManager singleton and is identified by a
  * PoolId - keccak of its PoolKey - rather than by an address, so there is no
- * factory to enumerate and no `getPool` to call. Pools are also permissionless
- * in their hooks, which means the full set cannot be discovered without
- * indexing events.
- *
- * This adapter therefore probes the canonical, hookless keys: the standard
- * fee/tick-spacing pairs against the quote assets Fathom already anchors. Pools
- * behind custom hooks are not found, and that is a stated limit rather than a
- * silent gap - they simply do not contribute to `source_count`.
+ * factory to enumerate and no `getPool` to call. PoolKeys are therefore read
+ * from the durable index of PoolManager.Initialize events. Canonical hookless
+ * keys are still probed as a defence-in-depth fallback, but they are not
+ * mistaken for the complete v4 market.
  */
 export class UniswapV4Adapter implements DEXAdapter {
   readonly id = 'uniswap_v4';
@@ -48,22 +51,28 @@ export class UniswapV4Adapter implements DEXAdapter {
   ];
 
   private pinBlock?: bigint;
+  private poolIndex?: V4PoolIndexStore;
+  private indexClient?: PriceRpcClient;
 
-  constructor(rpcUrl: string, fallbackUrlsStr?: string, pinBlock?: string, sharedClient?: PriceRpcClient) {
+  constructor(
+    rpcUrl: string,
+    fallbackUrlsStr?: string,
+    pinBlock?: string,
+    sharedClient?: PriceRpcClient,
+    poolIndex?: V4PoolIndexStore,
+    indexClient?: PriceRpcClient
+  ) {
     if (pinBlock && pinBlock !== 'latest') {
       this.pinBlock = BigInt(pinBlock);
     }
     this.client = sharedClient ?? new PriceRpcClient(rpcUrl, fallbackUrlsStr);
+    this.poolIndex = poolIndex;
+    this.indexClient = indexClient;
   }
 
   /** PoolId = keccak256(abi.encode(PoolKey)). Currencies must be sorted. */
   static poolId(key: NonNullable<PoolInfo['v4Key']>): `0x${string}` {
-    return keccak256(
-      encodeAbiParameters(
-        [{ type: 'address' }, { type: 'address' }, { type: 'uint24' }, { type: 'int24' }, { type: 'address' }],
-        [key.currency0 as Address, key.currency1 as Address, key.fee, key.tickSpacing, key.hooks as Address]
-      )
-    );
+    return v4PoolId(key);
   }
 
   private static sortCurrencies(a: string, b: string): [string, string] {
@@ -71,23 +80,56 @@ export class UniswapV4Adapter implements DEXAdapter {
   }
 
   async getPools(tokenAddress: string): Promise<PoolInfo[]> {
-    const candidates: PoolInfo[] = [];
+    return (await this.getPoolsWithCoverage(tokenAddress)).pools;
+  }
+
+  async getPoolsWithCoverage(tokenAddress: string): Promise<PoolDiscoveryResult> {
+    const candidates = new Map<string, PoolInfo>();
+    const lowerToken = tokenAddress.toLowerCase();
+    const quoteAssets = new Set(this.quoteAssets.map(asset => asset.toLowerCase()));
+    let complete = false;
+
+    const addCandidate = (v4Key: V4PoolKey) => {
+      const currency0 = v4Key.currency0.toLowerCase();
+      const currency1 = v4Key.currency1.toLowerCase();
+      if (currency0 !== lowerToken && currency1 !== lowerToken) return;
+      const quote = currency0 === lowerToken ? currency1 : currency0;
+      if (!quoteAssets.has(quote)) return;
+
+      const address = UniswapV4Adapter.poolId(v4Key);
+      candidates.set(address, {
+        address,
+        dex: this.id,
+        // Dynamic PoolKeys carry a sentinel, not the fee charged. getSlot0's
+        // current lpFee replaces this value after existence is verified.
+        fee: v4Key.fee === V4_DYNAMIC_FEE_FLAG ? undefined : v4Key.fee / 1_000_000,
+        tickSpacing: v4Key.tickSpacing,
+        v4Key
+      });
+    };
+
+    if (this.poolIndex) {
+      const indexed = this.indexClient
+        ? await syncTokenV4PoolIndex(this.poolIndex, this.indexClient, tokenAddress)
+        : await readIndexedV4PoolKeys(this.poolIndex, tokenAddress);
+      complete = indexed.complete;
+      for (const key of indexed.keys) addCandidate(key);
+    }
+
+    // Keep probing the common hookless keys as a cheap cross-check against an
+    // indexing error. The event index is what supplies arbitrary fee, spacing,
+    // dynamic-fee and custom-hook keys.
     for (const quoteAsset of this.quoteAssets) {
-      if (tokenAddress.toLowerCase() === quoteAsset.toLowerCase()) continue;
+      if (lowerToken === quoteAsset.toLowerCase()) continue;
       const [currency0, currency1] = UniswapV4Adapter.sortCurrencies(tokenAddress, quoteAsset);
       for (const [fee, tickSpacing] of this.feeTiers) {
         const v4Key = { currency0, currency1, fee, tickSpacing, hooks: NATIVE_ETH };
-        candidates.push({
-          address: UniswapV4Adapter.poolId(v4Key),
-          dex: this.id,
-          fee: fee / 1000000,
-          tickSpacing,
-          v4Key
-        });
+        addCandidate(v4Key);
       }
     }
 
-    if (candidates.length === 0) return [];
+    const candidateList = [...candidates.values()];
+    if (candidateList.length === 0) return { pools: [], complete };
 
     const stateViewAbi = [{
       inputs: [{ internalType: 'PoolId', name: 'poolId', type: 'bytes32' }],
@@ -105,7 +147,7 @@ export class UniswapV4Adapter implements DEXAdapter {
     let results: any[];
     try {
       results = await this.client.multicall({
-        contracts: candidates.map(pool => ({
+        contracts: candidateList.map(pool => ({
           address: this.stateViewAddress,
           abi: stateViewAbi,
           functionName: 'getSlot0',
@@ -119,16 +161,20 @@ export class UniswapV4Adapter implements DEXAdapter {
         console.error('RPC FAILURE DETAILS:', error);
         throw new Error(`RPC rate limit exceeded while checking pools for ${tokenAddress}`);
       }
-      console.error(`Error checking pools for ${tokenAddress}:`, error.message);
-      return [];
+      throw new Error(`Failed to check Uniswap v4 pools for ${tokenAddress}: ${error.message}`);
     }
 
     // An uninitialised key reads back as sqrtPriceX96 == 0, which is how a
     // pool that was never created is told apart from one that exists.
-    return candidates.filter((_, i) => {
+    const pools = candidateList.flatMap((pool, i) => {
       const r: any = results[i];
-      return r?.status === 'success' && typeof r.result?.[0] === 'bigint' && r.result[0] > 0n;
+      if (r?.status !== 'success' || typeof r.result?.[0] !== 'bigint' || r.result[0] <= 0n) {
+        return [];
+      }
+      const lpFee = Number(r.result[3]);
+      return [{ ...pool, fee: lpFee / 1_000_000 }];
     });
+    return { pools, complete };
   }
 
   /**

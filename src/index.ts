@@ -14,6 +14,7 @@ import { AerodromeSlipstreamAdapter } from './adapters/aerodrome_slipstream'
 import { UniswapV2Adapter } from './adapters/uniswap_v2'
 import { UniswapV3Adapter } from './adapters/uniswap_v3'
 import { UniswapV4Adapter } from './adapters/uniswap_v4'
+import { syncDemandedV4PoolIndexes } from './adapters/uniswap_v4_index'
 import { PricingEngine } from './pricing_engine'
 import { PriceRpcClient } from './utils/price_rpc'
 import { parseTokensParam } from './utils'
@@ -89,12 +90,23 @@ function buildPricingEngine(env: ExtendedEnv, chain: string, defaultTTL: number)
     env.PRICE_RPC_FALLBACK_URLS,
     new OrchestratorCacheAdapter(env.FATHOM_KV, defaultTTL)
   )
+  // Base's public RPC permits 10,000-block log windows. Keeping event indexing
+  // separate prevents a provider configured for pricing (often capped at 2k)
+  // from turning custom-hook discovery into thousands of tiny requests.
+  const v4IndexClient = new PriceRpcClient(env.V4_INDEX_RPC_URL || 'https://mainnet.base.org')
   const adapters = [
     new AerodromeAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new AerodromeSlipstreamAdapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new UniswapV2Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
     new UniswapV3Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient),
-    new UniswapV4Adapter(env.PRICE_RPC_URL!, env.PRICE_RPC_FALLBACK_URLS, env.PIN_BLOCK, rpcClient)
+    new UniswapV4Adapter(
+      env.PRICE_RPC_URL!,
+      env.PRICE_RPC_FALLBACK_URLS,
+      env.PIN_BLOCK,
+      rpcClient,
+      env.FATHOM_KV,
+      v4IndexClient
+    )
   ]
   const orchestrator = new DEXOrchestrator(adapters, new OrchestratorCacheAdapter(env.FATHOM_KV, defaultTTL))
   return new PricingEngine(orchestrator, rpcClient, chain)
@@ -105,6 +117,7 @@ type ExtendedEnv = FathomEnv & {
   PRICE_RPC_URL?: string;
   PRICE_CHAIN_ID?: string;
   PIN_BLOCK?: string;
+  V4_INDEX_RPC_URL?: string;
   X402_NETWORK?: string;
 };
 
@@ -117,7 +130,7 @@ import {
   metadatasInputSchema, metadatasOutputSchema
 } from './schemas/x402DiscoverySchemas'
 import SKILL_MD from '../SKILL.md'
-import { assess } from './assess'
+import { assess, unverifiedAssessment } from './assess'
 
 /**
  * The agent-facing entry point. Served free and unpaywalled: a capability
@@ -467,7 +480,10 @@ app.get('/v1/assess', validateAddressesMiddleware, validateChainMiddleware, x402
   }
 
   if (!price) {
-    return c.json({ error: 'not_found', message: 'No pools found or un-priceable' }, 404)
+    // An answer that contains no measurement is useful for branching, but is
+    // not a successful paid result. 503 keeps x402 from settling the live
+    // authorization while the body still says exactly what is unknown.
+    return c.json(unverifiedAssessment(token, chain, sizeUsd), 503)
   }
 
   return c.json(assess(price, sizeUsd))
@@ -511,7 +527,10 @@ const defaultTTL = c.env?.CACHE_DEFAULT_TTL_SECONDS
   }
 
   if (!finalResponse) {
-     return c.json({ error: 'not_found', message: 'No pools found or un-priceable' }, 404);
+     return c.json({
+       error: 'unpriceable',
+       message: 'No supported price source could be measured. This does not establish that the token has no pool or liquidity.'
+     }, 503);
   }
 
   c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
@@ -564,7 +583,14 @@ app.get('/v1/prices', validateAddressesMiddleware, validateChainMiddleware, x402
       const finalResponse = await engine.calculatePrice(token);
 
       if (!finalResponse) {
-        return { token, status: "no_liquidity", error: { code: "no_liquidity", message: "No usable liquidity found or unpriceable" } };
+        return {
+          token,
+          status: "unpriceable",
+          error: {
+            code: "unpriceable",
+            message: "No supported price source could be measured; pool absence was not established"
+          }
+        };
       }
 
       c.executionCtx.waitUntil(cacheLayer.set(token, chain, finalResponse))
@@ -810,6 +836,28 @@ async function scheduled(_event: ScheduledEvent, env: ExtendedEnv, ctx: Executio
   if (!env?.PRICE_RPC_URL || env.PRICE_CHAIN_ID !== '8453') {
     console.error('[smoke] skipped: price RPC is not configured for Base mainnet')
     return
+  }
+
+  if (env.FATHOM_KV) {
+    try {
+      const rpc = new PriceRpcClient(env.V4_INDEX_RPC_URL || 'https://mainnet.base.org')
+      const indexed = await syncDemandedV4PoolIndexes(env.FATHOM_KV, rpc)
+      console.log(JSON.stringify({
+        event: 'v4_pool_index',
+        status: indexed ? 'advanced' : 'idle',
+        ...(indexed ? {
+          token: indexed.meta.token,
+          fromBlock: indexed.fromBlock,
+          toBlock: indexed.toBlock,
+          pools: indexed.keys.length,
+          complete: indexed.complete
+        } : {})
+      }))
+    } catch (error) {
+      // A stale index makes the v4 adapter fail closed, so this alert is a
+      // coverage incident rather than a reason to stop the independent smoke.
+      console.error('[v4-index] FAILED', error)
+    }
   }
 
   const result: SmokeResult = await runSmokeChecks(() => buildPricingEngine(env, 'base', 60))

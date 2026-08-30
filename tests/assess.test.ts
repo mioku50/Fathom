@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { assess } from '../src/assess';
+import { assess, unverifiedAssessment } from '../src/assess';
 import type { PriceResponse } from '../src/schema';
 
 /**
@@ -37,6 +37,15 @@ const withQuote = (over: Partial<PriceResponse['sell_quotes'][number]>, rest: Pa
 });
 
 describe('verdict', () => {
+  it('returns a complete unverified verdict when no price source was measured', () => {
+    const a = unverifiedAssessment(BASE.token, 'base', 10000);
+    expect(a.verdict).toBe('unverified');
+    expect(a.exit.fillable).toBeNull();
+    expect(a.price_trust).toMatchObject({ confidence: 0, measured_weight: 0, sources: 0 });
+    expect(a.concerns).toEqual([]);
+    expect(a.reason).toMatch(/does not mean/i);
+  });
+
   it('clears a cheap exit against a corroborated price', () => {
     const a = assess(BASE, 10000);
     expect(a.verdict).toBe('tradeable');

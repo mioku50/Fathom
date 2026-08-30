@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UniswapV4Adapter, NATIVE_ETH } from '../../src/adapters/uniswap_v4';
+import {
+  UNISWAP_V4_POOL_MANAGER,
+  v4PoolIndexKey,
+  v4TokenMetaKey
+} from '../../src/adapters/uniswap_v4_index';
 import { createPublicClient } from 'viem';
 import { makeMulticallMock } from './multicall_mock';
 
@@ -15,10 +20,16 @@ describe('UniswapV4Adapter', () => {
   let adapter: UniswapV4Adapter;
   let mockMulticall: any;
 
-  function build(resolve: (c: any) => any) {
+  function build(resolve: (c: any) => any, poolIndex?: any) {
     mockMulticall = makeMulticallMock(resolve);
     (createPublicClient as any).mockReturnValue({ multicall: mockMulticall });
-    adapter = new UniswapV4Adapter('http://localhost:8545');
+    adapter = new UniswapV4Adapter(
+      'http://localhost:8545',
+      undefined,
+      undefined,
+      undefined,
+      poolIndex
+    );
   }
 
   beforeEach(() => {
@@ -86,6 +97,75 @@ describe('UniswapV4Adapter', () => {
 
       // one of the four quote assets is USDC itself, so a tier is dropped
       expect(mockMulticall.mock.calls[0][0].contracts).toHaveLength(12);
+    });
+
+    it('discovers a custom-hook dynamic-fee pool from the event index', async () => {
+      const customKey = {
+        currency0: TOKEN,
+        currency1: '0x4200000000000000000000000000000000000006',
+        fee: 0x800000,
+        tickSpacing: 200,
+        hooks: '0xBDF938149ac6a781F94FAa0ed45E6A0e984c6544'
+      };
+      const poolIndex = {
+        get: vi.fn(async (key: string) => {
+          if (key === v4TokenMetaKey(TOKEN)) {
+            return {
+              chainId: 8453,
+              poolManager: UNISWAP_V4_POOL_MANAGER,
+              token: TOKEN,
+              startBlock: 46_513_103,
+              indexedThrough: 50_000_000,
+              complete: true,
+              updatedAt: Date.now()
+            };
+          }
+          if (key === v4PoolIndexKey(TOKEN)) return [customKey];
+          return null;
+        }),
+        put: vi.fn()
+      };
+
+      const customId = UniswapV4Adapter.poolId(customKey);
+      build(({ args }: any) =>
+        args[0] === customId ? [123n, -197580, 0, 7000] : [0n, 0, 0, 0],
+        poolIndex
+      );
+
+      const pools = await adapter.getPools(TOKEN);
+
+      expect(pools).toHaveLength(1);
+      expect(pools[0]).toMatchObject({
+        address: customId,
+        fee: 0.007,
+        tickSpacing: 200,
+        v4Key: { ...customKey, hooks: customKey.hooks.toLowerCase() }
+      });
+      // The PoolKey keeps the dynamic sentinel while the public fee reports
+      // StateView's current LP fee.
+      expect(pools[0].v4Key!.fee).toBe(0x800000);
+    });
+
+    it('uses found pools but reports incomplete venue coverage while backfilling', async () => {
+      const poolIndex = {
+        get: vi.fn(async (key: string) => key === v4TokenMetaKey(TOKEN)
+          ? {
+              chainId: 8453,
+              poolManager: UNISWAP_V4_POOL_MANAGER,
+              token: TOKEN,
+              startBlock: 25_350_988,
+              indexedThrough: 30_000_000,
+              complete: false,
+              updatedAt: Date.now()
+            }
+          : null),
+        put: vi.fn()
+      };
+      build(() => [0n, 0, 0, 0], poolIndex);
+
+      const result = await adapter.getPoolsWithCoverage(TOKEN);
+      expect(result).toEqual({ pools: [], complete: false });
+      expect(mockMulticall).toHaveBeenCalledOnce();
     });
   });
 

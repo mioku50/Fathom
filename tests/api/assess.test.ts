@@ -128,11 +128,33 @@ describe('GET /v1/assess', () => {
     expect((await res.json() as any).error).toBe('rpc_error');
   });
 
-  it('reports a token with no pools as 404', async () => {
+  it('reports an unread token as unverified, never as proof that no pool exists', async () => {
     calculatePrice.mockResolvedValue(null);
 
     const res = await get(`token=${TOKEN}`);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(503);
+    const body = await res.json() as any;
+    expect(body.verdict).toBe('unverified');
+    expect(body.exit.fillable).toBeNull();
+    expect(body.concerns).toEqual([]);
+    expect(body.unverified).toEqual(expect.arrayContaining([
+      expect.stringMatching(/not proof/i)
+    ]));
+    expect(body.reason).not.toMatch(/no pools found/i);
+  });
+
+  it('keeps the raw price endpoint retryable when no source was measured', async () => {
+    calculatePrice.mockResolvedValue(null);
+    const res = await app.fetch(
+      new Request(`https://fathom.test/v1/price?token=${TOKEN}`, AUTH),
+      ENV,
+      { waitUntil: () => {}, passThroughOnException: () => {} } as any
+    );
+
+    expect(res.status).toBe(503);
+    const body = await res.json() as any;
+    expect(body.error).toBe('unpriceable');
+    expect(body.message).toMatch(/does not establish/i);
   });
 
   it('carries the two kinds of caveat through separately', async () => {
