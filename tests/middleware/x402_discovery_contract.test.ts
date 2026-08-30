@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { declareDiscoveryExtension, validateDiscoveryExtension } from '@x402/extensions';
-import { priceInputSchema, priceOutputSchema } from '../../src/schemas/x402DiscoverySchemas';
+import {
+  assessOutputSchema,
+  priceInputSchema,
+  priceOutputSchema
+} from '../../src/schemas/x402DiscoverySchemas';
 
 /** Pin the official Bazaar wire format that the CDP/Agentic Market validator reads. */
 const TEST_ENV = {
@@ -82,6 +86,28 @@ describe('x402 discovery extension contract', () => {
     expect(output.properties.twap_5m).toBeUndefined();
     expect(output.properties.price_low).toBeUndefined();
     expect(output.properties.price_high).toBeUndefined();
+  });
+
+  it('serves the primary assess route as a validator-compatible Bazaar resource', async () => {
+    const { default: app } = await import('../../src/index');
+    const res = await app.fetch(
+      new Request('http://localhost/v1/assess?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631&size_usd=10000'),
+      TEST_ENV,
+      { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as any
+    );
+
+    expect(res.status).toBe(402);
+    const challenge = JSON.parse(
+      Buffer.from(res.headers.get('Payment-Required')!, 'base64').toString('utf8')
+    );
+    const bazaar = challenge.extensions?.bazaar;
+    expect(validateDiscoveryExtension(bazaar)).toEqual({ valid: true });
+    expect(challenge.resource.url).toBe('http://localhost/v1/assess');
+    expect(bazaar.info.input).toMatchObject({
+      method: 'GET',
+      queryParams: { token: expect.any(String), size_usd: 10000 }
+    });
+    expect(bazaar.schema.properties.output.properties.example).toEqual(assessOutputSchema);
   });
 
   it('carries the Base Builder Code in the challenge', async () => {

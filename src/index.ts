@@ -124,6 +124,7 @@ type ExtendedEnv = FathomEnv & {
 const app = new Hono<{ Bindings: ExtendedEnv }>()
 
 import {
+  assessInputSchema, assessOutputSchema,
   priceInputSchema, priceOutputSchema,
   pricesInputSchema, pricesOutputSchema,
   metadataInputSchema, metadataOutputSchema,
@@ -170,12 +171,13 @@ app.get('/', (c) => {
     <div class="tagline">x402-powered Base token price oracle for agents</div>
     
     <div class="endpoints">
-        <h3>Primary Endpoint</h3>
+        <h3>Start Here — Primary Endpoint</h3>
         <ul>
-            <li><code>GET <a href="/v1/prices?tokens=0x940181a94A35A4569E4529A3CDfB74e38FD98631,0x4200000000000000000000000000000000000006">/v1/prices</a></code></li>
+            <li><code>GET <a href="/v1/assess?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631&amp;size_usd=10000">/v1/assess</a></code></li>
         </ul>
-        <p><strong>Price:</strong> $0.003 per batch</p>
-        <p><strong>Limit:</strong> Up to 50 Base ERC-20 token addresses</p>
+        <p>One branchable answer: can this Base token position be exited at the size you name, at a price you can trust?</p>
+        <p><strong>Price:</strong> $0.001 per assessment</p>
+        <p><strong>Input:</strong> One Base ERC-20 token address and position size in USD</p>
         <p><strong>Network:</strong> Base mainnet</p>
         <p><strong>Payment:</strong> USDC via x402</p>
 
@@ -183,14 +185,16 @@ app.get('/', (c) => {
         <ul>
             <li><code>GET <a href="/.well-known/x402">/.well-known/x402</a></code> - x402 Manifest</li>
             <li><code>GET <a href="/openapi.json">/openapi.json</a></code> - OpenAPI 3.1 Spec</li>
-            <li><code>GET <a href="/schemas/prices.input.json">/schemas/prices.input.json</a></code> - Input Schema</li>
-            <li><code>GET <a href="/schemas/prices.output.json">/schemas/prices.output.json</a></code> - Output Schema</li>
+            <li><code>GET <a href="/schemas/assess.input.json">/schemas/assess.input.json</a></code> - Primary Input Schema</li>
+            <li><code>GET <a href="/schemas/assess.output.json">/schemas/assess.output.json</a></code> - Primary Output Schema</li>
         </ul>
     </div>
 </body>
 </html>`)
 })
 
+app.get('/schemas/assess.input.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(assessInputSchema) })
+app.get('/schemas/assess.output.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(assessOutputSchema) })
 app.get('/schemas/price.input.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(priceInputSchema) })
 app.get('/schemas/price.output.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(priceOutputSchema) })
 app.get('/schemas/prices.input.json', (c) => { c.header('Cache-Control', 'no-store, no-cache, must-revalidate'); return c.json(pricesInputSchema) })
@@ -204,28 +208,39 @@ app.get('/.well-known/x402', (c) => {
   c.header('Cache-Control', 'no-store, no-cache, must-revalidate')
   return c.json({
     name: "Fathom",
-    description: "x402-powered Base token price oracle for agents",
+    description: "Exit-liquidity and price-trust assessments for Base tokens, paid via x402",
     version: "1.0.0",
     baseUrl: "https://fathom-api.mioku-fathom.workers.dev",
     network: "eip155:8453",
     asset: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", // Base USDC
-    primaryEndpoint: "/v1/prices",
+    primaryEndpoint: "/v1/assess",
     endpoints: [
+      "/v1/assess",
+      "/v1/price",
       "/v1/prices",
       "/v1/metadata",
-      "/v1/price"
+      "/v1/metadatas"
     ],
     pricing: {
+      "/v1/assess": "$0.001",
+      "/v1/price": "$0.001",
       "/v1/prices": "$0.003",
       "/v1/metadata": "$0.001",
-      "/v1/price": "$0.001"
+      "/v1/metadatas": "$0.003"
     },
     maxBatchTokens: 50,
     schemaUrls: {
-      input: "/schemas/prices.input.json",
-      output: "/schemas/prices.output.json"
+      input: "/schemas/assess.input.json",
+      output: "/schemas/assess.output.json"
     },
-    tags: ["base", "x402", "price-oracle", "batch-pricing", "liquidity", "dex", "agents", "wallets", "trading"]
+    schemas: {
+      "/v1/assess": { input: "/schemas/assess.input.json", output: "/schemas/assess.output.json" },
+      "/v1/price": { input: "/schemas/price.input.json", output: "/schemas/price.output.json" },
+      "/v1/prices": { input: "/schemas/prices.input.json", output: "/schemas/prices.output.json" },
+      "/v1/metadata": { input: "/schemas/metadata.input.json", output: "/schemas/metadata.output.json" },
+      "/v1/metadatas": { input: "/schemas/metadatas.input.json", output: "/schemas/metadatas.output.json" }
+    },
+    tags: ["base", "x402", "token-assessment", "exit-liquidity", "price-trust", "dex", "agents", "wallets", "trading"]
   })
 })
 
@@ -239,6 +254,47 @@ app.get('/openapi.json', (c) => {
       description: "x402-powered Base token price oracle for agents"
     },
     paths: {
+      "/v1/assess": {
+        get: {
+          summary: "Assess whether a Base token position can be exited",
+          description: "Primary agent endpoint. Quotes the exact position size on chain and returns one branchable verdict: tradeable, caution, illiquid, or unverified. Requires x402 payment.",
+          parameters: [
+            {
+              name: "token",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "Base ERC-20 token address",
+              example: "0x940181a94A35A4569E4529A3CDfB74e38FD98631"
+            },
+            {
+              name: "size_usd",
+              in: "query",
+              required: false,
+              schema: { type: "number", minimum: MIN_ASSESS_SIZE_USD, maximum: MAX_ASSESS_SIZE_USD, default: DEFAULT_ASSESS_SIZE_USD },
+              description: "Position size to quote on chain, in USD"
+            },
+            {
+              name: "chain",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["base"], default: "base" }
+            }
+          ],
+          responses: {
+            "200": {
+              description: "Successful, measured assessment",
+              content: { "application/json": { schema: assessOutputSchema } }
+            },
+            "402": {
+              description: "Payment Required - Follow x402 protocol instructions to pay 0.001 USDC."
+            },
+            "503": {
+              description: "No reliable measurement was established. The response is unverified, not a negative finding."
+            }
+          }
+        }
+      },
       "/v1/prices": {
         get: {
           summary: "Batch pricing for Base tokens",
