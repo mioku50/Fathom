@@ -43,7 +43,7 @@ function createBuilderCodeExtension(env?: FathomEnv) {
  * @x402/core 2.24 currently accepts only the standard Base64 alphabet, so
  * normalize the transport encoding without changing the signed EIP-3009 data.
  */
-function createFacilitatorCompatiblePaymentSignature(value: string) {
+function createFacilitatorCompatiblePaymentSignature(value: string, builderCode?: string) {
   const standard = value.replace(/-/g, '+').replace(/_/g, '/')
   const padded = standard + '='.repeat((4 - (standard.length % 4)) % 4)
   const paymentPayload = decodePaymentSignatureHeader(padded) as any
@@ -54,6 +54,36 @@ function createFacilitatorCompatiblePaymentSignature(value: string) {
   // authorization while matching the facilitator's accepted wire shape.
   if (paymentPayload.x402Version === 2 && paymentPayload.resource) {
     delete paymentPayload.resource
+  }
+
+  // Official x402 clients echo route extensions from PAYMENT-REQUIRED into the
+  // paid payload. Minimal clients such as the current PayBox/Hermes path may
+  // omit them, which still permits settlement but silently loses Fathom's
+  // ERC-8021 attribution. Restore only this server's advertised app code while
+  // preserving any wallet/service attribution supplied by the client.
+  if (paymentPayload.x402Version === 2 && builderCode) {
+    const declared = declareBuilderCodeExtension(builderCode)
+    const extensions = paymentPayload.extensions && typeof paymentPayload.extensions === 'object'
+      ? paymentPayload.extensions
+      : {}
+    const existing = extensions[BUILDER_CODE] && typeof extensions[BUILDER_CODE] === 'object'
+      ? extensions[BUILDER_CODE]
+      : {}
+    const existingInfo = existing.info && typeof existing.info === 'object'
+      ? existing.info
+      : {}
+
+    paymentPayload.extensions = {
+      ...extensions,
+      [BUILDER_CODE]: {
+        ...declared,
+        ...existing,
+        info: {
+          ...existingInfo,
+          a: builderCode
+        }
+      }
+    }
   }
 
   return encodePaymentSignatureHeader(paymentPayload)
@@ -70,7 +100,10 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   let paymentHeaderOverridden = false
   if (paymentSignature) {
     try {
-      const compatible = createFacilitatorCompatiblePaymentSignature(paymentSignature)
+      const compatible = createFacilitatorCompatiblePaymentSignature(
+        paymentSignature,
+        c.env?.BASE_BUILDER_CODE?.trim()
+      )
       // Cloudflare Request headers are immutable. Shadow HonoRequest.header()
       // for this request instead; @x402/hono's adapter reads through this API.
       ;(c.req as any).header = (name?: string) => {

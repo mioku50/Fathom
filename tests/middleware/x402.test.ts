@@ -107,7 +107,8 @@ describe('the resource it advertises', () => {
     FATHOM_X402_FACILITATOR_URL: 'http://mock',
     X402_NETWORK: 'base-sepolia',
     X402_PRICE_USDC: '0.01',
-    FATHOM_X402_RECIPIENT: '0x123'
+    FATHOM_X402_RECIPIENT: '0x123',
+    BASE_BUILDER_CODE: 'bc_tzj2linw'
   } as any
 
   const challenge = async (url: string) => {
@@ -219,5 +220,79 @@ describe('the resource it advertises', () => {
     expect(paymentRequired.resource.url).toBe('https://fathom.test/v1/assess')
     expect(verifyBody.paymentPayload.resource).toBeUndefined()
     expect(settleBody.paymentPayload.resource).toBeUndefined()
+    expect(verifyBody.paymentPayload.extensions['builder-code'].info.a).toBe('bc_tzj2linw')
+    expect(settleBody.paymentPayload.extensions['builder-code'].info.a).toBe('bc_tzj2linw')
+  })
+
+  it('preserves client attribution while enforcing Fathom app attribution', async () => {
+    let verifyBody: any
+
+    global.fetch = vi.fn().mockImplementation((url: any, init?: RequestInit) => {
+      const target = url.toString()
+      if (target.includes('/supported')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:84532', asset: 'usdc' }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (target.includes('/verify')) {
+        verifyBody = JSON.parse(String(init?.body))
+        return Promise.resolve(new Response(JSON.stringify({
+          isValid: true,
+          payer: '0x1111111111111111111111111111111111111111'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      if (target.includes('/settle')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          success: true,
+          payer: '0x1111111111111111111111111111111111111111',
+          transaction: `0x${'1'.repeat(64)}`,
+          network: 'eip155:84532',
+          amount: '10000'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      }
+      return Promise.resolve(new Response(null, { status: 404 }))
+    })
+
+    const url = 'https://fathom.test/v1/assess?token=0x940181a94A35A4569E4529A3CDfB74e38FD98631&size_usd=10000'
+    const paymentRequired = await challenge(url)
+    const accepted = paymentRequired.accepts[0]
+    const paymentPayload = {
+      x402Version: 2,
+      resource: paymentRequired.resource,
+      accepted,
+      extensions: {
+        'builder-code': {
+          info: {
+            a: 'bc_wrong_app',
+            w: 'paybox_wallet',
+            s: ['hermes_client']
+          }
+        }
+      },
+      payload: {
+        authorization: {
+          from: '0x1111111111111111111111111111111111111111',
+          to: accepted.payTo,
+          value: accepted.amount,
+          validAfter: '0',
+          validBefore: '9999999999',
+          nonce: `0x${'4'.repeat(64)}`
+        },
+        signature: `0x${'5'.repeat(130)}`
+      }
+    }
+
+    const encodedPayment = Buffer.from(JSON.stringify(paymentPayload)).toString('base64url')
+    const res = await app.fetch(new Request(url, {
+      headers: { 'PAYMENT-SIGNATURE': encodedPayment }
+    }), env)
+
+    expect(res.status).toBe(200)
+    expect(verifyBody.paymentPayload.resource).toBeUndefined()
+    expect(verifyBody.paymentPayload.extensions['builder-code'].info).toEqual({
+      a: 'bc_tzj2linw',
+      w: 'paybox_wallet',
+      s: ['hermes_client']
+    })
   })
 })
