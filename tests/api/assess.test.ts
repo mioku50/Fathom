@@ -15,7 +15,7 @@ vi.mock('../../src/pricing_engine', () => ({
 }));
 
 vi.mock('../../src/orchestrator', () => ({
-  DEXOrchestrator: vi.fn().mockImplementation(() => ({})),
+  DEXOrchestrator: vi.fn().mockImplementation(function () { return {}; }),
   rawSetCacheKey: () => 'k'
 }));
 

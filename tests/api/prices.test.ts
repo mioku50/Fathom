@@ -7,17 +7,19 @@ import { DEXOrchestrator } from '../../src/orchestrator';
 // Mock dependencies to avoid real network calls
 vi.mock('../../src/orchestrator', () => {
   return {
-    DEXOrchestrator: vi.fn().mockImplementation(() => ({
-      getAllPools: vi.fn().mockResolvedValue([
-        { dex: 'uniswap_v3', address: '0x123', fee: 3000 }
-      ]),
-      getAllRawData: vi.fn().mockResolvedValue([
-        {
-          pool: { dex: 'uniswap_v3', address: '0x123', fee: 3000 },
-          rawData: { some: 'data' }
-        }
-      ])
-    })),
+    DEXOrchestrator: vi.fn().mockImplementation(function () {
+      return {
+        getAllPools: vi.fn().mockResolvedValue([
+          { dex: 'uniswap_v3', address: '0x123', fee: 3000 }
+        ]),
+        getAllRawData: vi.fn().mockResolvedValue([
+          {
+            pool: { dex: 'uniswap_v3', address: '0x123', fee: 3000 },
+            rawData: { some: 'data' }
+          }
+        ])
+      };
+    }),
     OrchestratorCacheAdapter: vi.fn()
   };
 });

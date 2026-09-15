@@ -19,7 +19,7 @@ import type { FathomEnv } from '../src/cache'
 
 vi.mock('../src/orchestrator', () => {
   return {
-    DEXOrchestrator: vi.fn().mockImplementation(() => {
+    DEXOrchestrator: vi.fn().mockImplementation(function () {
       let lastToken = '';
       return {
         getAllPools: vi.fn().mockImplementation(async (token: string) => {
