@@ -209,15 +209,16 @@ one reported as absent:
   every response.
 - **No pool age or 24h volume.** The `maturity` component is always unmeasured,
   which is why `measured_weight` tops out at 0.90.
-- **No Uniswap v4 pools behind custom hooks.** Discovering those needs event
-  indexing.
+- **No exhaustive Uniswap v4 custom-hook coverage.** Pools behind custom hooks
+  are indexed on demand, per token asked about, from a KV-backed event index —
+  not pre-indexed across the chain.
 
 ## Development
 
 ```bash
 npm install
 npm run typecheck
-npx vitest run          # 761 tests
+npx vitest run          # 820 tests
 npx wrangler dev
 ```
 

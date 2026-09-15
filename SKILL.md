@@ -153,7 +153,9 @@ single unreadable token does not cost you the rest of the list.
 - No chains other than Base mainnet
 - No honeypot or transfer-tax simulation yet; `sellability_unchecked` says so
 - No pool age or 24h volume yet; the `maturity` component is always unmeasured
-- No Uniswap v4 pools behind custom hooks, which need event indexing to discover
+- No exhaustive Uniswap v4 hook discovery; pools behind custom hooks are indexed
+  on demand, per token asked about, from a KV-backed event index rather than
+  scanned across all historical deployments
 
 These are stated because an unmeasured signal reported as healthy is worse than
 one reported as absent.
