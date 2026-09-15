@@ -15,6 +15,7 @@
  */
 
 import type { PriceResponse } from './schema';
+import type { AssetType, B20Context, B20State, StockReference } from './b20';
 
 export type Verdict = 'tradeable' | 'caution' | 'illiquid' | 'unverified';
 
@@ -53,6 +54,32 @@ export type Assessment = {
   /** Checks that did not run. Never evidence against the token. */
   unverified: string[];
 
+  /**
+   * What kind of thing this token is. `erc20` for everything Fathom has always
+   * priced; the two B20 values carry the blocks below.
+   */
+  asset_type: AssetType;
+
+  /**
+   * Asset semantics for a B20 token, absent for a plain ERC-20. A tokenized
+   * stock is not one share: `multiplier` says how many it is redeemable for.
+   */
+  b20?: B20State;
+
+  /**
+   * The equity reference for a verified Coinbase tokenized stock, and Fathom's
+   * measured price against it. Never a substitute for `exit`, which is the only
+   * field that says what a sale returns.
+   */
+  stock_reference?: StockReference;
+
+  /**
+   * Machine-readable asset flags, kept raw. `concerns` and `unverified` carry
+   * the subset that belongs in each; a premium is in neither, because it is an
+   * observation about price rather than a risk or a gap in what we looked at.
+   */
+  asset_flags?: string[];
+
   updated_at: string;
 };
 
@@ -70,17 +97,19 @@ const IMPACT_TRADEABLE_BPS = 100;
 const IMPACT_CAUTION_BPS = 1000;
 
 /** Flags that describe the token, mapped to what they mean for a trade. */
-const CONCERN_FLAGS: Record<string, string> = {
+export const CONCERN_FLAGS: Record<string, string> = {
   thin_liquidity: 'Pool holds very little; the price moves easily.',
   no_exit_liquidity: 'The requested sale cannot be filled at any price.',
   possible_manipulation: 'Spot is far from the pool’s own time-weighted price.',
   single_pool: 'Only one venue prices this token; nothing corroborates it.',
   stale: 'The pool data is stale.',
-  unsellable: 'A sale of this token reverts.'
+  unsellable: 'A sale of this token reverts.',
+  b20_transfer_paused: 'The issuer has paused transfers of this token on chain, so a sale cannot execute.',
+  corporate_action_pending: 'A corporate action is being applied: the equity reference feed is frozen until it completes, and mint and redeem are suspended off chain.'
 };
 
 /** Flags that describe our reading, not the token. */
-const UNVERIFIED_FLAGS: Record<string, string> = {
+export const UNVERIFIED_FLAGS: Record<string, string> = {
   twap_unavailable: 'The pool has no usable price oracle, so spot could not be checked against a time-weighted price.',
   freshness_unchecked: 'Data staleness was not established.',
   sellability_unchecked: 'No honeypot or transfer-tax simulation was run.',
@@ -92,13 +121,24 @@ const UNVERIFIED_FLAGS: Record<string, string> = {
   incomplete_venue_coverage: 'One or more DEXes could not be searched, so pools this token trades on may be missing entirely.',
   incomplete_quote_coverage: 'Pools quoted in another asset could not be converted to USD, so the deepest venue may be missing from this answer.',
   exit_liquidity_unverified: 'Whether the position can be exited was not established.',
-  hardcoded_numeraire: 'This is USDC, whose value is defined rather than measured.'
+  hardcoded_numeraire: 'This is USDC, whose value is defined rather than measured.',
+  b20_metadata_unverified: 'The token\u2019s B20 multiplier and pause state could not be read, so how many shares one token redeems for is unknown.',
+  b20_scheduled_update_unverified: 'This token does not expose the ERC-8056 scheduled-multiplier views, so a future-dated corporate action cannot be seen in advance.',
+  b20_policy_unverified: 'A transfer policy is configured, or could not be read. Fathom does not know the selling address, so whether that policy permits this particular seller was not established.',
+  corporate_action_unverified: 'Whether a corporate action is in progress could not be established.',
+  reference_price_unavailable: 'No equity reference price was available, so the on-chain price could not be compared against one. This is not a finding about the token.',
+  reference_price_stale: 'The equity reference has not updated within its heartbeat. Outside market hours it holds its last value by design, so the comparison is against that close rather than a live quote.',
+  premium_unverified: 'No measured on-chain price was available to compare against the equity reference.'
 };
 
 /** Coverage below which no verdict about the market is offered. */
 const MIN_COVERAGE_FOR_VERDICT = 0.5;
 
-export function assess(price: PriceResponse, sizeUsd: number): Assessment {
+export function assess(
+  price: PriceResponse,
+  sizeUsd: number,
+  b20?: B20Context | null
+): Assessment {
   const quote =
     price.sell_quotes.find(q => q.size_usd === sizeUsd) ??
     price.sell_quotes.reduce<(typeof price.sell_quotes)[number] | null>(
@@ -114,15 +154,20 @@ export function assess(price: PriceResponse, sizeUsd: number): Assessment {
   const anyFilled = price.sell_quotes.some(q => q.proceeds_usd !== null);
   const fillable = impactBps !== null ? true : anyFilled ? false : null;
 
-  const concerns = price.flags.filter(f => f in CONCERN_FLAGS).map(f => CONCERN_FLAGS[f]);
-  const unverified = price.flags.filter(f => f in UNVERIFIED_FLAGS).map(f => UNVERIFIED_FLAGS[f]);
+  // Asset flags join the pricing flags for translation, so a B20 pause reads
+  // out of `concerns` in the same prose as any other measured fact.
+  const assetFlags = b20?.flags ?? [];
+  const allFlags = [...price.flags, ...assetFlags];
+
+  const concerns = allFlags.filter(f => f in CONCERN_FLAGS).map(f => CONCERN_FLAGS[f]);
+  const unverified = allFlags.filter(f => f in UNVERIFIED_FLAGS).map(f => UNVERIFIED_FLAGS[f]);
 
   const { verdict, reason } = decide({
     impactBps,
     fillable,
     sizeUsd,
     measuredWeight: price.measured_weight,
-    flags: price.flags
+    flags: allFlags
   });
 
   return {
@@ -148,6 +193,10 @@ export function assess(price: PriceResponse, sizeUsd: number): Assessment {
     },
     concerns,
     unverified,
+    asset_type: b20?.asset_type ?? 'erc20',
+    ...(b20?.b20 ? { b20: b20.b20 } : {}),
+    ...(b20?.stock_reference ? { stock_reference: b20.stock_reference } : {}),
+    ...(assetFlags.length > 0 ? { asset_flags: assetFlags } : {}),
     updated_at: price.updated_at
   };
 }
@@ -160,7 +209,8 @@ export function assess(price: PriceResponse, sizeUsd: number): Assessment {
 export function unverifiedAssessment(
   token: string,
   chain: string,
-  sizeUsd: number
+  sizeUsd: number,
+  b20?: B20Context | null
 ): UnverifiedAssessment {
   return {
     token,
@@ -181,11 +231,16 @@ export function unverifiedAssessment(
       dispersion_bps: null,
       twap_deviation_bps: null
     },
-    concerns: [],
+    concerns: (b20?.flags ?? []).filter(f => f in CONCERN_FLAGS).map(f => CONCERN_FLAGS[f]),
     unverified: [
       'No supported price source was measured.',
-      'Pool discovery is not proof that no other pool exists.'
+      'Pool discovery is not proof that no other pool exists.',
+      ...(b20?.flags ?? []).filter(f => f in UNVERIFIED_FLAGS).map(f => UNVERIFIED_FLAGS[f])
     ],
+    asset_type: b20?.asset_type ?? 'erc20',
+    ...(b20?.b20 ? { b20: b20.b20 } : {}),
+    ...(b20?.stock_reference ? { stock_reference: b20.stock_reference } : {}),
+    ...(b20?.flags?.length ? { asset_flags: b20.flags } : {}),
     updated_at: new Date().toISOString()
   };
 }
@@ -222,6 +277,16 @@ function decide(input: {
     return {
       verdict: 'unverified',
       reason: 'Pools quoted in another asset could not be converted to USD, so the deepest venue may be missing from this answer. Retry before acting.'
+    };
+  }
+
+  // An issuer pause blocks the transfer itself, so no quote on any venue can be
+  // acted on. This is a statement about execution, not about the token being
+  // fraudulent or its pools being empty, and the reason says so.
+  if (input.flags.includes('b20_transfer_paused')) {
+    return {
+      verdict: 'illiquid',
+      reason: `Transfers of this token are paused on chain, so ${usd} cannot be sold at any venue or price until the issuer unpauses. This is an issuer pause, not an absence of liquidity.`
     };
   }
 

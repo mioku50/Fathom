@@ -128,6 +128,60 @@ reason: a failure to look is not a finding.
 interpolate between standard sizes, because a guess about slippage is worse than
 no answer.
 
+## Coinbase tokenized stocks
+
+Base's [B20](https://docs.base.org/specifications/b20/specification-overview)
+standard carries Coinbase's tokenized equities — AAPLc, NVDAc, TSLAc and the
+rest. For those, Fathom compares the exit you can actually execute on chain
+against the equity's own reference price, and reads the asset semantics that
+make a tokenized stock different from an ERC-20.
+
+```jsonc
+{
+  "asset_type": "b20_stock",
+  "b20": {
+    "underlying": "NVDA",
+    "multiplier": 1.0,             // shares per token - not permanently 1
+    "corporate_action_pending": false,
+    "paused": false
+  },
+  "stock_reference": {
+    "reference_price_usd": 213.03,
+    "premium_discount_bps": -10.8, // the venue is quoting NVDA cheap
+    "source": "chainlink"
+  },
+  "exit": { "fillable": true, "proceeds_usd": 9952, "price_impact_bps": 48 }
+}
+```
+
+The reference never replaces `exit`. One says where the equity is; the other
+says what your sale returns. An agent needs both, and confusing them is how you
+buy a 2% premium believing you bought the index.
+
+Three things are easy to get wrong here, so Fathom is explicit about them:
+
+**One token is not one share.** `multiplier` is how many shares it redeems for.
+Dividends are paid by moving it rather than in cash — GOOGLc already sits at
+1.000377 — so any position sized as "one token, one share" drifts. If the read
+fails, `multiplier` is `null`; it is never quietly 1.0.
+
+**The reference is already the token's price.** Chainlink publishes *total
+return*, the underlying scaled by the multiplier. Applying the multiplier a
+second time — the obvious thing to do with a field called "reference price" —
+double-counts every corporate action the token has ever had.
+
+**A frozen feed is the market being shut.** The equity feed stops updating
+overnight, at weekends, on holidays, and while a corporate action is applied.
+Fathom reports its age and marks it `unverified`; it never treats a closed
+equity market as a fault of the token, and never lets a missing feed produce a
+negative verdict.
+
+Pause and policy state are read and reported plainly. A paused transfer blocks
+the sale and says so. A configured transfer policy does *not*: secondary trading
+is permissionless and those slots normally hold a sanctions blocklist, so Fathom
+reports that a policy exists and states that whether it applies to any given
+seller was not established. It does not guess compliance eligibility.
+
 ## Quickstart
 
 Any x402 client works. With the [x402 fetch wrapper](https://www.npmjs.com/package/@x402/fetch):
@@ -212,6 +266,8 @@ one reported as absent:
 - **No exhaustive Uniswap v4 custom-hook coverage.** Pools behind custom hooks
   are indexed on demand, per token asked about, from a KV-backed event index —
   not pre-indexed across the chain.
+- **No mint, redeem, or compliance eligibility for tokenized stocks.** Fathom
+  reads a token's policy state; it never decides whether an address may trade.
 
 ## Agent integrations
 

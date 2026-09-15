@@ -180,7 +180,8 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
                               sources: 6,
                               dispersion_bps: 39.7,
                               twap_deviation_bps: 0.85
-                          }
+                          },
+                          asset_type: "erc20"
                       }
                   }
               }, assessOutputSchema)

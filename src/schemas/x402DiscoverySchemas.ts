@@ -337,7 +337,63 @@ export const assessOutputSchema = {
       items: { type: "string" },
       description: "Checks that did not run. Never evidence against the token - a failure to look is not a finding."
     },
+    asset_type: {
+      type: "string",
+      enum: ["erc20", "b20_asset", "b20_stock"],
+      description: "What kind of token this is. `erc20` is every ordinary Base token. `b20_stock` is a verified Coinbase tokenized stock and carries `b20` and `stock_reference`. `b20_asset` is a B20 token Fathom cannot identify as a stock: the factory is permissionless, so being a B20 asset does not make a token an equity."
+    },
+    b20: {
+      type: "object",
+      description: "Asset semantics for a B20 token. Absent for a plain ERC-20.",
+      properties: {
+        underlying: { type: ["string", "null"], description: "The equity this token represents, for verified stocks only." },
+        multiplier: {
+          type: ["number", "null"],
+          description: "How many underlying shares one token is redeemable for. One token is NOT permanently one share: dividends and splits move this. null means it could not be read, never 1.0 by default."
+        },
+        ui_multiplier: { type: ["number", "null"], description: "ERC-8056 scheduled-multiplier view. null means the token does not implement it, not that no update is scheduled." },
+        next_ui_multiplier: { type: ["number", "null"] },
+        effective_at: { type: ["string", "null"], format: "date-time" },
+        corporate_action_pending: {
+          type: ["boolean", "null"],
+          description: "True while a corporate action is being applied and the equity reference feed is held frozen. null means this could not be established."
+        },
+        paused: { type: ["boolean", "null"], description: "Transfers paused on chain by the issuer. This blocks a sale outright." },
+        policy_restricted: {
+          type: ["boolean", "null"],
+          description: "A transfer policy is configured. This does NOT mean the caller is blocked: secondary trading is permissionless and these slots normally hold a sanctions blocklist. Fathom does not know the selling address and so cannot resolve applicability."
+        }
+      },
+      required: ["underlying", "multiplier", "corporate_action_pending", "paused", "policy_restricted"]
+    },
+    stock_reference: {
+      type: "object",
+      description: "The equity reference for a verified Coinbase tokenized stock. Never a substitute for `exit`, which remains the only field that says what a sale returns.",
+      properties: {
+        reference_price_usd: {
+          type: ["number", "null"],
+          description: "Chainlink total-return value: the price of one TOKEN, already inclusive of the multiplier. Do not multiply it by the multiplier again."
+        },
+        premium_discount_bps: {
+          type: ["number", "null"],
+          description: "Fathom's measured on-chain price against that reference, in bps. Positive is a premium. null when either side is unavailable."
+        },
+        source: { type: ["string", "null"], enum: ["chainlink", null] },
+        feed: { type: ["string", "null"] },
+        updated_at: { type: ["string", "null"], format: "date-time" },
+        age_seconds: {
+          type: ["number", "null"],
+          description: "How long the feed has held its value. Outside US market hours it stops updating by design, so a large age means the equity market is shut, not that anything is wrong."
+        }
+      },
+      required: ["reference_price_usd", "premium_discount_bps", "source"]
+    },
+    asset_flags: {
+      type: "array",
+      items: { type: "string" },
+      description: "Machine-readable asset flags. `concerns` and `unverified` carry the subset that belongs in each; a premium appears in neither, because it is an observation about price rather than a risk or a gap in what was measured."
+    },
     updated_at: { type: "string", format: "date-time" }
   },
-  required: ["token", "chain", "verdict", "reason", "size_usd", "exit", "price_trust"]
+  required: ["token", "chain", "verdict", "reason", "size_usd", "exit", "price_trust", "asset_type"]
 };

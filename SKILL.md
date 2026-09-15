@@ -119,6 +119,64 @@ Never conclude a token is bad from the second kind. `exit_liquidity_unverified`
 means the exit was not established, not that none exists. If a decision hangs on
 it, call again rather than acting on the gap.
 
+### Coinbase tokenized stocks
+
+Base's B20 standard carries Coinbase's tokenized equities. For those, `/v1/assess`
+adds `asset_type`, a `b20` block and a `stock_reference` block, and raw
+`asset_flags` beside them. Everything else in the answer is unchanged, and for an
+ordinary ERC-20 the three fields are simply absent.
+
+```jsonc
+{
+  "asset_type": "b20_stock",
+  "b20": {
+    "underlying": "TSLA",
+    "multiplier": 1.0,            // shares per token - NOT permanently 1
+    "corporate_action_pending": false,
+    "paused": false,
+    "policy_restricted": false
+  },
+  "stock_reference": {
+    "reference_price_usd": 357.88,
+    "premium_discount_bps": 13.4, // Fathom's measured price vs the equity
+    "source": "chainlink"
+  }
+}
+```
+
+Four things worth knowing before using them:
+
+**One token is not one share.** `multiplier` is how many shares it redeems for,
+and dividends and splits move it — GOOGLc already sits at 1.000377. A `null`
+there means the read failed; it is never defaulted to 1.0.
+
+**`reference_price_usd` is already the token's price.** The Chainlink feeds
+publish total return, which is the underlying's price with the multiplier
+applied. Multiplying by `multiplier` again double-counts every corporate action
+the token has ever had.
+
+**The reference does not replace `exit`.** `sell_quotes` remains the only number
+that says what a sale returns. The premium says whether the venue is quoting the
+equity rich or cheap, and it deliberately does not move the verdict.
+
+**A frozen feed is normal.** The equity feed stops updating outside US market
+hours, at weekends, on holidays, and while a corporate action is applied. Past
+its 24-hour heartbeat it is marked `reference_price_stale` and reported under
+`unverified`, because a closed market is not a fault of the token. `age_seconds`
+says how old the comparison is.
+
+The asset flags follow the same two-kind rule. `b20_transfer_paused` and
+`corporate_action_pending` are measurements. `b20_policy_unverified`,
+`b20_scheduled_update_unverified`, `corporate_action_unverified`,
+`b20_metadata_unverified`, `reference_price_unavailable`, `reference_price_stale`
+and `premium_unverified` are limits of the reading. `stock_premium_high` and
+`stock_discount_high` are neither: they are observations about price.
+
+A configured transfer policy is **not** a block. Secondary trading is
+permissionless and those slots normally hold a sanctions blocklist; Fathom does
+not know your address, so it reports that a policy exists and says explicitly
+that applicability was not established.
+
 ### Nulls are deliberate
 
 `liquidity_usd` is `null` for concentrated-liquidity pools. Those pools have no
@@ -156,6 +214,9 @@ single unreadable token does not cost you the rest of the list.
 - No exhaustive Uniswap v4 hook discovery; pools behind custom hooks are indexed
   on demand, per token asked about, from a KV-backed event index rather than
   scanned across all historical deployments
+- No mint or redeem of tokenized stocks, and no compliance eligibility check;
+  Fathom reads a token's policy state but never decides whether an address may
+  trade
 
 These are stated because an unmeasured signal reported as healthy is worse than
 one reported as absent.

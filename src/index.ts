@@ -77,6 +77,18 @@ class OrchestratorCacheAdapter implements CacheLayer {
 }
 
 /**
+ * A bare RPC client for the B20 layer, which reads token semantics rather than
+ * pools and so needs none of the pricing stack around it.
+ */
+function buildB20RpcClient(env: ExtendedEnv, defaultTTL: number) {
+  return new PriceRpcClient(
+    env.PRICE_RPC_URL!,
+    env.PRICE_RPC_FALLBACK_URLS,
+    new OrchestratorCacheAdapter(env.FATHOM_KV, defaultTTL)
+  )
+}
+
+/**
  * Builds the pricing stack for one request. Every adapter shares a single RPC
  * client, and the returned engine memoizes its WETH/USD anchor, so a batch pays
  * for both once rather than once per token.
@@ -132,6 +144,7 @@ import {
 } from './schemas/x402DiscoverySchemas'
 import SKILL_MD from '../SKILL.md'
 import { assess, unverifiedAssessment } from './assess'
+import { readB20Context } from './b20'
 
 /**
  * The agent-facing entry point. Served free and unpaywalled: a capability
@@ -535,14 +548,29 @@ app.get('/v1/assess', validateAddressesMiddleware, validateChainMiddleware, x402
     throw error
   }
 
+  // Asset semantics are read after pricing because the premium is measured
+  // against Fathom's own price, and they never fail the request: a B20 layer
+  // that could not be read leaves an ordinary ERC-20 answer intact rather than
+  // turning a working assessment into an error.
+  let b20 = null
+  try {
+    b20 = await readB20Context(
+      buildB20RpcClient(c.env, defaultTTL),
+      token,
+      price?.price_usd ?? null
+    )
+  } catch (error) {
+    console.error('B20 context read failed:', error)
+  }
+
   if (!price) {
     // An answer that contains no measurement is useful for branching, but is
     // not a successful paid result. 503 keeps x402 from settling the live
     // authorization while the body still says exactly what is unknown.
-    return c.json(unverifiedAssessment(token, chain, sizeUsd), 503)
+    return c.json(unverifiedAssessment(token, chain, sizeUsd, b20), 503)
   }
 
-  return c.json(assess(price, sizeUsd))
+  return c.json(assess(price, sizeUsd, b20))
 })
 
 app.get('/v1/price', validateAddressesMiddleware, validateChainMiddleware, x402Middleware, async (c) => {

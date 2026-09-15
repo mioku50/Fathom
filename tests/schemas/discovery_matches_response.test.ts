@@ -126,18 +126,64 @@ describe('the assess schema matches the assessment it advertises', () => {
     return assess(await realResponse(), 10000);
   }
 
+  /**
+   * `b20`, `stock_reference` and `asset_flags` are returned only for B20
+   * tokens, so an ordinary ERC-20 answer alone can no longer cover the schema.
+   * Checking the union keeps the promise exactly as strict: every declared
+   * field still has to be one the endpoint really returns, on some token.
+   */
+  async function b20Assessment() {
+    const { assess } = await import('../../src/assess');
+    return assess(await realResponse(), 10000, {
+      asset_type: 'b20_stock',
+      b20: {
+        underlying: 'TSLA',
+        multiplier: 1,
+        ui_multiplier: null,
+        next_ui_multiplier: null,
+        effective_at: null,
+        corporate_action_pending: false,
+        paused: false,
+        policy_restricted: false
+      },
+      stock_reference: {
+        reference_price_usd: 357.88,
+        premium_discount_bps: 13.4,
+        source: 'chainlink',
+        feed: '0xFaf869185383a24F8cb00e27BdA6b63B9905DCb4',
+        updated_at: '2026-09-15T14:44:11.000Z',
+        age_seconds: 54
+      },
+      flags: ['b20_asset']
+    });
+  }
+
   it('declares every field the assessment actually returns', async () => {
     const { assessOutputSchema } = await import('../../src/schemas/x402DiscoverySchemas');
     const declared = Object.keys(assessOutputSchema.properties);
-    const undeclared = Object.keys(await realAssessment()).filter(k => !declared.includes(k));
-    expect(undeclared).toEqual([]);
+    const returned = [
+      ...Object.keys(await realAssessment()),
+      ...Object.keys(await b20Assessment())
+    ];
+    expect(returned.filter(k => !declared.includes(k))).toEqual([]);
   });
 
   it('does not promise fields the assessment never returns', async () => {
     const { assessOutputSchema } = await import('../../src/schemas/x402DiscoverySchemas');
-    const assessment = await realAssessment();
-    const missing = Object.keys(assessOutputSchema.properties).filter(k => !(k in assessment));
+    const returned = new Set([
+      ...Object.keys(await realAssessment()),
+      ...Object.keys(await b20Assessment())
+    ]);
+    const missing = Object.keys(assessOutputSchema.properties).filter(k => !returned.has(k));
     expect(missing).toEqual([]);
+  });
+
+  it('keeps the B20 blocks off an ordinary ERC-20 answer', async () => {
+    const plain = await realAssessment();
+    expect(plain.asset_type).toBe('erc20');
+    expect(plain).not.toHaveProperty('b20');
+    expect(plain).not.toHaveProperty('stock_reference');
+    expect(plain).not.toHaveProperty('asset_flags');
   });
 
   it('declares the nested exit and price_trust shapes correctly', async () => {

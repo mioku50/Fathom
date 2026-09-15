@@ -17,19 +17,21 @@ describe('SKILL.md', () => {
   });
 
   it('only references fields the response actually has', async () => {
-    const { priceOutputSchema } = await import('../src/schemas/x402DiscoverySchemas');
-    const real = Object.keys(priceOutputSchema.properties);
+    const { priceOutputSchema, assessOutputSchema } = await import('../src/schemas/x402DiscoverySchemas');
+    const { CONCERN_FLAGS, UNVERIFIED_FLAGS } = await import('../src/assess');
+    const { B20_FLAGS } = await import('../src/b20/constants');
 
-    // Anything written as a bare `snake_case` code span should be a real field
-    // or a real flag, not something invented for the documentation.
-    const flags = [
-      'thin_liquidity', 'no_exit_liquidity', 'possible_manipulation', 'single_pool',
-      'stale', 'unsellable', 'twap_unavailable', 'freshness_unchecked',
-      'sellability_unchecked', 'depth_unavailable', 'liquidity_unmeasured',
-      'low_measurement_coverage', 'no_measurable_signal', 'incomplete_pool_coverage',
-      'incomplete_venue_coverage', 'incomplete_quote_coverage',
-      'exit_liquidity_unverified', 'hardcoded_numeraire'
-    ];
+    // Derived, not transcribed. The earlier hardcoded copy of this vocabulary
+    // was a second source of truth, and adding a flag meant remembering to
+    // update it here too - exactly the drift these tests exist to catch.
+    const schemaFields = (schema: any): string[] => {
+      const props = schema?.properties;
+      if (!props) return [];
+      return Object.entries(props).flatMap(([k, v]) => [k, ...schemaFields(v)]);
+    };
+
+    const real = [...schemaFields(priceOutputSchema), ...schemaFields(assessOutputSchema)];
+    const flags = [...Object.keys(CONCERN_FLAGS), ...Object.keys(UNVERIFIED_FLAGS), ...B20_FLAGS];
     const errors = ['rpc_error', 'stale_anchor', 'unknown_decimals', 'unpriceable'];
     const quoteFields = ['size_usd', 'proceeds_usd', 'execution_price_usd', 'price_impact_bps'];
     const known = new Set([...real, ...flags, ...errors, ...quoteFields]);
