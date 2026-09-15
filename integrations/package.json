@@ -1,0 +1,65 @@
+{
+  "name": "@fathom/integrations",
+  "version": "1.0.0",
+  "description": "Integration layer for Fathom API",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": {
+    "fathom-assess": "dist/bin/fathom-assess.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "pretest": "npm run build",
+    "test": "vitest",
+    "verify": "npm run typecheck && npm run build && vitest run"
+  },
+  "dependencies": {
+    "@coinbase/agentkit": "^0.10.4",
+    "@langchain/core": "^0.3.40",
+    "@x402/core": "^2.24.0",
+    "@x402/evm": "^2.24.0",
+    "@x402/fetch": "^2.24.0",
+    "viem": "^2.21.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.1"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./core": {
+      "types": "./dist/src/core/index.d.ts",
+      "import": "./dist/src/core/index.js"
+    },
+    "./x402": {
+      "types": "./dist/src/x402/index.d.ts",
+      "import": "./dist/src/x402/index.js"
+    },
+    "./agentkit": {
+      "types": "./dist/src/agentkit/index.d.ts",
+      "import": "./dist/src/agentkit/index.js"
+    },
+    "./langchain": {
+      "types": "./dist/src/langchain/index.d.ts",
+      "import": "./dist/src/langchain/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/src",
+    "dist/bin",
+    "skills",
+    "base-mcp",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  }
+}

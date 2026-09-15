@@ -42,6 +42,35 @@ jobs:
       - name: Tests
         run: npx vitest run
 
+  integrations:
+    name: integration kit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Its own job with its own install. The root job scopes Vitest to `tests/**`,
+    # so without this the payment policy - the part of the kit that decides
+    # whether to sign anything - would be covered by nothing.
+    defaults:
+      run:
+        working-directory: integrations
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: integrations/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # typecheck + build + `vitest run`; the build has to precede the suite
+      # that executes the emitted artifact.
+      - name: Verify
+        run: npm run verify
+
   audit:
     name: dependency audit
     runs-on: ubuntu-latest

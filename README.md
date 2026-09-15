@@ -213,6 +213,12 @@ one reported as absent:
   are indexed on demand, per token asked about, from a KV-backed event index —
   not pre-indexed across the chain.
 
+## Agent integrations
+
+A reusable kit — one canonical client, one fail-closed x402 transport, an
+AgentKit action provider, a LangChain tool and a CLI — lives in
+[`integrations/`](integrations/README.md).
+
 ## Development
 
 ```bash
