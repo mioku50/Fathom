@@ -2,6 +2,7 @@
   "name": "@fathom/integrations",
   "version": "1.0.0",
   "description": "Integration layer for Fathom API",
+  "license": "Apache-2.0",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "bin": {

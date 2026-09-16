@@ -130,3 +130,21 @@ The package ships as native ESM (`"type": "module"`, Node >= 18.17) with declare
 `node` — the CLI, the package entry, every subpath export, and the payment policy —
 because a build that exits 0 while producing an unusable artifact is the failure
 this suite exists to catch.
+
+## License
+
+[Apache-2.0](LICENSE). Apache rather than MIT for the explicit patent grant —
+this package signs payments, and a client library that does that should carry
+one.
+
+The Fathom core service in the parent directory is licensed separately, under
+[AGPL-3.0](../LICENSE). This package contains no code from it and imports
+nothing from `src/`, which `test/license_boundary.test.ts` enforces, so
+installing the kit brings no copyleft obligation with it.
+
+Two documents here are additionally offered under MIT so they can be
+contributed to upstream registries whose own licence is MIT — see
+[NOTICE](NOTICE):
+
+- `base-mcp/fathom.md`
+- `skills/fathom/SKILL.md`

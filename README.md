@@ -185,4 +185,30 @@ The Integration Kit has its own verification suite under `integrations/`.
 
 ## License
 
-MIT
+Two licences, drawn along the line between the service and the things you
+install.
+
+**The core — [AGPL-3.0](LICENSE).** Everything that produces a number:
+`src/`, the DEX adapters, the pricing engine, the confidence model, the B20
+layer. Run a modified Fathom as a network service and §13 asks you to publish
+the modifications. That is the whole intent — it is the one way the work here
+could be taken without being given back.
+
+**The Integration Kit — [Apache-2.0](integrations/LICENSE).** The client,
+transport, adapters and CLI in [`integrations/`](integrations/README.md), which
+are meant to be installed into other people's code. Apache rather than MIT for
+the explicit patent grant: this is a library that signs payments.
+
+The kit imports nothing from the core — a test enforces that — so the boundary
+is a real one rather than a claim.
+
+**Calling the API does not put anything of yours under AGPL.** §13 binds
+whoever conveys a modified Fathom, not whoever sends it an HTTP request. If you
+consume the service, the only Fathom code you touch is the Apache-licensed kit.
+
+Two agent-facing documents, `integrations/base-mcp/fathom.md` and
+`integrations/skills/fathom/SKILL.md`, are additionally offered under MIT, so
+they can be contributed upstream to registries whose own licence is MIT.
+
+Releases up to and including `6c5a5e3` were published under MIT and stay
+available on those terms; the change applies going forward.

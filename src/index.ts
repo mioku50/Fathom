@@ -201,6 +201,14 @@ app.get('/', (c) => {
             <li><code>GET <a href="/schemas/assess.input.json">/schemas/assess.input.json</a></code> - Primary Input Schema</li>
             <li><code>GET <a href="/schemas/assess.output.json">/schemas/assess.output.json</a></code> - Primary Output Schema</li>
         </ul>
+
+        <h3>Source</h3>
+        <p>Fathom is licensed under the <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL v3</a>.
+        Section 13 asks that anyone interacting with this service over a network be offered its
+        corresponding source, so here it is: <a href="https://github.com/mioku50/Fathom">github.com/mioku50/Fathom</a>.</p>
+        <p>The <a href="https://github.com/mioku50/Fathom/tree/main/integrations">agent integration kit</a> -
+        the client, x402 transport and adapters you would actually install - is Apache-2.0, and imports
+        nothing from the AGPL core. Calling this API puts no copyleft obligation on your code.</p>
     </div>
 </body>
 </html>`)
