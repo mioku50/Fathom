@@ -129,4 +129,23 @@ describe('x402 discovery extension contract', () => {
     expect(challenge.accepts[0].amount).toBe('3000');
     expect(challenge.accepts[0].network).toBe('eip155:84532');
   });
+
+  it.each(['assess', 'price', 'prices', 'metadata', 'metadatas'])(
+    'keeps %s resource metadata within the CDP facilitator limits',
+    async (endpoint) => {
+      const { default: app } = await import('../../src/index');
+      const query = endpoint === 'prices' || endpoint === 'metadatas' ? 'tokens' : 'token';
+      const res = await app.fetch(
+        new Request(`https://fathom.test/v1/${endpoint}?${query}=0x940181a94A35A4569E4529A3CDfB74e38FD98631`),
+        TEST_ENV,
+        { waitUntil: (p: Promise<any>) => p.catch(() => {}) } as any
+      );
+      expect(res.status).toBe(402);
+      const challenge = JSON.parse(Buffer.from(res.headers.get('Payment-Required')!, 'base64').toString('utf8'));
+      expect(challenge.resource.serviceName).toBe('Fathom');
+      expect(challenge.resource.description.length).toBeGreaterThan(0);
+      expect(challenge.resource.description.length).toBeLessThanOrEqual(500);
+      expect(challenge.resource.url).toBe(`https://fathom.test/v1/${endpoint}`);
+    }
+  );
 });

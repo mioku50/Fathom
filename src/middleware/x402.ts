@@ -1,11 +1,13 @@
 import { createMiddleware } from 'hono/factory'
 import type { FathomEnv } from '../cache'
-import { paymentMiddlewareFromConfig } from '@x402/hono'
+import { HonoAdapter, paymentMiddlewareFromConfig } from '@x402/hono'
 import { HTTPFacilitatorClient } from '@x402/core/server'
 import { decodePaymentSignatureHeader, encodePaymentSignatureHeader } from '@x402/core/http'
 import { ExactEvmScheme } from '@x402/evm/exact/server'
-import type { RoutesConfig } from '@x402/core/server'
+import type { RouteConfig } from '@x402/core/server'
+import type { ResourceInfo } from '@x402/core/types'
 import { declareDiscoveryExtension } from '@x402/extensions'
+import { bazaarResourceServerExtension } from '@x402/extensions/bazaar'
 import { BUILDER_CODE, declareBuilderCodeExtension } from '@x402/extensions/builder-code'
 import { parseX402Config } from '../utils/x402_config'
 import {
@@ -43,79 +45,52 @@ function createBuilderCodeExtension(env?: FathomEnv) {
  * @x402/core 2.24 currently accepts only the standard Base64 alphabet, so
  * normalize the transport encoding without changing the signed EIP-3009 data.
  */
-function createFacilitatorCompatiblePaymentSignature(value: string, builderCode?: string) {
+function createFacilitatorCompatiblePaymentSignature(
+  value: string,
+  resourceInfo: ResourceInfo,
+  declaredExtensions: Record<string, unknown>
+) {
   const standard = value.replace(/-/g, '+').replace(/_/g, '/')
   const padded = standard + '='.repeat((4 - (standard.length % 4)) % 4)
   const paymentPayload = decodePaymentSignatureHeader(padded) as any
 
-  // The current CDP facilitator rejects v2 PaymentPayload.resource at its API
-  // schema boundary even though @x402/core 2.24 models it as optional. It is
-  // not part of the EIP-3009 signature, so omitting it here preserves the
-  // authorization while matching the facilitator's accepted wire shape.
-  if (paymentPayload.x402Version === 2 && paymentPayload.resource) {
-    delete paymentPayload.resource
-  }
+  if (paymentPayload.x402Version === 2) {
+    // Bazaar needs BOTH resource and extensions.bazaar on verify/settle. The
+    // old workaround dropped resource to hide an over-500-character description
+    // rejected by CDP; that allowed payments but made discovery impossible.
+    // Rebuild metadata from this route, never from client-supplied catalog text.
+    // These fields are outside the signed EIP-3009 authorization.
+    paymentPayload.resource = resourceInfo
+    const extensions = isRecord(paymentPayload.extensions) ? { ...paymentPayload.extensions } : {}
+    delete extensions.bazaar
+    if (declaredExtensions.bazaar) {
+      extensions.bazaar = declaredExtensions.bazaar
+    }
 
-  // Official x402 clients echo route extensions from PAYMENT-REQUIRED into the
-  // paid payload. Minimal clients such as the current PayBox/Hermes path may
-  // omit them, which still permits settlement but silently loses Fathom's
-  // ERC-8021 attribution. Restore only this server's advertised app code while
-  // preserving any wallet/service attribution supplied by the client.
-  if (paymentPayload.x402Version === 2 && builderCode) {
-    const declared = declareBuilderCodeExtension(builderCode)
-    const extensions = paymentPayload.extensions && typeof paymentPayload.extensions === 'object'
-      ? paymentPayload.extensions
-      : {}
-    const existing = extensions[BUILDER_CODE] && typeof extensions[BUILDER_CODE] === 'object'
-      ? extensions[BUILDER_CODE]
-      : {}
-    const existingInfo = existing.info && typeof existing.info === 'object'
-      ? existing.info
-      : {}
-
-    paymentPayload.extensions = {
-      ...extensions,
-      [BUILDER_CODE]: {
-        ...declared,
+    const declaredBuilderCode = declaredExtensions[BUILDER_CODE]
+    if (isRecord(declaredBuilderCode)) {
+      const existing = isRecord(extensions[BUILDER_CODE]) ? extensions[BUILDER_CODE] : {}
+      const existingInfo = isRecord(existing.info) ? existing.info : {}
+      extensions[BUILDER_CODE] = {
         ...existing,
-        info: {
-          ...existingInfo,
-          a: builderCode
-        }
+        ...declaredBuilderCode,
+        info: { ...existingInfo, ...declaredBuilderCode.info }
       }
     }
+    paymentPayload.extensions = extensions
   }
 
   return encodePaymentSignatureHeader(paymentPayload)
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
 export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
   if (authHeader && c.env?.ADMIN_AUTH_TOKEN && authHeader === `Bearer ${c.env.ADMIN_AUTH_TOKEN}`) {
     return next()
-  }
-
-  const paymentSignature = c.req.header('PAYMENT-SIGNATURE')
-  const originalHeader = c.req.header.bind(c.req)
-  let paymentHeaderOverridden = false
-  if (paymentSignature) {
-    try {
-      const compatible = createFacilitatorCompatiblePaymentSignature(
-        paymentSignature,
-        c.env?.BASE_BUILDER_CODE?.trim()
-      )
-      // Cloudflare Request headers are immutable. Shadow HonoRequest.header()
-      // for this request instead; @x402/hono's adapter reads through this API.
-      ;(c.req as any).header = (name?: string) => {
-        if (name?.toLowerCase() === 'payment-signature') {
-          return compatible
-        }
-        return originalHeader(name as any)
-      }
-      paymentHeaderOverridden = true
-    } catch {
-      // Let the official middleware handle malformed headers and return 402.
-    }
   }
 
   let x402Config;
@@ -147,11 +122,12 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
   const origin = new URL(c.req.url).origin
   const resource = (path: string) => `${origin}${path}`
 
-  const routes: RoutesConfig = {
+  const routes: Record<string, RouteConfig> = {
       "/v1/assess": {
           resource: resource('/v1/assess'),
+          serviceName: "Fathom",
           accepts: [baseAccepts],
-          description: "Answer one question about a Base ERC-20: can I get out of this position, at this size, at a price I can trust? Quotes the exact sale you name on chain across five DEXes - Aerodrome, Aerodrome Slipstream, Uniswap V2/V3/V4 - and returns a single verdict to branch on: tradeable, caution, illiquid, or unverified. Pass size_usd for the position you actually hold; it is priced at that size rather than interpolated between standard quotes, because a guess about slippage is worse than no answer. The response separates what is measured about the token from what could not be established about it, so a failed reading is never mistaken for a bad token. Built for agents deciding whether to enter, exit, size, or value a long-tail position on Base.",
+          description: "Exit-liquidity and price-trust assessment for a Base ERC-20 token at a requested USD position size. On-chain sell quotes cover Aerodrome, Slipstream, and Uniswap V2/V3/V4. Returns tradeable, caution, illiquid, or unverified with executable proceeds, price impact, confidence, concerns, and unmeasured checks. Inputs: token address and size_usd.",
           mimeType: "application/json",
           tags: [
             "base", "exit-liquidity", "price-impact", "risk", "trading-agent"
@@ -189,8 +165,9 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "/v1/price": {
           resource: resource('/v1/price'),
+          serviceName: "Fathom",
           accepts: [baseAccepts],
-          description: "Decide whether a Base ERC-20 can be priced and exited before you trade it. Reads five DEXes on Base mainnet - Aerodrome, Aerodrome Slipstream, Uniswap V2/V3/V4 - and returns spot price cross-checked across independent pools, the pool's own TWAP against spot, and on-chain quotes for actually selling $1k, $5k and $10k with the price impact each costs. Built for long-tail tokens that major feeds either lack or quote without any sense of whether the market can absorb a sale. Every number is measured or absent: liquidity_usd is null for concentrated-liquidity pools rather than reporting L*sqrtP as a balance it is not, unmeasured components are excluded from the confidence score, and measured_weight says what share of the model that score rests on. Flags separate what is true about the token from what could not be established about it.",
+          description: "Base ERC-20 price and exit-liquidity measurements across Aerodrome, Slipstream, and Uniswap V2/V3/V4. Returns spot price, independent pool agreement, TWAP deviation, executable $1k/$5k/$10k sell quotes, price impact, confidence, and risk flags. Unavailable measurements are explicit; concentrated-liquidity balances are null. Input: token address.",
           mimeType: "application/json",
           tags: [
             "base", "token-price", "exit-liquidity", "price-impact", "oracle"
@@ -212,8 +189,9 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "/v1/prices": {
           resource: resource('/v1/prices'),
+          serviceName: "Fathom",
           accepts: [batchAccepts],
-          description: "Value or de-risk a whole Base portfolio in one paid call. Same measurement as /v1/price - spot cross-checked across five DEXes, TWAP against spot, executable $1k/$5k/$10k sell quotes with price impact, confidence and risk flags - for up to 50 Base ERC-20s at once. Use it to mark a book, screen a watchlist, or find which holdings cannot actually be exited at size. Each token reports its own status, so one unreadable token does not cost you the rest.",
+          description: "Batch price and exit-liquidity measurements for up to 50 Base ERC-20 tokens. Returns spot prices across five DEXes, TWAP deviation, executable $1k/$5k/$10k sell quotes, price impact, confidence, and risk flags. Each token has its own status when measurement is unavailable. Input: comma-separated token addresses.",
           mimeType: "application/json",
           tags: [
             "base", "batch", "portfolio", "token-price", "risk"
@@ -241,8 +219,9 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "/v1/metadata": {
           resource: resource('/v1/metadata'),
+          serviceName: "Fathom",
           accepts: [baseAccepts],
-          description: "Read a Base ERC-20's own identity from the chain: address, symbol, name and decimals, taken from the contract rather than from a list that can be stale or absent. Use it to resolve a token you have only an address for, before pricing it.",
+          description: "On-chain identity for one Base ERC-20 token: address, symbol, name, and decimals read from the token contract. Input: token address.",
           mimeType: "application/json",
           tags: ["base", "erc20", "metadata", "token", "onchain-data"],
           extensions: {
@@ -263,8 +242,9 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "/v1/metadatas": {
           resource: resource('/v1/metadatas'),
+          serviceName: "Fathom",
           accepts: [batchAccepts],
-          description: "Resolve many Base ERC-20s at once: address, symbol, name and decimals read from each contract. Use it to label a portfolio or a watchlist in one paid call before pricing it.",
+          description: "On-chain identity for up to 50 Base ERC-20 tokens: address, symbol, name, and decimals read from each token contract. Input: comma-separated token addresses.",
           mimeType: "application/json",
           tags: ["base", "erc20", "metadata", "batch", "portfolio"],
           extensions: {
@@ -289,9 +269,44 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
       },
       "*": {
           resource: resource(c.req.path),
+          serviceName: "Fathom",
           accepts: [baseAccepts],
           extensions: builderCodeExtension
       }
+  }
+
+  const paymentSignature = c.req.header('PAYMENT-SIGNATURE')
+  const originalHeader = c.req.header.bind(c.req)
+  let paymentHeaderOverridden = false
+  if (paymentSignature) {
+    try {
+      const route = routes[c.req.path] ?? routes['*']
+      const declaredExtensions = { ...route.extensions }
+      if (declaredExtensions.bazaar) {
+        // Use the same native enrichment as @x402/hono so the restored echo
+        // has exactly the method/schema the SDK advertises in its challenge.
+        declaredExtensions.bazaar = bazaarResourceServerExtension.enrichDeclaration!(
+          declaredExtensions.bazaar,
+          { adapter: new HonoAdapter(c), method: c.req.method, path: c.req.path, routePattern: c.req.path }
+        )
+      }
+      const compatible = createFacilitatorCompatiblePaymentSignature(paymentSignature, {
+        url: route.resource!,
+        description: route.description ?? '',
+        mimeType: route.mimeType ?? '',
+        serviceName: route.serviceName,
+        ...(route.tags !== undefined ? { tags: route.tags } : {})
+      }, declaredExtensions)
+      // Cloudflare Request headers are immutable. Shadow HonoRequest.header()
+      // for this request; the SDK adapter reads through this API.
+      ;(c.req as any).header = (name?: string) => {
+        if (name?.toLowerCase() === 'payment-signature') return compatible
+        return originalHeader(name as any)
+      }
+      paymentHeaderOverridden = true
+    } catch {
+      // Let the official middleware handle malformed headers and return 402.
+    }
   }
 
   try {

@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { x402Middleware } from '../../src/middleware/x402'
 import type { FathomEnv } from '../../src/cache'
 import { validatePaymentPayload } from '@x402/core/schemas'
+import { extractDiscoveryInfo, validateDiscoveryExtension } from '@x402/extensions/bazaar'
 
 describe('x402Middleware', () => {
   let app: Hono<{ Bindings: FathomEnv }>
@@ -149,7 +150,7 @@ describe('the resource it advertises', () => {
     expect(payload.extensions.bazaar.info.input.queryParams).toHaveProperty('token')
   })
 
-  it('keeps the canonical resource in the challenge but omits it for the facilitator', async () => {
+  it.each(['echoed', 'omitted'])('forwards discoverable metadata when client resource is %s', async (resourceMode) => {
     let verifyBody: any
     let settleBody: any
 
@@ -185,8 +186,10 @@ describe('the resource it advertises', () => {
     const accepted = paymentRequired.accepts[0]
     const paymentPayload = {
       x402Version: 2,
-      resource: paymentRequired.resource,
+      ...(resourceMode === 'echoed' ? { resource: paymentRequired.resource } : {}),
       accepted,
+      // Exercise Base64URL's distinct alphabet independently of resource prose.
+      extensions: { 'client-audit': { info: { transportMarker: '???>>>???>>>' } } },
       payload: {
         authorization: {
           from: '0x1111111111111111111111111111111111111111',
@@ -218,10 +221,25 @@ describe('the resource it advertises', () => {
 
     expect(res.status).toBe(200)
     expect(paymentRequired.resource.url).toBe('https://fathom.test/v1/assess')
-    expect(verifyBody.paymentPayload.resource).toBeUndefined()
-    expect(settleBody.paymentPayload.resource).toBeUndefined()
-    expect(verifyBody.paymentPayload.extensions['builder-code'].info.a).toBe('bc_tzj2linw')
-    expect(settleBody.paymentPayload.extensions['builder-code'].info.a).toBe('bc_tzj2linw')
+    for (const body of [verifyBody, settleBody]) {
+      expect(body.paymentPayload.resource).toEqual(paymentRequired.resource)
+      expect(body.paymentPayload.resource.description.length).toBeLessThanOrEqual(500)
+      expect(body.paymentPayload.extensions.bazaar).toEqual(paymentRequired.extensions.bazaar)
+      expect(body.paymentPayload.extensions['builder-code'].info.a).toBe('bc_tzj2linw')
+      expect(body.paymentPayload.payload).toEqual(paymentPayload.payload)
+      expect(body.paymentPayload.accepted).toEqual(accepted)
+      expect(validateDiscoveryExtension(body.paymentPayload.extensions.bazaar)).toEqual({ valid: true })
+      // This is the official facilitator extraction, not only a wire-shape
+      // assertion: removing resource or bazaar makes cataloging fail here.
+      expect(extractDiscoveryInfo(body.paymentPayload, body.paymentRequirements)).toMatchObject({
+        resourceUrl: 'https://fathom.test/v1/assess',
+        serviceName: 'Fathom',
+        method: 'GET',
+        discoveryInfo: {
+          input: { queryParams: { token: expect.any(String), size_usd: 10000 } }
+        }
+      })
+    }
   })
 
   it('preserves client attribution while enforcing Fathom app attribution', async () => {
@@ -258,9 +276,11 @@ describe('the resource it advertises', () => {
     const accepted = paymentRequired.accepts[0]
     const paymentPayload = {
       x402Version: 2,
-      resource: paymentRequired.resource,
+      resource: { url: 'https://untrusted.test/wrong-resource', description: 'Untrusted catalog text' },
       accepted,
       extensions: {
+        bazaar: { info: { input: { type: 'http', method: 'POST', body: { forged: true } } } },
+        'client-audit': { info: { requestId: 'client-request-1' } },
         'builder-code': {
           info: {
             a: 'bc_wrong_app',
@@ -288,7 +308,10 @@ describe('the resource it advertises', () => {
     }), env)
 
     expect(res.status).toBe(200)
-    expect(verifyBody.paymentPayload.resource).toBeUndefined()
+    expect(verifyBody.paymentPayload.resource).toEqual(paymentRequired.resource)
+    expect(verifyBody.paymentPayload.extensions.bazaar).toEqual(paymentRequired.extensions.bazaar)
+    expect(verifyBody.paymentPayload.extensions['client-audit']).toEqual(paymentPayload.extensions['client-audit'])
+    expect(verifyBody.paymentPayload.payload).toEqual(paymentPayload.payload)
     expect(verifyBody.paymentPayload.extensions['builder-code'].info).toEqual({
       a: 'bc_tzj2linw',
       w: 'paybox_wallet',

@@ -183,6 +183,25 @@ npx vitest run
 
 The Integration Kit has its own verification suite under `integrations/`.
 
+## Bazaar discovery
+
+```bash
+npm run check:discovery
+```
+
+This read-only check validates the live `/v1/assess` challenge with CDP and
+checks its exact URL in the merchant catalog. It makes no payment. Exit code 2
+means the endpoint validates but is not indexed; exit code 1 means a check failed.
+The receiving wallet serves other projects, so wallet activity alone does not
+establish that Fathom is indexed.
+
+The server forwards its canonical `resource` and `extensions.bazaar` on both
+verification and settlement, including when a client omits them. Resource
+descriptions stay within CDP's 500-character limit. Indexing requires a successful
+paid request and can take up to 15 minutes. CDP removes resources after 30 days
+without settlement; the presence of a `402` challenge alone does not keep a
+listing active. See [CDP's discovery guide](https://docs.cdp.coinbase.com/x402/seller/get-discovered).
+
 ## License
 
 Two licences, drawn along the line between the service and the things you
