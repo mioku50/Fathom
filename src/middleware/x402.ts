@@ -10,6 +10,7 @@ import { declareDiscoveryExtension } from '@x402/extensions'
 import { bazaarResourceServerExtension } from '@x402/extensions/bazaar'
 import { BUILDER_CODE, declareBuilderCodeExtension } from '@x402/extensions/builder-code'
 import { parseX402Config } from '../utils/x402_config'
+import { recordSettledPaymentV1, settledPaymentOfV1, userAgentOfV1 } from './paymentLedger'
 import {
   priceInputSchema, priceOutputSchema,
   pricesInputSchema, pricesOutputSchema,
@@ -322,6 +323,28 @@ export const x402Middleware = createMiddleware<{ Bindings: FathomEnv }>(async (c
     const res = await middleware(c, next)
     if (res && res.status === 402) {
       res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    }
+    // A settled payment leaves its PAYMENT-RESPONSE on the answer: kept with
+    // the endpoint and the client's own name, after the answer has gone.
+    const settled = settledPaymentOfV1((res ?? c.res)?.headers.get('PAYMENT-RESPONSE'))
+    if (settled) {
+      const route = routes[c.req.path] ?? routes['*']
+      const accepted = route.accepts as Array<{ price?: unknown }> | { price?: unknown }
+      const price = String((Array.isArray(accepted) ? accepted[0]?.price : accepted?.price) ?? '')
+      const write = recordSettledPaymentV1(c.env, {
+        v: 1,
+        at: new Date().toISOString(),
+        path: c.req.path,
+        price,
+        ...settled,
+        userAgent: userAgentOfV1(originalHeader('User-Agent')),
+      })
+      try {
+        c.executionCtx.waitUntil(write)
+      } catch {
+        // No execution context (a test or a local run): the write is awaited instead.
+        await write
+      }
     }
     return res
   } catch (err) {

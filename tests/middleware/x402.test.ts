@@ -242,6 +242,51 @@ describe('the resource it advertises', () => {
     }
   })
 
+  it('keeps a settled payment in the ledger: the endpoint, the payer, the transaction and the client', async () => {
+    const payer = `0x${'1'.repeat(40)}`
+    const transaction = `0x${'4'.repeat(64)}`
+    global.fetch = vi.fn().mockImplementation((url: any) => {
+      const target = url.toString()
+      const json = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      if (target.includes('/supported')) return json({ kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:84532', asset: 'usdc' }] })
+      if (target.includes('/verify')) return json({ isValid: true, payer })
+      if (target.includes('/settle')) return json({ success: true, payer, transaction, network: 'eip155:84532', amount: '10000' })
+      return Promise.resolve(new Response(null, { status: 404 }))
+    })
+    const put = vi.fn(async () => undefined)
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const ledgerEnv = { ...env, FATHOM_KV: { put, get: vi.fn(async () => null) } }
+
+    const url = 'https://fathom.test/v1/assess?token=0x940181a94a35a4569e4529a3cdfb74e38fd98631&size_usd=10000'
+    const paymentRequired = await challenge(url)
+    expect(put).not.toHaveBeenCalled() // a price is not a sale
+    const accepted = paymentRequired.accepts[0]
+    const paymentPayload = {
+      x402Version: 2,
+      resource: paymentRequired.resource,
+      accepted,
+      payload: {
+        authorization: { from: payer, to: accepted.payTo, value: accepted.amount, validAfter: '0', validBefore: '9999999999', nonce: `0x${'2'.repeat(64)}` },
+        signature: `0x${'3'.repeat(130)}`
+      }
+    }
+    const res = await app.fetch(new Request(url, {
+      headers: { 'PAYMENT-SIGNATURE': Buffer.from(JSON.stringify(paymentPayload)).toString('base64'), 'User-Agent': 'agent-under-test/2.0' }
+    }), ledgerEnv)
+    expect(res.status).toBe(200)
+
+    const ledgerWrites = (put.mock.calls as unknown as [string, string, unknown][]).filter(([key]) => key.startsWith('ledger:v1:'))
+    expect(ledgerWrites).toHaveLength(1)
+    const [key, value, options] = ledgerWrites[0]!
+    expect(key.endsWith(`:${transaction}`)).toBe(true)
+    expect(JSON.parse(value)).toMatchObject({
+      v: 1, path: '/v1/assess', price: '$0.01', payer, transaction, network: 'eip155:84532', userAgent: 'agent-under-test/2.0'
+    })
+    expect(options).toEqual({ expirationTtl: 400 * 24 * 60 * 60 })
+    expect(log.mock.calls.some(([line]) => String(line).includes('"event":"x402_settled"'))).toBe(true)
+    log.mockRestore()
+  })
+
   it('preserves client attribution while enforcing Fathom app attribution', async () => {
     let verifyBody: any
 

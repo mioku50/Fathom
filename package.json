@@ -10,6 +10,7 @@
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "check:discovery": "node scripts/check_bazaar_discovery.js",
+    "report:payments": "node scripts/payment_ledger_report.js",
     "smoke:live": "bash scripts/live_smoke_test.sh"
   },
   "dependencies": {
